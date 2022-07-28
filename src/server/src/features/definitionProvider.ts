@@ -89,7 +89,7 @@ function findNodeDefinition(tree: any, def: any, con?: any): any {
 
 function findDefinition(db: LspDatabase, document: TextDocument, pos: vscode.Position, con?: any): Thenable<vscode.Location | vscode.Location[]> {
 	const tree = db.getLatestParseTree(document.uri);
-	
+
 	const circomImportFiles = [];
 
 	const filePath = URI.parse(document.uri).fsPath;
@@ -98,10 +98,10 @@ function findDefinition(db: LspDatabase, document: TextDocument, pos: vscode.Pos
 		for (const node of tree.statements) {
 			if (node.type === "INCLUDE") {
 				const libFile = path.join(path.dirname(filePath), node.file);
-				const content = readFileSync(libFile, {encoding: 'utf8'});
-				circomImportFiles.push({content, uri: URI.file(libFile)});
+				const content = readFileSync(libFile, { encoding: 'utf8' });
+				circomImportFiles.push({ content, uri: URI.file(libFile) });
 			}
-		}	
+		}
 	}
 
 	const greenNode = findNode(tree, pos);
@@ -125,7 +125,7 @@ function findDefinition(db: LspDatabase, document: TextDocument, pos: vscode.Pos
 
 	circomImportFiles.forEach((files) => {
 		const syntax_tree = Parser.parse(files.content);
-		location.push(...findNodeDefinition(syntax_tree, greenNode).map(
+		const another_definition = findNodeDefinition(syntax_tree, greenNode).filter((node: any) => node.type === "TEMPLATEDEF").map(
 			(nodePos: any) => {
 				return Location.create(
 					files.uri.toString(),
@@ -141,7 +141,8 @@ function findDefinition(db: LspDatabase, document: TextDocument, pos: vscode.Pos
 					)
 				);
 			}
-		));
+		);
+		location.push(...another_definition);
 	});
 
 	return Promise.resolve(location);
