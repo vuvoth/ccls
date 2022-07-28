@@ -1,5 +1,3 @@
 out
 node_modules
 .vscode-test
-
-server/node_modules
