@@ -1,4 +1,4 @@
-# Circom Plus
+# Circom lsp
 
 Better support for circom. 
 
