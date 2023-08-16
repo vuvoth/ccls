@@ -1,0 +1,89 @@
+{
+  "name": "circom-plus",
+  "description": "Better circom support",
+  "author": "Vu Vo",
+  "license": "MIT",
+  "version": "0.0.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vuvoth/circom-plus"
+  },
+  "publisher": "vuvoth",
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "circom",
+    "ZKP"
+  ],
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "activationEvents": [
+    "onLanguage:circom"
+  ],
+  "main": "./out/main",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Circom-Lsp",
+      "properties": {
+        "languageServerExample.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        },
+        "languageServerExample.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build-base -- --minify",
+    "package": "vsce package -o circom-plus.vsix",
+    "build-base": "esbuild ./src/main.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node16",
+    "build": "npm run build-base -- --sourcemap",
+    "watch": "npm run build-base -- --sourcemap --watch",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint -c .eslintrc.js --ext ts ./src ./tests",
+    "lint:fix": "npm run lint -- --fix",
+    "typecheck": "tsc",
+    "pretest": "npm run typecheck && npm run build",
+    "test": "node ./out/tests/runTests.js"
+  },
+  "dependencies": {
+    "@hpcc-js/wasm": "^2.13.0",
+    "anser": "^2.1.1",
+    "d3": "^7.8.5",
+    "d3-graphviz": "^5.0.2",
+    "vscode-languageclient": "^8.1.0"
+  },
+  "devDependencies": {
+    "@tsconfig/strictest": "^2.0.1",
+    "@types/node": "~16.11.7",
+    "@types/vscode": "~1.75",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/test-electron": "^2.3.3",
+    "@vscode/vsce": "^2.19.0",
+    "esbuild": "^0.18.12",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^8.8.0",
+    "ovsx": "^0.8.2",
+    "prettier": "^3.0.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.1.6"
+  }
+}
