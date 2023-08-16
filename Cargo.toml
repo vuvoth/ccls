@@ -1,0 +1,11 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace]
+members = ["crates/*", "xtask/"]
+
+[workspace.dependencies]
+parser = {path = "./crates/parser", version = "0.1.0"}
+
+
+[workspace.package]
+rust-version = "1.71"
