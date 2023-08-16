@@ -1,13 +1,18 @@
+use std::fmt::format;
+
 use dashmap::DashMap;
 use log::debug;
 use parser::node::Tree;
-use tower_lsp::LspService;
 use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::InitializedParams;
+use tower_lsp::lsp_types::notification::DidChangeTextDocument;
+use tower_lsp::lsp_types::{
+    DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializedParams, OneOf,
+    TextDocumentSyncCapability, TextDocumentSyncKind, CompletionOptions, HoverProviderCapability,
+};
+use tower_lsp::LspService;
 use tower_lsp::{
     lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
-    Client, LanguageServer,
-    Server
+    Client, LanguageServer, Server,
 };
 #[derive(Debug)]
 struct Backend {
@@ -25,10 +30,9 @@ impl LanguageServer for Backend {
             server_info: None,
             offset_encoding: None,
             capabilities: ServerCapabilities {
-                // definition: Some(GotoCapability::default()),
-                // definition_provider: Some(OneOf::Left(true)),
-                // references_provider: Some(OneOf::Left(true)),
-                // rename_provider: Some(OneOf::Left(true)),
+                text_document_sync: Some(TextDocumentSyncCapability::Kind(
+                    TextDocumentSyncKind::FULL,
+                )),
                 ..ServerCapabilities::default()
             },
         })
@@ -44,7 +48,21 @@ impl LanguageServer for Backend {
             .log_message(MessageType::INFO, "initialized!")
             .await;
     }
+
+    async fn did_open(&self, param: DidOpenTextDocumentParams) {
+        self.client
+            .log_message(MessageType::INFO, format!("{:?}", param))
+            .await;
+    }
+
+    async fn did_change(&self, param: DidChangeTextDocumentParams) {
+        self.client.log_message(MessageType::INFO, "This is infom").await;
+        self.client
+            .log_message(MessageType::INFO, format!("{:?}", param))
+            .await
+    }
 }
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
