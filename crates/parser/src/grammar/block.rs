@@ -1,4 +1,4 @@
-use super::{expression::expression, *};
+use super::*;
 
 pub fn block(p: &mut Parser) {
     if !p.at(LCurly) {

@@ -1,6 +1,5 @@
 use super::{block::block, expression::expression, *};
 
-pub(super) fn parse(p: &mut Parser) {}
 
 pub(super) fn statement(p: &mut Parser) {
     let m = p.open();
