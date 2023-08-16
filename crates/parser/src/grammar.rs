@@ -18,18 +18,22 @@ pub mod entry {
     use super::*;
 
     pub fn circom_program(p: &mut Parser) {
-        pragma::pragma(p);
-
         let m = p.open();
+        pragma::pragma(p);
         while !p.eof() {
             match p.current().kind {
-                TemplateKw => template::template(p),
-                IncludeKw => include::include(p),
+                TemplateKw => {
+                    template::template(p);
+                }
+                IncludeKw => {
+                    include::include(p);
+                },
                 ComponentKw => main_component::main_component(p),
                 FunctionKw => template::function_parse(p),
-                _ => p.advance_with_error("invalid token"),
+                _ => {
+                    p.advance_with_error("invalid token");
+                }
             }
-            p.expect(Comma);
         }
         p.close(m, CircomProgram);
     }

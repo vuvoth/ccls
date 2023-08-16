@@ -68,6 +68,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn advance_with_error(&mut self, error: &str) {
+        println!("{:?}",self.current().kind);
         let m = self.open();
         // TODO: Error reporting.
         eprintln!("{error}");
@@ -116,16 +117,19 @@ impl<'a> Parser<'a> {
         let mut parser = Self {
             lexer: Lexer::<TokenKind>::new(source),
             pos: 0,
-            current_token: Token { kind: TokenKind::Start, text: "".to_string() },
+            current_token: Token {
+                kind: TokenKind::Start,
+                text: "".to_string(),
+            },
             fuel: Cell::new(256),
             events: Vec::new(),
         };
         parser.next();
+        println!("{:?}", parser.current());
         parser
-        
     }
 
-    pub fn current(&mut self) -> Token { 
+    pub fn current(&mut self) -> Token {
         return self.current_token.clone();
     }
 
@@ -194,34 +198,14 @@ impl Parser<'_> {
 
 #[cfg(test)]
 mod tests {
-    use logos::Lexer;
-
-    use crate::token_kind::TokenKind;
-
     use super::Parser;
     use super::Scope;
 
     #[test]
     fn test_parser() {
         let source: String = r#"
-            include "another_template";
-            template Identifier() {
-                signal input hello;
-            }
-            template another() {
-                signal output hello;
-                var x;
-                x <== x.hello + 1;
-                x <== y.f + a[12];
-            }
-            function a() {
-                a <== b.a[3]
-                log("hellow");
-            }
-            function a() {
-                a <== b;
-                log("hellow");
-            }
+            pragma circom 2.0.1;
+            include "another_template"; 
         "#
         .to_string();
         let mut parser = Parser::new(&source);
