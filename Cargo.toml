@@ -5,7 +5,7 @@ members = ["crates/*", "xtask/"]
 
 [workspace.dependencies]
 parser = {path = "./crates/parser", version = "0.1.0"}
-
+vfs = {path = "./crates/vfs", version = "0.1.0"}
 
 [workspace.package]
 rust-version = "1.71"

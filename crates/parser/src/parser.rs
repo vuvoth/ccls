@@ -10,11 +10,11 @@ use crate::{
 };
 
 pub struct Parser<'a> {
-    lexer: &'a mut Lexer<'a, TokenKind>,
+    lexer: Lexer<'a, TokenKind>,
     pos: usize,
-    current_token: Option<Token<'a>>,
+    current_token: Token,
     fuel: Cell<u32>,
-    pub(crate) events: Vec<Event<'a>>,
+    pub(crate) events: Vec<Event>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -76,13 +76,13 @@ impl<'a> Parser<'a> {
         } else {
             self.events.push(Event::Token(Token {
                 kind: TokenKind::EOF,
-                text: "",
+                text: "".to_string(),
             }))
         }
         self.close(m, TokenKind::Error);
     }
 
-    pub fn build_tree(self) -> Tree<'a> {
+    pub fn build_tree(self) -> Tree {
         let mut events = self.events;
         let mut stack = Vec::new();
         assert!(matches!(events.pop(), Some(Event::Close)));
@@ -112,26 +112,26 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(lexer: &'a mut Lexer<'a, TokenKind>) -> Self {
-        Self {
-            lexer,
+    pub fn new(source: &'a str) -> Self {
+        let mut parser = Self {
+            lexer: Lexer::<TokenKind>::new(source),
             pos: 0,
-            current_token: None,
+            current_token: Token { kind: TokenKind::Start, text: "".to_string() },
             fuel: Cell::new(256),
             events: Vec::new(),
-        }
+        };
+        parser.next();
+        parser
+        
     }
 
-    pub fn current(&mut self) -> Token<'a> {
-        if self.current_token.is_none() {
-            self.next();
-        }
-        return self.current_token.unwrap();
+    pub fn current(&mut self) -> Token { 
+        return self.current_token.clone();
     }
 
     pub fn next(&mut self) -> TokenKind {
         let kind = self.lexer.next().unwrap_or(TokenKind::EOF);
-        self.current_token = Some(Token::new(kind, self.lexer.slice()));
+        self.current_token = Token::new(kind, self.lexer.slice());
         kind
     }
 
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_parser() {
-        let source = r#"
+        let source: String = r#"
             include "another_template";
             template Identifier() {
                 signal input hello;
@@ -222,9 +222,9 @@ mod tests {
                 a <== b;
                 log("hellow");
             }
-        "#;
-        let mut lexer = Lexer::<TokenKind>::new(source);
-        let mut parser = Parser::new(&mut lexer);
+        "#
+        .to_string();
+        let mut parser = Parser::new(&source);
 
         parser.parse(Scope::CircomProgram);
 

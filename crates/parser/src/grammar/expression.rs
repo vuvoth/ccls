@@ -163,8 +163,7 @@ mod tests {
         let source = r#"
           a > b ? b + 1  : 100
         "#;
-        let mut lexer = Lexer::<TokenKind>::new(source);
-        let mut parser = Parser::new(&mut lexer);
+        let mut parser = Parser::new(source);
 
         println!("{}", source);
         circom_expression(&mut parser);

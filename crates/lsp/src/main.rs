@@ -2,22 +2,37 @@ use std::fmt::format;
 
 use dashmap::DashMap;
 use log::debug;
+use parser::grammar::entry::Scope;
 use parser::node::Tree;
+use parser::parser::Parser;
+use parser::token_kind::TokenKind;
+use parser::Lexer;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
 use tower_lsp::lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializedParams, OneOf,
-    TextDocumentSyncCapability, TextDocumentSyncKind, CompletionOptions, HoverProviderCapability,
+    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
+    HoverProviderCapability, InitializedParams, OneOf, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Url,
 };
 use tower_lsp::LspService;
 use tower_lsp::{
     lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
     Client, LanguageServer, Server,
 };
+
+use vfs::{FilePath, VirtualFile};
+
 #[derive(Debug)]
 struct Backend {
     client: Client,
-    parse_map: DashMap<String, Tree<'static>>,
+    parse_map: DashMap<String, Tree>,
+}
+
+#[derive(Debug, Clone)]
+struct TextDocumentItem {
+    uri: Url,
+    text: String,
+    version: i32,
 }
 
 #[tower_lsp::async_trait]
@@ -38,10 +53,6 @@ impl LanguageServer for Backend {
         })
     }
 
-    async fn shutdown(&self) -> Result<()> {
-        Ok(())
-    }
-
     async fn initialized(&self, _: InitializedParams) {
         debug!("initialized");
         self.client
@@ -49,17 +60,41 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn did_open(&self, param: DidOpenTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", param))
-            .await;
+    async fn shutdown(&self) -> Result<()> {
+        Ok(())
     }
 
-    async fn did_change(&self, param: DidChangeTextDocumentParams) {
-        self.client.log_message(MessageType::INFO, "This is infom").await;
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, format!("{:?}", param))
-            .await
+            .log_message(MessageType::INFO, format!("{:?}", params))
+            .await;
+        self.on_change(
+            &TextDocumentItem {
+                uri: params.text_document.uri,
+                version: params.text_document.version,
+                text: params.text_document.text.clone(),
+            },
+            params.text_document.text.clone(),
+        ).await
+    }
+
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        self.client
+            .log_message(MessageType::INFO, "This is info")
+            .await;
+        self.client
+            .log_message(MessageType::INFO, format!("{:?}", params))
+            .await;
+    }
+}
+
+impl Backend {
+    async fn on_change(&self, text_document: &TextDocumentItem, text: String) {
+        let mut parser = Parser::new(&text);
+        parser.parse(Scope::CircomProgram);
+        let cst = parser.build_tree();
+        self.client.log_message(MessageType::INFO, format!("{:?}", cst.clone())).await;
+        self.parse_map.insert(text_document.uri.to_string(), cst);
     }
 }
 

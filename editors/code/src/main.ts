@@ -13,7 +13,7 @@ export function activate(context: ExtensionContext) {
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
   const run: Executable = {
-    command: "circom-lsp",
+    command: process.env.__CIRCOM_LSP_SERVER_DEBUG ?? "circom-lsp",
   };
   const serverOptions: ServerOptions = {
     run,
@@ -42,8 +42,18 @@ export function activate(context: ExtensionContext) {
 
     // Display a message box to the user
 
-    window.showInformationMessage("Hello World!");
+    if (client) {
+      client.stop();
+      client = new LanguageClient(
+        "circom-lsp",
+        "Circom-LSP",
+        serverOptions,
+        clientOptions
+      );
+      client.start();
+    }
   });
+  
   context.subscriptions.push(disposable);
 }
 

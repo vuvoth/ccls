@@ -2,27 +2,31 @@ use std::fmt;
 
 use crate::token_kind::TokenKind;
 
-pub struct Tree<'a> {
+#[derive(Clone)]
+pub struct Tree {
     pub(crate) kind: TokenKind,
-    pub(crate) children: Vec<Child<'a>>,
+    pub(crate) children: Vec<Child>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Token<'a> {
+#[derive(Debug, Clone)]
+pub struct Token {
     pub kind: TokenKind,
-    pub text: &'a str,
+    pub text: String,
 }
 
-impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, text: &'a str) -> Self {
-        Self { kind, text }
+impl Token {
+    pub fn new(kind: TokenKind, text: &str) -> Self {
+        Self {
+            kind,
+            text: text.to_string(),
+        }
     }
 }
 
-#[derive(Debug)]
-pub enum Child<'a> {
-    Token(Token<'a>),
-    Tree(Tree<'a>),
+#[derive(Debug, Clone)]
+pub enum Child {
+    Token(Token),
+    Tree(Tree),
 }
 
 #[macro_export]
@@ -32,7 +36,7 @@ macro_rules! format_to {
         { use ::std::fmt::Write as _; let _ = ::std::write!($buf, $lit $($arg)*); }
     };
 }
-impl Tree<'_> {
+impl Tree {
     pub fn print(&self, buf: &mut String, level: usize) {
         let indent = "  ".repeat(level);
         format_to!(buf, "{indent}{:?}\n", self.kind);
@@ -48,7 +52,7 @@ impl Tree<'_> {
     }
 }
 
-impl fmt::Debug for Tree<'_> {
+impl fmt::Debug for Tree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
         self.print(&mut buf, 0);

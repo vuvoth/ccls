@@ -7,7 +7,7 @@ pub enum TokenKind {
     #[regex("[\n]+", logos::skip)]
     #[error]
     Error = 0,
-    
+    Start,
     #[token("pragma")]
     Pragma,
     #[token("circom")]

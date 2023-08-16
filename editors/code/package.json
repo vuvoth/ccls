@@ -25,6 +25,18 @@
   ],
   "main": "./out/main",
   "contributes": {
+    "languages": [
+      {
+        "id": "circom",
+        "aliases": [
+          "circom",
+          "circom"
+        ],
+        "extensions": [
+          ".circom"
+        ]
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Circom-Lsp",
@@ -47,7 +59,13 @@
           "description": "Traces the communication between VS Code and the language server."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "circom-plus.restart",
+        "title": "Circom Lsp Restart"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run build-base -- --minify",

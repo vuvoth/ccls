@@ -57,7 +57,8 @@
         "runtimeExecutable": "${execPath}",
         "args": [
           "--disable-extensions",
-          "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
+          "--extensionDevelopmentPath=${workspaceFolder}/editors/code",
+          "${code --list-extensions | grep -v 'iden3.circom' | xargs -I % echo '--disable-extension %'}"
         ],
         "outFiles": [
           "${workspaceFolder}/editors/code/out/**/*.js"

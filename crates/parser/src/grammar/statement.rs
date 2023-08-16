@@ -143,8 +143,7 @@ mod tests {
         let source = r#"
             assert(1 == 2);
         "#;
-        let mut lexer = Lexer::<TokenKind>::new(source);
-        let mut parser = Parser::new(&mut lexer);
+        let mut parser = Parser::new(source);
 
         println!("{}", source);
 

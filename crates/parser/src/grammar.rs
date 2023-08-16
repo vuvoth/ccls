@@ -1,21 +1,20 @@
 use crate::parser::Parser;
 use crate::token_kind::TokenKind::*;
 
-
 mod block;
 mod declaration;
 mod expression;
 mod include;
-mod pragma;
-mod template;
-mod main_component;
 mod list_identity;
+mod main_component;
+mod pragma;
 mod statement;
+mod template;
 /**
  * parse circom program
  */
 
-pub(crate) mod entry {
+pub mod entry {
     use super::*;
 
     pub fn circom_program(p: &mut Parser) {
