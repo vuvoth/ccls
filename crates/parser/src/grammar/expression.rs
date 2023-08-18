@@ -2,7 +2,9 @@ use crate::parser::Marker;
 
 use super::*;
 pub(super) fn expression(p: &mut Parser) {
+    let m = p.open();
     circom_expression(p);
+    p.close(m, Expression);
 }
 
 /**
@@ -156,17 +158,16 @@ fn circom_expression(p: &mut Parser) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::token_kind::TokenKind;
-    use logos::Lexer;
     #[test]
     fn test_expression() {
         let source = r#"
-          a > b ? b + 1  : 100
+          10 + 100 + 23 + 3343
         "#;
         let mut parser = Parser::new(source);
-
-        println!("{}", source);
+        let m = parser.open();
+        parser.next();
         circom_expression(&mut parser);
+        parser.close(m, CircomProgram);
         let cst = parser.build_tree();
 
         println!("{:?}", cst);

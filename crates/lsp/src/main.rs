@@ -75,7 +75,8 @@ impl LanguageServer for Backend {
                 text: params.text_document.text.clone(),
             },
             params.text_document.text.clone(),
-        ).await
+        )
+        .await
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
@@ -93,7 +94,6 @@ impl Backend {
         let mut parser = Parser::new(&text);
         parser.parse(Scope::CircomProgram);
         let cst = parser.build_tree();
-        self.client.log_message(MessageType::INFO, format!("{:?}", cst.clone())).await;
         self.parse_map.insert(text_document.uri.to_string(), cst);
     }
 }

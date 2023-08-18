@@ -135,8 +135,6 @@ fn assignment_statement(p: &mut Parser) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::token_kind::TokenKind;
-    use logos::Lexer;
 
     #[test]
     fn if_statement_test() {
@@ -144,8 +142,6 @@ mod tests {
             assert(1 == 2);
         "#;
         let mut parser = Parser::new(source);
-
-        println!("{}", source);
 
         statement(&mut parser);
         let cst = parser.build_tree();

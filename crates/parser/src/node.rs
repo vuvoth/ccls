@@ -43,7 +43,16 @@ impl Tree {
         for child in &self.children {
             match child {
                 Child::Token(token) => {
-                    format_to!(buf, "{indent}  '{}'\n", token.text)
+                    if token.kind.is_travial() {
+                        match token.kind {
+                            TokenKind::WhiteSpace => {
+                                format_to!(buf, "{indent} WhileSpace'{}'\n", token.text.replace("\n", "\\n"))
+                            },
+                            _ => {unreachable!()}
+                        }
+                    } else {
+                        format_to!(buf, "{indent}  '{}'\n", token.text)
+                    }
                 }
                 Child::Tree(tree) => tree.print(buf, level + 1),
             }

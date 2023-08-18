@@ -3,11 +3,11 @@ use logos::Logos;
 #[derive(Logos, Debug, PartialEq, Clone, Copy)]
 pub enum TokenKind {
     #[regex(r"//[^\n]*", logos::skip)]
-    #[regex("[ \t]+", logos::skip)]
-    #[regex("[\n]+", logos::skip)]
     #[error]
     Error = 0,
     Start,
+    #[regex("[\n \t]+")]
+    WhiteSpace,
     #[token("pragma")]
     Pragma,
     #[token("circom")]
@@ -195,6 +195,12 @@ impl TokenKind {
     pub fn is_declaration_kw(self) -> bool {
         match self {
             Self::VarKw  | Self::ComponentKw | Self::SignalKw => true,
+            _ => false
+        }
+    }
+    pub fn is_travial(self) -> bool {
+        match self {
+            Self::WhiteSpace => true,
             _ => false
         }
     }

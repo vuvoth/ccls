@@ -67,8 +67,14 @@ impl<'a> Parser<'a> {
         self.skip();
     }
 
+    pub fn advance_with_token(&mut self, token: Token) {
+        assert!(token.kind != TokenKind::EOF);
+        self.fuel.set(256);
+        let token = Event::Token(token);
+        self.events.push(token);
+    }
+
     pub fn advance_with_error(&mut self, error: &str) {
-        println!("{:?}",self.current().kind);
         let m = self.open();
         // TODO: Error reporting.
         eprintln!("{error}");
@@ -114,7 +120,7 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(source: &'a str) -> Self {
-        let mut parser = Self {
+        Self {
             lexer: Lexer::<TokenKind>::new(source),
             pos: 0,
             current_token: Token {
@@ -123,10 +129,7 @@ impl<'a> Parser<'a> {
             },
             fuel: Cell::new(256),
             events: Vec::new(),
-        };
-        parser.next();
-        println!("{:?}", parser.current());
-        parser
+        }
     }
 
     pub fn current(&mut self) -> Token {
@@ -134,9 +137,18 @@ impl<'a> Parser<'a> {
     }
 
     pub fn next(&mut self) -> TokenKind {
-        let kind = self.lexer.next().unwrap_or(TokenKind::EOF);
+        let mut kind = self.lexer.next().unwrap_or(TokenKind::EOF);
         self.current_token = Token::new(kind, self.lexer.slice());
-        kind
+
+        while self.current().kind.is_travial() {
+            kind = self.lexer.next().unwrap_or(TokenKind::EOF);
+            let m = self.open();
+            // skip travial token
+            self.advance_with_token(self.current_token.clone());
+            self.close(m, TokenKind::WhiteSpace);
+            self.current_token = Token::new(kind, self.lexer.slice());
+        }
+        self.current_token.kind
     }
 
     pub fn at(&mut self, kind: TokenKind) -> bool {
@@ -206,6 +218,9 @@ mod tests {
         let source: String = r#"
             pragma circom 2.0.1;
             include "another_template"; 
+            function hello() {
+                a <== a + b;
+            }
         "#
         .to_string();
         let mut parser = Parser::new(&source);
