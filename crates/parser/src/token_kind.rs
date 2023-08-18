@@ -115,7 +115,7 @@ pub enum TokenKind {
     #[token("||")]
     BoolOr,
     #[token("?")]
-    MarkQuestion, 
+    MarkQuestion,
     #[token(":")]
     Colon,
     #[token(".")]
@@ -189,19 +189,19 @@ impl TokenKind {
         match self {
             Self::Dot => Some(200),
             Self::LBracket => Some(200),
-            _ => None
+            _ => None,
         }
     }
     pub fn is_declaration_kw(self) -> bool {
         match self {
-            Self::VarKw  | Self::ComponentKw | Self::SignalKw => true,
-            _ => false
+            Self::VarKw | Self::ComponentKw | Self::SignalKw => true,
+            _ => false,
         }
     }
     pub fn is_travial(self) -> bool {
         match self {
             Self::WhiteSpace => true,
-            _ => false
+            _ => false,
         }
     }
 }

@@ -204,14 +204,25 @@ impl<'a> Parser<'a> {
 
 impl Parser<'_> {
     pub fn parse(&mut self, scope: Scope) {
+        let m = self.open();
+        self.next();
         scope.parse(self);
+        self.close(m, TokenKind::Circom);
+    }
+
+    pub fn parse_source(source: &str) -> Tree{
+        let mut p = Parser::new(source);
+        
+        
+        p.parse(Scope::CircomProgram);
+        println!("{:?}", p.events);
+        p.build_tree()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Parser;
-    use super::Scope;
 
     #[test]
     fn test_parser() {
@@ -223,11 +234,9 @@ mod tests {
             }
         "#
         .to_string();
-        let mut parser = Parser::new(&source);
+            
+        let cst = Parser::parse_source(&source);
 
-        parser.parse(Scope::CircomProgram);
-
-        let cst = parser.build_tree();
 
         println!("{:?}", cst);
     }
