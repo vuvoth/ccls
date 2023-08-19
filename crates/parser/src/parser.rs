@@ -12,6 +12,7 @@ use crate::{
 pub struct Parser<'a> {
     lexer: Lexer<'a, TokenKind>,
     pos: usize,
+    bootstrap: bool,
     current_token: Token,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
@@ -127,6 +128,7 @@ impl<'a> Parser<'a> {
                 kind: TokenKind::Start,
                 text: "".to_string(),
             },
+            bootstrap: false,
             fuel: Cell::new(256),
             events: Vec::new(),
         }
@@ -137,6 +139,8 @@ impl<'a> Parser<'a> {
     }
 
     pub fn next(&mut self) -> TokenKind {
+        self.bootstrap = true;
+
         let mut kind = self.lexer.next().unwrap_or(TokenKind::EOF);
         self.current_token = Token::new(kind, self.lexer.slice());
 
@@ -205,7 +209,11 @@ impl<'a> Parser<'a> {
 impl Parser<'_> {
     pub fn parse(&mut self, scope: Scope) {
         let m = self.open();
-        self.next();
+
+        if !self.bootstrap {
+            self.next();
+        }
+
         scope.parse(self);
         self.close(m, TokenKind::Circom);
     }
