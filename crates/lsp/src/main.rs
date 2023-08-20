@@ -9,16 +9,19 @@ use parser::token_kind::TokenKind;
 use parser::Lexer;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
+use tower_lsp::lsp_types::request::GotoDefinition;
 use tower_lsp::lsp_types::{
     CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    HoverProviderCapability, InitializedParams, OneOf, TextDocumentSyncCapability,
-    TextDocumentSyncKind, Url,
+    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
+    OneOf, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::LspService;
 use tower_lsp::{
     lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
     Client, LanguageServer, Server,
 };
+
+mod jump_to_definition;
 
 use vfs::{FilePath, VirtualFile};
 
@@ -48,6 +51,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -86,6 +90,13 @@ impl LanguageServer for Backend {
         self.client
             .log_message(MessageType::INFO, format!("{:?}", params))
             .await;
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        Ok(None)
     }
 }
 

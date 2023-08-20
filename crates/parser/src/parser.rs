@@ -1,6 +1,7 @@
-use std::cell::Cell;
+use std::{cell::Cell, ops::Range};
 
 use logos::Lexer;
+use lsp_types::Position;
 
 use crate::{
     event::Event,
@@ -13,6 +14,7 @@ pub struct Parser<'a> {
     lexer: Lexer<'a, TokenKind>,
     pos: usize,
     bootstrap: bool,
+    last_position: Position,
     current_token: Token,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
@@ -85,6 +87,7 @@ impl<'a> Parser<'a> {
             self.events.push(Event::Token(Token {
                 kind: TokenKind::EOF,
                 text: "".to_string(),
+                range: lsp_types::Range { start: self.last_position, end: self.last_position }
             }))
         }
         self.close(m, TokenKind::Error);
@@ -125,9 +128,11 @@ impl<'a> Parser<'a> {
             lexer: Lexer::<TokenKind>::new(source),
             pos: 0,
             current_token: Token {
-                kind: TokenKind::Start,
+                kind: TokenKind::EOF,
                 text: "".to_string(),
+                range: lsp_types::Range::default()
             },
+            last_position: Position::new(0, 0),
             bootstrap: false,
             fuel: Cell::new(256),
             events: Vec::new(),
@@ -142,7 +147,8 @@ impl<'a> Parser<'a> {
         self.bootstrap = true;
 
         let mut kind = self.lexer.next().unwrap_or(TokenKind::EOF);
-        self.current_token = Token::new(kind, self.lexer.slice());
+        self.current_token = Token::new(kind, self.lexer.slice(), self.lexer.span(), self.last_position);
+        self.last_position = self.current_token.range.end;
 
         while self.current().kind.is_travial() {
             kind = self.lexer.next().unwrap_or(TokenKind::EOF);
@@ -150,7 +156,9 @@ impl<'a> Parser<'a> {
             // skip travial token
             self.advance_with_token(self.current_token.clone());
             self.close(m, TokenKind::WhiteSpace);
-            self.current_token = Token::new(kind, self.lexer.slice());
+            self.current_token = Token::new(kind, self.lexer.slice(), self.lexer.span(), self.last_position);
+            self.last_position = self.current_token.range.end;
+
         }
         self.current_token.kind
     }
@@ -179,7 +187,9 @@ impl<'a> Parser<'a> {
     pub fn eat(&mut self, kind: TokenKind) -> bool {
         if self.at(kind) {
             let text = self.lexer.slice();
-            self.events.push(Event::Token(Token::new(kind, text)));
+            let token = Token::new(kind, text, self.lexer.span(), self.last_position);
+            self.last_position = token.range.end;
+            self.events.push(Event::Token(token));
             self.skip();
             return true;
         }
@@ -219,11 +229,8 @@ impl Parser<'_> {
     }
 
     pub fn parse_source(source: &str) -> Tree{
-        let mut p = Parser::new(source);
-        
-        
+        let mut p = Parser::new(source);        
         p.parse(Scope::CircomProgram);
-        println!("{:?}", p.events);
         p.build_tree()
     }
 }

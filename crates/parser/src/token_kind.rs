@@ -5,7 +5,6 @@ pub enum TokenKind {
     #[regex(r"//[^\n]*", logos::skip)]
     #[error]
     Error = 0,
-    Start,
     #[regex("[\n \t]+")]
     WhiteSpace,
     #[token("pragma")]
