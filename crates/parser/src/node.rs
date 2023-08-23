@@ -1,5 +1,6 @@
 use std::fmt;
 
+use logos::Logos;
 use lsp_types::{Position, Range};
 
 use crate::token_kind::TokenKind;
@@ -35,7 +36,9 @@ pub struct Token {
     pub range: Range,
 }
 
-fn span_to_range(last_position: Position, text: &str) -> Range {
+fn span_to_range(last_position: Position, span: logos::Span, text: &str) -> Range {
+    println!("{:?}", span);
+    println!("{:?}", last_position);
     let mut start = last_position;
     let mut end = last_position;
     let endline = '\n';
@@ -74,15 +77,17 @@ fn span_to_range(last_position: Position, text: &str) -> Range {
             first_char = false;
         }
     }
+    println!("{:?} {:?}", start, end);
     Range::new(start, end)
 }
 
 impl Token {
     pub fn new(kind: TokenKind, text: &str, span: logos::Span, last_position: Position) -> Self {
+        let range = span_to_range(last_position, span, text);
         Self {
             kind,
             text: text.to_string(),
-            range: span_to_range(last_position, text),
+            range,
         }
     }
 }

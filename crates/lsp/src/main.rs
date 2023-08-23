@@ -96,6 +96,9 @@ impl LanguageServer for Backend {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
+        let url = params.text_document_position_params.text_document.uri;
+        let ast = self.parse_map.get(&url.to_string()).unwrap();
+        self.client.log_message(MessageType::INFO, format!("{:?}", ast.clone())).await;
         Ok(None)
     }
 }

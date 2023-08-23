@@ -186,9 +186,7 @@ impl<'a> Parser<'a> {
 
     pub fn eat(&mut self, kind: TokenKind) -> bool {
         if self.at(kind) {
-            let text = self.lexer.slice();
-            let token = Token::new(kind, text, self.lexer.span(), self.last_position);
-            self.last_position = token.range.end;
+            let token = self.current().clone();
             self.events.push(Event::Token(token));
             self.skip();
             return true;
@@ -242,12 +240,12 @@ mod tests {
     #[test]
     fn test_parser() {
         let source: String = r#"
-            pragma circom 2.0.1;
-            include "another_template"; 
-            function hello() {
-                a <== a + b;
-            }
-        "#
+pragma circom 2.0.1;
+include "another_template"; 
+function hello() {
+    a <== a + b;
+}
+"#
         .to_string();
             
         let cst = Parser::parse_source(&source);
