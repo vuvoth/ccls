@@ -1,4 +1,4 @@
-use std::{cell::Cell, ops::Range};
+use std::cell::Cell;
 
 use logos::Lexer;
 use lsp_types::Position;
@@ -24,6 +24,10 @@ pub struct Parser<'a> {
 pub enum Marker {
     Open(usize),
     Close(usize),
+}
+
+pub enum ParserError {
+    InvalidEvents,
 }
 
 impl<'a> Parser<'a> {
@@ -63,7 +67,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn advance(&mut self) {
-        assert!(!self.eof());
+        // assert!(!self.eof());
         self.fuel.set(256);
         let token = Event::Token(self.current());
         self.events.push(token);
@@ -80,23 +84,29 @@ impl<'a> Parser<'a> {
     pub fn advance_with_error(&mut self, error: &str) {
         let m = self.open();
         // TODO: Error reporting.
-        eprintln!("{error}");
+        println!("{error}");
         if !self.eof() {
             self.advance();
         } else {
             self.events.push(Event::Token(Token {
                 kind: TokenKind::EOF,
                 text: "".to_string(),
-                range: lsp_types::Range { start: self.last_position, end: self.last_position }
+                range: lsp_types::Range {
+                    start: self.last_position,
+                    end: self.last_position,
+                },
             }))
         }
         self.close(m, TokenKind::Error);
     }
 
-    pub fn build_tree(self) -> Tree {
+    pub fn build_tree(self) -> Result<Tree, ParserError> {
         let mut events = self.events;
         let mut stack = Vec::new();
-        assert!(matches!(events.pop(), Some(Event::Close)));
+
+        if !matches!(events.pop(), Some(Event::Close)) {
+            return Err(ParserError::InvalidEvents);
+        }
 
         for event in events {
             match event {
@@ -117,8 +127,10 @@ impl<'a> Parser<'a> {
         }
 
         let tree = stack.pop().unwrap();
-        assert!(stack.is_empty());
-        tree
+        if !stack.is_empty() {
+            return Err(ParserError::InvalidEvents);
+        }
+        Ok(tree)
     }
 }
 
@@ -130,7 +142,7 @@ impl<'a> Parser<'a> {
             current_token: Token {
                 kind: TokenKind::EOF,
                 text: "".to_string(),
-                range: lsp_types::Range::default()
+                range: lsp_types::Range::default(),
             },
             last_position: Position::new(0, 0),
             bootstrap: false,
@@ -147,7 +159,12 @@ impl<'a> Parser<'a> {
         self.bootstrap = true;
 
         let mut kind = self.lexer.next().unwrap_or(TokenKind::EOF);
-        self.current_token = Token::new(kind, self.lexer.slice(), self.lexer.span(), self.last_position);
+        self.current_token = Token::new(
+            kind,
+            self.lexer.slice(),
+            self.lexer.span(),
+            self.last_position,
+        );
         self.last_position = self.current_token.range.end;
 
         while self.current().kind.is_travial() {
@@ -156,9 +173,13 @@ impl<'a> Parser<'a> {
             // skip travial token
             self.advance_with_token(self.current_token.clone());
             self.close(m, TokenKind::WhiteSpace);
-            self.current_token = Token::new(kind, self.lexer.slice(), self.lexer.span(), self.last_position);
+            self.current_token = Token::new(
+                kind,
+                self.lexer.slice(),
+                self.lexer.span(),
+                self.last_position,
+            );
             self.last_position = self.current_token.range.end;
-
         }
         self.current_token.kind
     }
@@ -181,10 +202,13 @@ impl<'a> Parser<'a> {
         if self.at_any(kinds) {
             self.skip();
         }
-        eprintln!("expected skip {kinds:?}");
+        println!("expected skip {kinds:?}");
     }
 
     pub fn eat(&mut self, kind: TokenKind) -> bool {
+        if self.bootstrap == false {
+            self.next();
+        }
         if self.at(kind) {
             let token = self.current().clone();
             self.events.push(Event::Token(token));
@@ -200,13 +224,13 @@ impl<'a> Parser<'a> {
             self.eat(kind);
             return;
         }
-        eprintln!("expected in any {kinds:?}");
+        println!("expected in any {kinds:?}");
     }
     pub fn expect(&mut self, kind: TokenKind) {
         if self.eat(kind) {
             return;
         }
-        eprintln!("expected {kind:?}");
+        println!("expected {kind:?}");
     }
 
     pub fn eof(&mut self) -> bool {
@@ -226,8 +250,8 @@ impl Parser<'_> {
         self.close(m, TokenKind::Circom);
     }
 
-    pub fn parse_source(source: &str) -> Tree{
-        let mut p = Parser::new(source);        
+    pub fn parse_source(source: &str) -> Result<Tree, ParserError> {
+        let mut p = Parser::new(source);
         p.parse(Scope::CircomProgram);
         p.build_tree()
     }
@@ -247,10 +271,23 @@ function hello() {
 }
 "#
         .to_string();
-            
+
         let cst = Parser::parse_source(&source);
 
+        println!("{:?}", cst.ok().unwrap());
+    }
 
-        println!("{:?}", cst);
+    #[test]
+    fn other_parser_test() {
+        let source: String = 
+r#"int fx = 12000;
+        x == 1; 
+        m
+"#
+        .to_string();
+
+        let cst = Parser::parse_source(&source);
+
+        println!("{:?}", cst.ok().unwrap());
     }
 }

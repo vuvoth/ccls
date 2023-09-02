@@ -1,4 +1,5 @@
 use std::fmt::format;
+use std::sync::Arc;
 
 use dashmap::DashMap;
 use log::debug;
@@ -32,9 +33,9 @@ struct Backend {
 }
 
 #[derive(Debug, Clone)]
-struct TextDocumentItem {
+struct TextDocumentItem<'a> {
     uri: Url,
-    text: String,
+    text: &'a str,
     version: i32,
 }
 
@@ -44,6 +45,7 @@ impl LanguageServer for Backend {
         self.client
             .log_message(MessageType::INFO, "initializing!")
             .await;
+
         Ok(InitializeResult {
             server_info: None,
             offset_encoding: None,
@@ -51,7 +53,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
-                definition_provider: Some(OneOf::Left(true)),
+                // definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -76,11 +78,10 @@ impl LanguageServer for Backend {
             &TextDocumentItem {
                 uri: params.text_document.uri,
                 version: params.text_document.version,
-                text: params.text_document.text.clone(),
+                text: &params.text_document.text,
             },
-            params.text_document.text.clone(),
         )
-        .await
+        .await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
@@ -98,17 +99,17 @@ impl LanguageServer for Backend {
     ) -> Result<Option<GotoDefinitionResponse>> {
         let url = params.text_document_position_params.text_document.uri;
         let ast = self.parse_map.get(&url.to_string()).unwrap();
-        self.client.log_message(MessageType::INFO, format!("{:?}", ast.clone())).await;
+        self.client
+            .log_message(MessageType::INFO, format!("{:?}", ast.clone()))
+            .await;
         Ok(None)
     }
 }
 
 impl Backend {
-    async fn on_change(&self, text_document: &TextDocumentItem, text: String) {
-        let mut parser = Parser::new(&text);
-        parser.parse(Scope::CircomProgram);
-        let cst = parser.build_tree();
-        self.parse_map.insert(text_document.uri.to_string(), cst);
+    async fn on_change(&self, text_document: &TextDocumentItem<'_>) { 
+        let cst = Parser::parse_source(&text_document.text);
+        // self.parse_map.insert(text_document.uri.to_string(), cst);
     }
 }
 

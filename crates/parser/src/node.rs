@@ -37,8 +37,6 @@ pub struct Token {
 }
 
 fn span_to_range(last_position: Position, span: logos::Span, text: &str) -> Range {
-    println!("{:?}", span);
-    println!("{:?}", last_position);
     let mut start = last_position;
     let mut end = last_position;
     let endline = '\n';
@@ -77,7 +75,6 @@ fn span_to_range(last_position: Position, span: logos::Span, text: &str) -> Rang
             first_char = false;
         }
     }
-    println!("{:?} {:?}", start, end);
     Range::new(start, end)
 }
 
@@ -132,7 +129,7 @@ impl Tree {
                 Child::Tree(tree) => tree.print(buf, level + 1),
             }
         }
-        assert!(buf.ends_with('\n'));
+        // assert!(buf.ends_with('\n'));
     }
 }
 

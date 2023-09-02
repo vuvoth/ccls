@@ -144,7 +144,7 @@ mod tests {
         let mut parser = Parser::new(source);
 
         statement(&mut parser);
-        let cst = parser.build_tree();
+        let cst = parser.build_tree().ok().unwrap();
 
         println!("{:?}", cst);
     }

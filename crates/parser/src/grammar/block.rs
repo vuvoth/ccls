@@ -56,7 +56,7 @@ mod tests {
 
         parser.parse(Scope::Block);
 
-        let cst = parser.build_tree();
+        let cst = parser.build_tree().ok().unwrap();
 
         println!("{:?}", cst);
     }
