@@ -39,9 +39,9 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Circom-Lsp",
+      "title": "circom-lsp",
       "properties": {
-        "lspCircom.trace.server": {
+        "circom-lsp.trace.server": {
           "scope": "window",
           "type": "string",
           "enum": [

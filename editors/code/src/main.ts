@@ -31,7 +31,7 @@ export async function activate(context: ExtensionContext) {
   // Create the language client and start the client.
   client = new LanguageClient(
     "circom-lsp",
-    "Circom-LSP",
+    "circom-lsp",
     serverOptions,
     clientOptions
   );

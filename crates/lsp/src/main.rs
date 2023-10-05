@@ -41,7 +41,10 @@ struct TextDocumentItem<'a> {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
+        self.client
+            .log_message(MessageType::INFO, format!("WE init {:?}", params))
+            .await;
         self.client
             .log_message(MessageType::INFO, "initializing!")
             .await;
@@ -74,23 +77,24 @@ impl LanguageServer for Backend {
         self.client
             .log_message(MessageType::INFO, format!("{:?}", params))
             .await;
-        self.on_change(
-            &TextDocumentItem {
-                uri: params.text_document.uri,
-                version: params.text_document.version,
-                text: &params.text_document.text,
-            },
-        )
+        self.on_change(&TextDocumentItem {
+            uri: params.text_document.uri,
+            version: params.text_document.version,
+            text: &params.text_document.text,
+        })
         .await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, "This is info")
+            .log_message(MessageType::INFO, "This is info change")
             .await;
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", params))
-            .await;
+        self.on_change(&TextDocumentItem {
+            uri: params.text_document.uri,
+            version: params.text_document.version,
+            text: &params.content_changes[0].text,
+        })
+        .await;
     }
 
     async fn goto_definition(
@@ -107,9 +111,22 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    async fn on_change(&self, text_document: &TextDocumentItem<'_>) { 
-        let cst = Parser::parse_source(&text_document.text);
-        // self.parse_map.insert(text_document.uri.to_string(), cst);
+    async fn on_change(&self, text_document: &TextDocumentItem<'_>) {
+        let cst_result = Parser::parse_source(&text_document.text);
+
+        match cst_result {
+            Ok(cst) => {
+                self.client
+                    .log_message(MessageType::INFO, format!("{:?}", cst))
+                    .await;
+                self.parse_map.insert(text_document.uri.to_string(), cst);
+            }
+            _ => {
+                self.client
+                    .log_message(MessageType::INFO, "Somthing wrong")
+                    .await;
+            }
+        }
     }
 }
 
