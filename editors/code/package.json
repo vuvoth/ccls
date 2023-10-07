@@ -39,15 +39,9 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Circom-Lsp",
+      "title": "circom-lsp",
       "properties": {
-        "languageServerExample.maxNumberOfProblems": {
-          "scope": "resource",
-          "type": "number",
-          "default": 100,
-          "description": "Controls the maximum number of problems produced by the server."
-        },
-        "languageServerExample.trace.server": {
+        "circom-lsp.trace.server": {
           "scope": "window",
           "type": "string",
           "enum": [
@@ -55,7 +49,7 @@
             "messages",
             "verbose"
           ],
-          "default": "verbose",
+          "default": "messages",
           "description": "Traces the communication between VS Code and the language server."
         }
       }

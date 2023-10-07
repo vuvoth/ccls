@@ -168,7 +168,7 @@ mod tests {
         parser.next();
         circom_expression(&mut parser);
         parser.close(m, CircomProgram);
-        let cst = parser.build_tree();
+        let cst = parser.build_tree().ok().unwrap();
 
         println!("{:?}", cst);
     }

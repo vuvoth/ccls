@@ -5,7 +5,7 @@ use crate::grammar::*;
  *
  */
 pub fn template(p: &mut Parser) {
-    assert!(p.at(TemplateKw));
+    // assert!(p.at(TemplateKw));
     let m = p.open();
     p.expect(TemplateKw);
     p.expect(Identifier);

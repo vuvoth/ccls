@@ -1,4 +1,5 @@
 use std::fmt::format;
+use std::sync::Arc;
 
 use dashmap::DashMap;
 use log::debug;
@@ -9,10 +10,11 @@ use parser::token_kind::TokenKind;
 use parser::Lexer;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
+use tower_lsp::lsp_types::request::GotoDefinition;
 use tower_lsp::lsp_types::{
     CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    HoverProviderCapability, InitializedParams, OneOf, TextDocumentSyncCapability,
-    TextDocumentSyncKind, Url,
+    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
+    OneOf, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::LspService;
 use tower_lsp::{
@@ -20,7 +22,7 @@ use tower_lsp::{
     Client, LanguageServer, Server,
 };
 
-use vfs::{FilePath, VirtualFile};
+mod jump_to_definition;
 
 #[derive(Debug)]
 struct Backend {
@@ -29,18 +31,21 @@ struct Backend {
 }
 
 #[derive(Debug, Clone)]
-struct TextDocumentItem {
+struct TextDocumentItem<'a> {
     uri: Url,
-    text: String,
-    version: i32,
+    text: &'a str,
 }
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
+        self.client
+            .log_message(MessageType::INFO, format!("WE init {:?}", params))
+            .await;
         self.client
             .log_message(MessageType::INFO, "initializing!")
             .await;
+
         Ok(InitializeResult {
             server_info: None,
             offset_encoding: None,
@@ -48,6 +53,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -68,33 +74,54 @@ impl LanguageServer for Backend {
         self.client
             .log_message(MessageType::INFO, format!("{:?}", params))
             .await;
-        self.on_change(
-            &TextDocumentItem {
-                uri: params.text_document.uri,
-                version: params.text_document.version,
-                text: params.text_document.text.clone(),
-            },
-            params.text_document.text.clone(),
-        )
-        .await
+        self.on_change(&TextDocumentItem {
+            uri: params.text_document.uri,
+            text: &params.text_document.text,
+        })
+        .await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, "This is info")
+            .log_message(MessageType::INFO, "This is info change")
             .await;
+        self.on_change(&TextDocumentItem {
+            uri: params.text_document.uri,
+            text: &params.content_changes[0].text,
+        })
+        .await;
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let url = params.text_document_position_params.text_document.uri;
+        let ast = self.parse_map.get(&url.to_string()).unwrap();
         self.client
-            .log_message(MessageType::INFO, format!("{:?}", params))
+            .log_message(MessageType::INFO, format!("{:?}", ast.clone()))
             .await;
+        Ok(None)
     }
 }
 
 impl Backend {
-    async fn on_change(&self, text_document: &TextDocumentItem, text: String) {
-        let mut parser = Parser::new(&text);
-        parser.parse(Scope::CircomProgram);
-        let cst = parser.build_tree();
-        self.parse_map.insert(text_document.uri.to_string(), cst);
+    async fn on_change(&self, text_document: &TextDocumentItem<'_>) {
+        let cst_result = Parser::parse_source(&text_document.text);
+
+        match cst_result {
+            Ok(cst) => {
+                self.client
+                    .log_message(MessageType::INFO, format!("{:?}", cst))
+                    .await;
+                self.parse_map.insert(text_document.uri.to_string(), cst);
+            }
+            _ => {
+                self.client
+                    .log_message(MessageType::INFO, "Somthing wrong")
+                    .await;
+            }
+        }
     }
 }
 

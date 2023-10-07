@@ -16,7 +16,7 @@
         "request": "launch",
         "runtimeExecutable": "${execPath}",
         "args": [
-          // "--user-data-dir=${workspaceFolder}/target/code",
+          "--user-data-dir=${workspaceFolder}/target/code",
           "--disable-extensions",
           "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
         ],
@@ -36,6 +36,7 @@
         "runtimeExecutable": "${execPath}",
         "args": [
           "--disable-extensions",
+          "--user-data-dir=${workspaceFolder}/target/code",
           "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
         ],
         "outFiles": [
@@ -58,7 +59,6 @@
         "args": [
           "--disable-extensions",
           "--extensionDevelopmentPath=${workspaceFolder}/editors/code",
-          "${code --list-extensions | grep -v 'iden3.circom' | xargs -I % echo '--disable-extension %'}"
         ],
         "outFiles": [
           "${workspaceFolder}/editors/code/out/**/*.js"
@@ -104,7 +104,7 @@
         "name": "Attach To Server",
         "type": "lldb",
         "request": "attach",
-        "program": "${workspaceFolder}/target/debug/rust-analyzer",
+        "program": "${workspaceFolder}/target/debug/circom-lsp",
         "pid": "${command:pickMyProcess}",
         "sourceLanguages": [
           "rust"
