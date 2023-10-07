@@ -2,5 +2,10 @@ pragma circom 2.0.1;
 
 template Adder() {
     signal input x;
-    var x = 12;
+    x <= 100;
+    add();
+}
+
+
+function add() {
 }

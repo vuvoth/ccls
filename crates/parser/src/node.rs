@@ -1,33 +1,44 @@
 use std::fmt;
 
-use logos::Logos;
 use lsp_types::{Position, Range};
 
 use crate::token_kind::TokenKind;
 
 #[derive(Clone)]
 pub struct Tree {
-    pub(crate) kind: TokenKind,
-    pub(crate) children: Vec<Child>,
+    pub kind: TokenKind,
+    pub children: Vec<Child>,
 }
 
-// #[derive(Debug, Clone, Copy)]
-// pub struct TokenRange {
-//     pub start: u32,
-//     pub end: u32,
-// }
+impl Tree {
+    pub fn get_range(self) -> Range{
+        let mut right = Position {line: 0, character: 0};
+        let mut left = Position {line: 10000000, character: 100000}; 
+        for child in self.children {
+            match  child{
+                Child::Token(token) => {
+                    if equal_or_greater(left, token.range.start) {
+                        left = token.range.start;
+                    }
+                    if equal_or_greater(token.range.end, right) {
+                        right = token.range.end
+                    }
+                },
+                Child::Tree(tree) => {
+                    let sub_range = tree.get_range();
+                    if equal_or_greater(left, sub_range.start) {
+                        left = sub_range.start;
+                    }
+                    if equal_or_greater(sub_range.end, right) {
+                        right = sub_range.end;
+                    } 
+                }
+            }
+        }
 
-// impl TokenRange {
-//     pub fn new(start: u32, end: u32) -> Self {
-//         Self { start, end }
-//     }
-// }
-
-// impl From<Range<usize>> for TokenRange {
-//     fn from(value: Range<usize>) -> Self {
-//         TokenRange { start: value.start, end: value.end}
-//     }
-// }
+        return Range{start: left, end: right};
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -78,6 +89,13 @@ fn span_to_range(last_position: Position, span: logos::Span, text: &str) -> Rang
     Range::new(start, end)
 }
 
+fn equal_or_greater(l: Position, r: Position) -> bool {
+    if l.line == r.line {
+        return l.character >= r.character;
+    }
+    return  l.line > r.line;
+}
+
 impl Token {
     pub fn new(kind: TokenKind, text: &str, span: logos::Span, last_position: Position) -> Self {
         let range = span_to_range(last_position, span, text);
@@ -87,6 +105,11 @@ impl Token {
             range,
         }
     }
+
+    pub fn is_wrap(self, pos: Position) -> bool {
+        let ran = self.range;
+        return equal_or_greater(pos, ran.start) && equal_or_greater(ran.end, pos);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -94,6 +117,8 @@ pub enum Child {
     Token(Token),
     Tree(Tree),
 }
+
+
 
 #[macro_export]
 macro_rules! format_to {
@@ -140,3 +165,4 @@ impl fmt::Debug for Tree {
         write!(f, "{}", buf)
     }
 }
+

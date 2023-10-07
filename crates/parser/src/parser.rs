@@ -234,13 +234,13 @@ impl<'a> Parser<'a> {
     pub fn expect_any(&mut self, kinds: &[TokenKind]) {
         let kind = self.current().kind;
         if kinds.contains(&kind) {
-            self.eat(kind);
+            self.advance();
             return;
         }
     }
     pub fn expect(&mut self, kind: TokenKind) {
-        if self.eat(kind) {
-            return;
+        if self.at(kind) {
+            self.advance();
         }
     }
 
@@ -265,10 +265,6 @@ impl Parser<'_> {
         let mut p = Parser::new(source);
         p.parse(Scope::CircomProgram);
         p.build_tree()
-        // Ok(Tree {
-        //     kind: TokenKind::Circom,
-        //     children: Vec::new(),
-        // })
     }
 }
 
@@ -300,14 +296,26 @@ mod tests {
 
     #[test]
     fn other_parser_test() {
-        let source: String = r#"int fx = 12000;
-        x == 1; 
-        m
-"#
+        let source: String = r#"
+        pragma circom 2.0.1;
+
+        template Adder() {
+            signal input x;
+            x <= 100;
+            add();
+        }
+
+
+        function add() {
+        }
+        "#
         .to_string();
 
         let cst = Parser::parse_source(&source);
 
-        println!("{:?}", cst.ok().unwrap());
+        let tree = cst.unwrap();
+        println!("{:?}", tree);
+        println!("{:?}", tree.get_range());
+
     }
 }

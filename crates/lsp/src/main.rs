@@ -24,8 +24,6 @@ use tower_lsp::{
 
 mod jump_to_definition;
 
-use vfs::{FilePath, VirtualFile};
-
 #[derive(Debug)]
 struct Backend {
     client: Client,
@@ -36,7 +34,6 @@ struct Backend {
 struct TextDocumentItem<'a> {
     uri: Url,
     text: &'a str,
-    version: i32,
 }
 
 #[tower_lsp::async_trait]
@@ -56,7 +53,7 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
-                // definition_provider: Some(OneOf::Left(true)),
+                definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -79,7 +76,6 @@ impl LanguageServer for Backend {
             .await;
         self.on_change(&TextDocumentItem {
             uri: params.text_document.uri,
-            version: params.text_document.version,
             text: &params.text_document.text,
         })
         .await;
@@ -91,7 +87,6 @@ impl LanguageServer for Backend {
             .await;
         self.on_change(&TextDocumentItem {
             uri: params.text_document.uri,
-            version: params.text_document.version,
             text: &params.content_changes[0].text,
         })
         .await;

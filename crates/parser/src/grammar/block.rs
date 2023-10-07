@@ -29,9 +29,8 @@ pub fn block(p: &mut Parser) {
 
 #[cfg(test)]
 mod tests {
-    use logos::Lexer;
 
-    use crate::{grammar::entry::Scope, token_kind::TokenKind};
+    use crate::grammar::entry::Scope;
 
     use super::*;
     #[test]
