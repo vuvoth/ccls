@@ -22,7 +22,7 @@ use tower_lsp::{
     Client, LanguageServer, Server,
 };
 
-mod jump_to_definition;
+mod handler;
 
 #[derive(Debug)]
 struct Backend {

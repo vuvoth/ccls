@@ -136,7 +136,7 @@ impl Tree {
                 Child::Token(token) => {
                     if token.kind.is_travial() {
                         match token.kind {
-                            TokenKind::WhiteSpace => {
+                            TokenKind::WhiteSpace | TokenKind::EndLine => {
                                 format_to!(
                                     buf,
                                     "{indent} WhileSpace'{}'\n",
