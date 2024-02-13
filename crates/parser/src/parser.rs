@@ -185,6 +185,7 @@ impl<'a> Parser<'a> {
             kind = self.lexer.next().unwrap_or(TokenKind::EOF);
             let m = self.open();
             // skip travial token
+            let curr_kind = self.current_token.kind;
             self.advance_with_token(self.current_token.clone());
             self.close(m, TokenKind::WhiteSpace);
             self.current_token = Token::new(

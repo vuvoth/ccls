@@ -68,7 +68,7 @@
           "<node_internals>/**/*.js"
         ],
         "env": {
-          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/rust-analyzer"
+          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/circom-lsp"
         }
       },
       {
@@ -79,7 +79,7 @@
         "request": "launch",
         "runtimeExecutable": "${execPath}",
         "args": [
-          "--disable-extension", "rust-lang.rust-analyzer",
+          "--disable-extension", "circom.circom-plus",
           "--extensionDevelopmentPath=${workspaceFolder}/editors/code"
         ],
         "outFiles": [

@@ -5,8 +5,10 @@ pub enum TokenKind {
     #[regex(r"//[^\n]*", logos::skip)]
     #[error]
     Error = 0,
-    #[regex("[\n \t]+")]
+    #[regex("[ \t]+")]
     WhiteSpace,
+    #[regex("[\n]")]
+    EndLine,
     #[token("pragma")]
     Pragma,
     #[token("circom")]
@@ -199,7 +201,7 @@ impl TokenKind {
     }
     pub fn is_travial(self) -> bool {
         match self {
-            Self::WhiteSpace => true,
+            Self::WhiteSpace | Self::EndLine => true,
             _ => false,
         }
     }

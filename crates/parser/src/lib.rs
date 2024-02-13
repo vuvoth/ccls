@@ -1,4 +1,4 @@
-mod event;
+pub mod event;
 pub mod node;
 pub mod parser;
 pub mod token_kind;

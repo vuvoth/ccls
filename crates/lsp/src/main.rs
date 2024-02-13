@@ -1,13 +1,10 @@
 use std::fmt::format;
 use std::sync::Arc;
 
+use ::parser::node::Tree;
+use ::parser::parser::Parser;
 use dashmap::DashMap;
-use log::debug;
-use parser::grammar::entry::Scope;
-use parser::node::Tree;
-use parser::parser::Parser;
-use parser::token_kind::TokenKind;
-use parser::Lexer;
+use parser::parser;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
 use tower_lsp::lsp_types::request::GotoDefinition;
@@ -60,16 +57,14 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: InitializedParams) {
-        debug!("initialized");
         self.client
-            .log_message(MessageType::INFO, "initialized!")
+            .log_message(MessageType::INFO, "server initialized!")
             .await;
     }
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
-
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.client
             .log_message(MessageType::INFO, format!("{:?}", params))
@@ -102,18 +97,21 @@ impl LanguageServer for Backend {
             .get(&position.text_document.uri.to_string())
             .unwrap();
         self.client
-            .log_message(MessageType::INFO, format!("This is Position {:?}", position.position))
+            .log_message(
+                MessageType::INFO,
+                format!("This is Position {:?}", position.position),
+            )
             .await;
         let pos = Position {
             line: position.position.line + 1,
-            character: position.position.character
+            character: position.position.character,
         };
 
         let token = ast.clone().lookup_element_by_range(pos);
-        let ranges = ast.clone().lookup_definition(token.unwrap());
-        
+        // let ranges = ast.clone().lookup_definition(token.unwrap());
+
         self.client
-            .log_message(MessageType::INFO, format!("This is token {:?}", ranges))
+            .log_message(MessageType::INFO, format!("This is token {:?}", token.clone().unwrap()))
             .await;
         Ok(None)
     }
@@ -138,20 +136,12 @@ impl Backend {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
-
-    debug!("starting up");
-
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, socket) = LspService::build(|client| Backend {
+    let (service, socket) = LspService::new(|client| Backend {
         client,
         parse_map: DashMap::new(),
-    })
-    .finish();
-
-    debug!("built service and created backend");
-
+    });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
