@@ -270,6 +270,8 @@ impl Parser<'_> {
 
 #[cfg(test)]
 mod tests {
+    use lsp_types::Position;
+
     use super::Parser;
 
     #[test]
@@ -296,26 +298,38 @@ mod tests {
 
     #[test]
     fn other_parser_test() {
-        let source: String = r#"
-        pragma circom 2.0.1;
+        let source: String = 
+r#"pragma circom 2.0.0;
 
-        template Adder() {
-            signal input x;
-            x <= 100;
-            add();
-        }
+template X() {
+   component x = Multiplier2()
+}
+
+template Multiplier2 () {  
+
+   // Declaration of signals.  
+   signal input a;  
+   signal input b;  
+   signal output c;  
 
 
-        function add() {
-        }
+   signal output d;
+   // Constraints.  
+   c <== a * b;  
+}
         "#
         .to_string();
 
         let cst = Parser::parse_source(&source);
 
         let tree = cst.unwrap();
-        println!("{:?}", tree);
-        println!("{:?}", tree.get_range());
+      
+        let t =  tree.clone().lookup_element_by_range(Position {
+            line: 7, 
+            character: 12
+        });
 
+        let tmp = tree.lookup_definition(t.unwrap());
+        println!("{:?}", tmp);
     }
 }

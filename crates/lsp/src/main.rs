@@ -14,7 +14,7 @@ use tower_lsp::lsp_types::request::GotoDefinition;
 use tower_lsp::lsp_types::{
     CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
     GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
-    OneOf, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::LspService;
 use tower_lsp::{
@@ -96,10 +96,24 @@ impl LanguageServer for Backend {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        let url = params.text_document_position_params.text_document.uri;
-        let ast = self.parse_map.get(&url.to_string()).unwrap();
+        let position = params.text_document_position_params.clone();
+        let ast = self
+            .parse_map
+            .get(&position.text_document.uri.to_string())
+            .unwrap();
         self.client
-            .log_message(MessageType::INFO, format!("{:?}", ast.clone()))
+            .log_message(MessageType::INFO, format!("This is Position {:?}", position.position))
+            .await;
+        let pos = Position {
+            line: position.position.line + 1,
+            character: position.position.character
+        };
+
+        let token = ast.clone().lookup_element_by_range(pos);
+        let ranges = ast.clone().lookup_definition(token.unwrap());
+        
+        self.client
+            .log_message(MessageType::INFO, format!("This is token {:?}", ranges))
             .await;
         Ok(None)
     }
@@ -111,9 +125,6 @@ impl Backend {
 
         match cst_result {
             Ok(cst) => {
-                self.client
-                    .log_message(MessageType::INFO, format!("{:?}", cst))
-                    .await;
                 self.parse_map.insert(text_document.uri.to_string(), cst);
             }
             _ => {
