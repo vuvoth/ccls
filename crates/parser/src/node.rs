@@ -2,7 +2,7 @@ use std::fmt;
 
 use lsp_types::{Position, Range};
 
-use crate::token_kind::TokenKind;
+use crate::token_kind::{self, TokenKind};
 
 #[derive(Clone)]
 pub struct Tree {
@@ -11,11 +11,17 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn get_range(self) -> Range{
-        let mut right = Position {line: 0, character: 0};
-        let mut left = Position {line: 10000000, character: 100000}; 
+    pub fn get_range(self) -> Range {
+        let mut right = Position {
+            line: 0,
+            character: 0,
+        };
+        let mut left = Position {
+            line: 10000000,
+            character: 100000,
+        };
         for child in self.children {
-            match  child{
+            match child {
                 Child::Token(token) => {
                     if equal_or_greater(left, token.range.start) {
                         left = token.range.start;
@@ -23,7 +29,7 @@ impl Tree {
                     if equal_or_greater(token.range.end, right) {
                         right = token.range.end
                     }
-                },
+                }
                 Child::Tree(tree) => {
                     let sub_range = tree.get_range();
                     if equal_or_greater(left, sub_range.start) {
@@ -31,12 +37,15 @@ impl Tree {
                     }
                     if equal_or_greater(sub_range.end, right) {
                         right = sub_range.end;
-                    } 
+                    }
                 }
             }
         }
 
-        return Range{start: left, end: right};
+        Range {
+            start: left,
+            end: right,
+        }
     }
 }
 
@@ -93,7 +102,7 @@ fn equal_or_greater(l: Position, r: Position) -> bool {
     if l.line == r.line {
         return l.character >= r.character;
     }
-    return  l.line > r.line;
+    l.line > r.line
 }
 
 impl Token {
@@ -108,7 +117,7 @@ impl Token {
 
     pub fn is_wrap(self, pos: Position) -> bool {
         let ran = self.range;
-        return equal_or_greater(pos, ran.start) && equal_or_greater(ran.end, pos);
+        equal_or_greater(pos, ran.start) && equal_or_greater(ran.end, pos)
     }
 }
 
@@ -118,7 +127,47 @@ pub enum Child {
     Tree(Tree),
 }
 
+impl Tree {
+    pub fn lookup_element_by_range(self, position: Position) -> Option<Token> {
+        for child in self.children {
+            match child {
+                Child::Token(token) => {
+                    if token.clone().is_wrap(position) {
+                        return Some(token);
+                    }
+                }
+                Child::Tree(tree) => {
+                    let range = tree.clone().get_range();
+                    if equal_or_greater(position, range.start)
+                        && equal_or_greater(range.end, position)
+                    {
+                        return tree.lookup_element_by_range(position);
+                    }
+                }
+            }
+        }
+        None
+    }
 
+    pub fn lookup_definition(self, token: Token) -> Vec<Range> {
+        let mut ranges = Vec::<Range>::new();
+        if matches!(self.kind, TokenKind::TemplateKw) {
+            ranges.push(self.clone().get_range());
+        }
+        if matches!(token.kind, TokenKind::Identifier) {
+            for child in self.children {
+                match child {
+                    Child::Tree(tree) => {
+                       let tmp = tree.lookup_definition(token.clone());
+                        ranges.extend(tmp.iter());
+                    }
+                    _ => {}
+                }
+            }
+        } 
+        ranges
+    }
+}
 
 #[macro_export]
 macro_rules! format_to {
