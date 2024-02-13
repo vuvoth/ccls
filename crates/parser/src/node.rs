@@ -151,15 +151,15 @@ impl Tree {
 
     pub fn lookup_definition(self, token: Token) -> Vec<Range> {
         let mut ranges = Vec::<Range>::new();
-        println!("{:?}", token.kind);
+        if matches!(self.kind, TokenKind::TemplateKw) {
+            ranges.push(self.clone().get_range());
+        }
         if matches!(token.kind, TokenKind::Identifier) {
             for child in self.children {
                 match child {
                     Child::Tree(tree) => {
-                        println!("{:?}", tree.kind);
-                        if matches!(tree.kind, TokenKind::TemplateKw){
-                            ranges.push(tree.get_range());
-                        }
+                       let tmp = tree.lookup_definition(token.clone());
+                        ranges.extend(tmp.iter());
                     }
                     _ => {}
                 }

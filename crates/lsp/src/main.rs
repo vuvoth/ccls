@@ -9,9 +9,7 @@ use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
 use tower_lsp::lsp_types::request::GotoDefinition;
 use tower_lsp::lsp_types::{
-    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
-    OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams, Location, OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url
 };
 use tower_lsp::LspService;
 use tower_lsp::{
@@ -19,7 +17,6 @@ use tower_lsp::{
     Client, LanguageServer, Server,
 };
 
-mod jump_to_definition;
 
 #[derive(Debug)]
 struct Backend {
@@ -108,12 +105,16 @@ impl LanguageServer for Backend {
         };
 
         let token = ast.clone().lookup_element_by_range(pos);
-        // let ranges = ast.clone().lookup_definition(token.unwrap());
+        let ranges = ast.clone().lookup_definition(token.unwrap());
 
-        self.client
-            .log_message(MessageType::INFO, format!("This is token {:?}", token.clone().unwrap()))
-            .await;
-        Ok(None)
+        let result = ranges.iter().map(move |range| {
+            Location {
+                uri: position.text_document.uri.clone(),
+                range: *range
+            }
+        }).collect();
+
+        Ok(Some(GotoDefinitionResponse::Array(result)))
     }
 }
 
