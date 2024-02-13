@@ -102,6 +102,7 @@ impl<'a> Parser<'a> {
         self.close(m, TokenKind::Error);
     }
 
+    // build_tree should use rowan tree builder
     pub fn build_tree(self) -> Result<Tree, ParserError> {
         let mut events = self.events;
         let mut stack = Vec::new();

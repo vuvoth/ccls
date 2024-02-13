@@ -1,51 +1,19 @@
-use std::fmt::format;
-use std::sync::Arc;
-
 use dashmap::DashMap;
-use log::debug;
-use parser::grammar::entry::Scope;
-use parser::node::Tree;
-use parser::parser::Parser;
-use parser::token_kind::TokenKind;
-use parser::Lexer;
+use parser::parser;
 use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::notification::DidChangeTextDocument;
-use tower_lsp::lsp_types::request::GotoDefinition;
-use tower_lsp::lsp_types::{
-    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
-    OneOf, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
-};
-use tower_lsp::LspService;
-use tower_lsp::{
-    lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
-    Client, LanguageServer, Server,
-};
-
-mod handler;
+use tower_lsp::lsp_types::*;
+use tower_lsp::{Client, LanguageServer, LspService, Server};
+use parser::node::Tree;
 
 #[derive(Debug)]
 struct Backend {
     client: Client,
-    parse_map: DashMap<String, Tree>,
-}
-
-#[derive(Debug, Clone)]
-struct TextDocumentItem<'a> {
-    uri: Url,
-    text: &'a str,
+    ast_map: DashMap<String, Tree>
 }
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
-        self.client
-            .log_message(MessageType::INFO, format!("WE init {:?}", params))
-            .await;
-        self.client
-            .log_message(MessageType::INFO, "initializing!")
-            .await;
-
+    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             server_info: None,
             offset_encoding: None,
@@ -60,87 +28,49 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: InitializedParams) {
-        debug!("initialized");
         self.client
-            .log_message(MessageType::INFO, "initialized!")
+            .log_message(MessageType::INFO, "server initialized!")
             .await;
-    }
-
-    async fn shutdown(&self) -> Result<()> {
-        Ok(())
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, format!("{:?}", params))
+            .log_message(MessageType::INFO, "file opened!")
             .await;
-        self.on_change(&TextDocumentItem {
-            uri: params.text_document.uri,
-            text: &params.text_document.text,
-        })
-        .await;
-    }
-
-    async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, "This is info change")
-            .await;
-        self.on_change(&TextDocumentItem {
-            uri: params.text_document.uri,
-            text: &params.content_changes[0].text,
-        })
-        .await;
     }
 
     async fn goto_definition(
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        let url = params.text_document_position_params.text_document.uri;
-        let ast = self.parse_map.get(&url.to_string()).unwrap();
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", ast.clone()))
-            .await;
+
+        
         Ok(None)
+    }
+
+    async fn shutdown(&self) -> Result<()> {
+        Ok(())
     }
 }
 
-impl Backend {
-    async fn on_change(&self, text_document: &TextDocumentItem<'_>) {
-        let cst_result = Parser::parse_source(&text_document.text);
+struct TextDocumentItem {
+    uri: Url,
+    text: String,
+    version: i32,
+}
 
-        match cst_result {
-            Ok(cst) => {
-                self.client
-                    .log_message(MessageType::INFO, format!("{:?}", cst))
-                    .await;
-                self.parse_map.insert(text_document.uri.to_string(), cst);
-            }
-            _ => {
-                self.client
-                    .log_message(MessageType::INFO, "Somthing wrong")
-                    .await;
-            }
-        }
+impl Backend {
+    async fn on_change(&self, text_document: TextDocumentItem) {
+        let tree = parser::Parser::new(&text_document.text);
+        self.ast_map.insert(text_document.uri.to_string(), tree);
     }
 }
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
-
-    debug!("starting up");
-
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, socket) = LspService::build(|client| Backend {
-        client,
-        parse_map: DashMap::new(),
-    })
-    .finish();
-
-    debug!("built service and created backend");
-
+    let (service, socket) = LspService::new(|client| Backend { client });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
