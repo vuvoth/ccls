@@ -73,7 +73,7 @@ pub(super) fn signal_declaration(p: &mut Parser) {
 
 
 pub(super) fn declaration(p: &mut Parser) {
-    match p.current().kind {
+    match p.current() {
         SignalKw => signal_declaration(p),
         VarKw => var_declaration(p),
         _ => unreachable!()

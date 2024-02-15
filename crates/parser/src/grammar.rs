@@ -21,7 +21,7 @@ pub mod entry {
         let m = p.open();
         pragma::pragma(p);
         while !p.eof() {
-            match p.current().kind {
+            match p.current() {
                 TemplateKw => {
                     template::template(p);
                 }

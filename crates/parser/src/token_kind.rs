@@ -1,6 +1,9 @@
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+#[repr(u16)]
 pub enum TokenKind {
     #[regex(r"//[^\n]*", logos::skip)]
     #[error]
@@ -147,6 +150,7 @@ pub enum TokenKind {
     FunctionDef,
     Statement,
     EOF,
+    ROOT
 }
 
 impl TokenKind {

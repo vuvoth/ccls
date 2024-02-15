@@ -8,6 +8,7 @@ version = "0.1.0"
 [dependencies]
 logos = "0.12.0"
 lsp-types = {version = "0.94.1", features = ["proposed"]}
+rowan = "0.15.15"
 
 [profile.dev]
 debug = 2

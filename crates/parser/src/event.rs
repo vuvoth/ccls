@@ -1,8 +1,11 @@
-use crate::{node::Token, token_kind::TokenKind};
+use std::ops::Range;
 
-#[derive(Debug, Clone)]
+use crate::token_kind::TokenKind;
+
+
+#[derive(Debug, Clone, Copy)]
 pub enum Event {
     Open { kind: TokenKind },
     Close,
-    Token(Token),
+    TokenPosition(usize),
 }

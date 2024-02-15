@@ -1,21 +1,19 @@
-use std::cell::Cell;
+use std::{cell::Cell, usize::MAX};
 
-use logos::Lexer;
-use lsp_types::Position;
+use rowan::GreenNode;
 
 use crate::{
-    event::Event,
+    event::{self, Event},
     grammar::entry::Scope,
-    node::{Child, Token, Tree},
+    input::Input,
+    node::{Child, Tree},
+    syntax::{covert_to_tree_format, CircomParser},
     token_kind::TokenKind,
 };
 
 pub struct Parser<'a> {
-    lexer: Lexer<'a, TokenKind>,
+    pub(crate) input: &'a Input<'a>,
     pos: usize,
-    bootstrap: bool,
-    last_position: Position,
-    current_token: Token,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
 }
@@ -70,16 +68,16 @@ impl<'a> Parser<'a> {
     pub fn advance(&mut self) {
         // assert!(!self.eof());
         self.fuel.set(256);
-        let token = Event::Token(self.current());
+        let token = Event::TokenPosition(self.pos);
         self.events.push(token);
         self.skip();
     }
 
-    pub fn advance_with_token(&mut self, token: Token) {
+    pub fn advance_with_token(&mut self, index: usize) {
         // assert!(token.kind != TokenKind::EOF);
-        if token.kind != TokenKind::EOF {
+        if self.input.kind_of(index) != TokenKind::EOF {
             self.fuel.set(256);
-            let token = Event::Token(token);
+            let token = Event::TokenPosition(index);
             self.events.push(token);
         }
     }
@@ -90,123 +88,48 @@ impl<'a> Parser<'a> {
         if !self.eof() {
             self.advance();
         } else {
-            self.events.push(Event::Token(Token {
-                kind: TokenKind::EOF,
-                text: "".to_string(),
-                range: lsp_types::Range {
-                    start: self.last_position,
-                    end: self.last_position,
-                },
-            }))
+            // TODO: make this logic more sense
+            self.events.push(Event::TokenPosition(MAX))
         }
         self.close(m, TokenKind::Error);
-    }
-
-    pub fn build_tree(self) -> Result<Tree, ParserError> {
-        let mut events = self.events;
-        let mut stack = Vec::new();
-
-        if !matches!(events.pop(), Some(Event::Close)) {
-            return Err(ParserError::InvalidEvents);
-        }
-
-        for event in events {
-            match event {
-                Event::Open { kind } => {
-                    stack.push(Tree {
-                        kind,
-                        children: Vec::new(),
-                    });
-                }
-                Event::Close => {
-                    let tree = stack.pop().unwrap();
-                    if stack.last_mut().is_none() {
-                        return Err(ParserError::InvalidEvents);
-                    } else {
-                        stack.last_mut().unwrap().children.push(Child::Tree(tree));
-                    }
-                }
-                Event::Token(token) => {
-                    if stack.last().is_some() {
-                        stack.last_mut().unwrap().children.push(Child::Token(token));
-                    } else {
-                        return Err(ParserError::InvalidEvents);
-                    }
-                }
-            }
-        }
-
-        if stack.is_empty() {
-            return Err(ParserError::InvalidEvents);
-        }
-        let tree = stack.pop().unwrap();
-
-        if !stack.is_empty() {
-            return Err(ParserError::InvalidEvents);
-        }
-        Ok(tree)
     }
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(input: &'a Input) -> Self {
         Self {
-            lexer: Lexer::<TokenKind>::new(source),
+            input,
             pos: 0,
-            current_token: Token {
-                kind: TokenKind::EOF,
-                text: "".to_string(),
-                range: lsp_types::Range::default(),
-            },
-            last_position: Position::new(0, 0),
-            bootstrap: false,
             fuel: Cell::new(256),
             events: Vec::new(),
         }
     }
 
-    pub fn current(&mut self) -> Token {
-        return self.current_token.clone();
+    pub fn current(&mut self) -> TokenKind {
+        // we skip whitespace token
+        // TODO: process this for format
+        while self.input.kind_of(self.pos).is_travial() {
+            self.advance();
+        }
+        self.input.kind_of(self.pos)
     }
 
     pub fn next(&mut self) -> TokenKind {
-        self.bootstrap = true;
-
-        let mut kind = self.lexer.next().unwrap_or(TokenKind::EOF);
-        self.current_token = Token::new(
-            kind,
-            self.lexer.slice(),
-            self.lexer.span(),
-            self.last_position,
-        );
-        self.last_position = self.current_token.range.end;
-
-        while self.current().kind.is_travial() {
-            kind = self.lexer.next().unwrap_or(TokenKind::EOF);
-            let m = self.open();
-            // skip travial token
-            let curr_kind = self.current_token.kind;
-            self.advance_with_token(self.current_token.clone());
-            self.close(m, TokenKind::WhiteSpace);
-            self.current_token = Token::new(
-                kind,
-                self.lexer.slice(),
-                self.lexer.span(),
-                self.last_position,
-            );
-            self.last_position = self.current_token.range.end;
+        if self.pos < self.input.size() {
+            self.pos += 1;
+            return self.input.kind_of(self.pos);
         }
-        self.current_token.kind
+
+        TokenKind::EOF
     }
 
     pub fn at(&mut self, kind: TokenKind) -> bool {
-        let token = self.current();
-        token.kind == kind
+        self.current() == kind
     }
 
     pub fn at_any(&mut self, kinds: &[TokenKind]) -> bool {
-        let current_kind = self.current().kind;
-        return kinds.contains(&current_kind);
+        let current_kind = self.current();
+        kinds.contains(&current_kind)
     }
 
     pub fn skip(&mut self) {
@@ -220,58 +143,55 @@ impl<'a> Parser<'a> {
     }
 
     pub fn eat(&mut self, kind: TokenKind) -> bool {
-        if self.bootstrap == false {
-            self.next();
-        }
         if self.at(kind) {
-            let token = self.current().clone();
-            self.events.push(Event::Token(token));
+            self.events.push(Event::TokenPosition(self.pos));
             self.skip();
             return true;
         }
-        return false;
+        false
     }
 
     pub fn expect_any(&mut self, kinds: &[TokenKind]) {
-        let kind = self.current().kind;
+        let kind = self.current();
         if kinds.contains(&kind) {
             self.advance();
-            return;
         }
     }
     pub fn expect(&mut self, kind: TokenKind) {
         if self.at(kind) {
             self.advance();
+        } else {
+            println!("expect {:?} but got {:?}", kind, self.current());
         }
     }
 
     pub fn eof(&mut self) -> bool {
-        self.current().kind == TokenKind::EOF
+        self.current() == TokenKind::EOF
     }
 }
 
 impl Parser<'_> {
     pub fn parse(&mut self, scope: Scope) {
-        let m = self.open();
-
-        if !self.bootstrap {
-            self.next();
-        }
-
         scope.parse(self);
-        self.close(m, TokenKind::Circom);
     }
 
-    pub fn parse_source(source: &str) -> Result<Tree, ParserError> {
-        let mut p = Parser::new(source);
+    pub fn parse_source(source: &str) -> GreenNode {
+        let input = Input::new(source);
+        let mut p = Parser::new(&input);
         p.parse(Scope::CircomProgram);
-        p.build_tree()
+        let mut builder = CircomParser::new(&input);
+        let tree = covert_to_tree_format(&mut p.events);
+        println!("{:?}", tree);
+        builder.build(tree);
+        builder.finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lsp_types::Position;
+    use rowan::SyntaxNode;
+
+    use crate::syntax::{CircomLang, CircomParser};
 
     use super::Parser;
 
@@ -293,44 +213,38 @@ mod tests {
         .to_string();
 
         let cst = Parser::parse_source(&source);
-
-        println!("{:?}", cst.ok().unwrap());
     }
 
     #[test]
     fn other_parser_test() {
-        let source: String = 
-r#"pragma circom 2.0.0;
+        let source: String = r#"pragma circom 2.0.0;
 
-template X() {
-   component x = Multiplier2()
-}
-
-template Multiplier2 () {  
-
-   // Declaration of signals.  
-   signal input a;  
-   signal input b;  
-   signal output c;  
-
-
-   signal output d;
-   // Constraints.  
-   c <== a * b;  
-}
+        
+        template Multiplier2 () {  
+        
+           // Declaration of signals.  
+           signal input a;  
+           signal input b;  
+           signal output c;  
+        
+           // Constraints.  
+           c <== a * b;  
+        }
         "#
         .to_string();
 
-        let cst = Parser::parse_source(&source);
+        let green_node = Parser::parse_source(&source);
+        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
-        let tree = cst.unwrap();
-      
-        let t =  tree.clone().lookup_element_by_range(Position {
-            line: 7, 
-            character: 12
-        });
-
-        let tmp = tree.lookup_definition(t.unwrap());
-        println!("{:?}", tmp);
+        for child in syntax_node.children() {
+            println!("{:?}", child.kind());
+            for c in child.children() {
+                println!("{:?}", c.kind());
+                for a in c.children() {
+                    println!("{:?}", a.text());                    
+                }
+            }
+        }
+        
     }
 }
