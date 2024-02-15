@@ -9,14 +9,15 @@ use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::notification::DidChangeTextDocument;
 use tower_lsp::lsp_types::request::GotoDefinition;
 use tower_lsp::lsp_types::{
-    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams, Location, OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url
+    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
+    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
+    Location, OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::LspService;
 use tower_lsp::{
     lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
     Client, LanguageServer, Server,
 };
-
 
 #[derive(Debug)]
 struct Backend {
@@ -93,28 +94,26 @@ impl LanguageServer for Backend {
             .parse_map
             .get(&position.text_document.uri.to_string())
             .unwrap();
-        self.client
-            .log_message(
-                MessageType::INFO,
-                format!("This is Position {:?}", position.position),
-            )
-            .await;
         let pos = Position {
             line: position.position.line + 1,
             character: position.position.character,
         };
 
-        let token = ast.clone().lookup_element_by_range(pos);
-        let ranges = ast.clone().lookup_definition(token.unwrap());
+        if let Some(token) = ast.lookup_element_by_range(pos) {
+            let ranges = ast.lookup_definition(token);
 
-        let result = ranges.iter().map(move |range| {
-            Location {
-                uri: position.text_document.uri.clone(),
-                range: *range
-            }
-        }).collect();
+            let result = ranges
+                .iter()
+                .map(move |range| Location {
+                    uri: position.text_document.uri.clone(),
+                    range: *range,
+                })
+                .collect();
 
-        Ok(Some(GotoDefinitionResponse::Array(result)))
+            Ok(Some(GotoDefinitionResponse::Array(result)))
+        } else {
+            Ok(None)
+        }
     }
 }
 

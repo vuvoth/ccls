@@ -115,7 +115,7 @@ impl Token {
         }
     }
 
-    pub fn is_wrap(self, pos: Position) -> bool {
+    pub fn is_wrap(&self, pos: Position) -> bool {
         let ran = self.range;
         equal_or_greater(pos, ran.start) && equal_or_greater(ran.end, pos)
     }
@@ -128,12 +128,12 @@ pub enum Child {
 }
 
 impl Tree {
-    pub fn lookup_element_by_range(self, position: Position) -> Option<Token> {
-        for child in self.children {
+    pub fn lookup_element_by_range(&self, position: Position) -> Option<Token> {
+        for child in &self.children {
             match child {
                 Child::Token(token) => {
-                    if token.clone().is_wrap(position) {
-                        return Some(token);
+                    if token.is_wrap(position) {
+                        return Some(token.clone());
                     }
                 }
                 Child::Tree(tree) => {
@@ -149,13 +149,13 @@ impl Tree {
         None
     }
 
-    pub fn lookup_definition(self, token: Token) -> Vec<Range> {
+    pub fn lookup_definition(&self, token: Token) -> Vec<Range> {
         let mut ranges = Vec::<Range>::new();
         if matches!(self.kind, TokenKind::TemplateKw) {
             ranges.push(self.clone().get_range());
         }
         if matches!(token.kind, TokenKind::Identifier) {
-            for child in self.children {
+            for child in &self.children {
                 match child {
                     Child::Tree(tree) => {
                        let tmp = tree.lookup_definition(token.clone());
