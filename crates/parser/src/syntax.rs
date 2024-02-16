@@ -9,7 +9,6 @@ pub struct CircomParser<'a> {
     input: &'a Input<'a>,
 }
 
-
 #[derive(Debug)]
 pub enum Child {
     Token(usize), // position of token,
@@ -67,10 +66,13 @@ impl<'a> CircomParser<'a> {
         self.builder.start_node(tree.kind.into());
         for child in tree.children {
             match child {
-                Child::Token(token_id) => self.builder.token(
-                    self.input.kind_of(token_id).into(),
-                    self.input.token_value(token_id),
-                ),
+                Child::Token(token_id) => {
+                    let token_kind = self.input.kind_of(token_id);
+                    let token_value = self.input.token_value(token_id);
+                    self.builder.start_node(token_kind.into());
+                    self.builder.token(token_kind.into(), token_value);
+                    self.builder.finish_node();
+                }
                 Child::Tree(child_tree) => self.build_rec(child_tree),
             }
         }

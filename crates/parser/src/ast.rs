@@ -38,13 +38,12 @@ pub struct Version {
 
 impl AstNode for Version {
     fn can_cast(token_kind: TokenKind) -> bool {
-        token_kind == TokenKind::Pragma
+        token_kind == TokenKind::Version
     }
     fn cast(syntax: SyntaxNode) -> Option<Self>
     where
         Self: Sized,
     {
-        println!("Hello {:?}", TokenKind::from(syntax.kind()));
         if Self::can_cast(syntax.kind().into()) {
             return Some(Version { syntax });
         }

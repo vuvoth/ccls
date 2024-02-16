@@ -31,8 +31,8 @@ mod tests {
         for c in node.children() {
             println!("{}", c.text());
         }
-        
-        let pragma = PragmaDef::cast(node).unwrap();
+
+        let pragma = PragmaDef::cast(node.last_child().unwrap()).unwrap();
 
 
         

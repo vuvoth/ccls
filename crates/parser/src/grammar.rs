@@ -49,7 +49,11 @@ pub mod entry {
             match self {
                 Self::Block => block::block(p),
                 Self::CircomProgram => circom_program(p),
-                Self::Pragma => pragma::pragma(p),
+                Self::Pragma => {
+                    let m = p.open();
+                    pragma::pragma(p);
+                    p.close(m, ROOT);
+                },
             }
         }
     }
