@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
-    token_kind::TokenKind,
+    token_kind::{self, TokenKind},
 };
 
 pub trait AstNode {
@@ -115,7 +115,6 @@ impl Block {
         self.syntax().children().find_map(StatementList::cast)
     }
 }
-
 
 pub struct IfStatement {
     syntax: SyntaxNode,
@@ -238,5 +237,42 @@ impl TemplateDef {
     }
     pub fn func_body(&self) -> Option<Block> {
         self.syntax.children().find_map(Block::cast)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CircomProgramAST {
+    syntax: SyntaxNode,
+}
+
+impl AstNode for CircomProgramAST {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::CircomProgram
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+
+impl CircomProgramAST {
+    pub fn pragma(&self) -> Option<PragmaDef> {
+        self.syntax().children().find_map(PragmaDef::cast)
+    }
+
+    pub fn template_list(&self) -> Vec<TemplateDef> {
+        self.syntax().children().filter_map(TemplateDef::cast).collect()
     }
 }

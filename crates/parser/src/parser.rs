@@ -194,7 +194,7 @@ impl Parser<'_> {
 mod tests {
     use rowan::SyntaxNode;
 
-    use crate::syntax_node::CircomLang;
+    use crate::{ast::{AstNode, CircomProgramAST}, syntax_node::CircomLang};
 
     use super::Parser;
 
@@ -220,7 +220,8 @@ mod tests {
 
     #[test]
     fn other_parser_test() {
-        let source: String = r#"pragma circom 2.0.0;
+        let source: String = r#"
+        pragma circom 2.0.0;
 
         
         template Multiplier2 () {  
@@ -239,6 +240,10 @@ mod tests {
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
+        let program_ast = CircomProgramAST::cast(syntax_node);
+
+
+        assert!(program_ast.unwrap().template_list()[0].func_name().unwrap().name().text() == "Multiplier2");
         // find token
     }
 }
