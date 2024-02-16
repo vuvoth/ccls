@@ -79,6 +79,11 @@ impl AstNode for StatementList {
     }
 }
 
+impl StatementList {
+    pub fn statement_list(&self) -> AstChildren<Statement> {
+        AstChildren::<Statement>::new(self.syntax())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Block {
