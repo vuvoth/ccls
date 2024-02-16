@@ -17,7 +17,10 @@ pub fn pragma(p: &mut Parser) {
 
 mod tests {
 
-    use crate::{ast::{AstNode, PragmaDef}, syntax_node::SyntaxNode};
+    use crate::{
+        ast::{AstNode, PragmaDef},
+        syntax_node::SyntaxNode,
+    };
 
     use super::{entry::Scope, Parser};
 
@@ -34,9 +37,6 @@ mod tests {
 
         let pragma = PragmaDef::cast(node.last_child().unwrap()).unwrap();
 
-
-        
         println!("{:?}", pragma.version());
-        
     }
 }

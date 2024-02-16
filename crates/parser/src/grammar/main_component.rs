@@ -1,6 +1,5 @@
 use super::*;
 
-
 pub fn main_component(p: &mut Parser) {
     p.expect(ComponentKw);
     p.expect(MainKw);

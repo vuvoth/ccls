@@ -53,7 +53,7 @@ pub mod entry {
                     let m = p.open();
                     pragma::pragma(p);
                     p.close(m, ROOT);
-                },
+                }
             }
         }
     }

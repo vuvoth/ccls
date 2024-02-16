@@ -1,4 +1,3 @@
-
 use crate::grammar::*;
 /**
  * template Identifier() {content}

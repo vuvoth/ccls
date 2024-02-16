@@ -1,5 +1,7 @@
-use crate::{syntax_node::{SyntaxNode, SyntaxToken}, token_kind::TokenKind};
-
+use crate::{
+    syntax_node::{SyntaxNode, SyntaxToken},
+    token_kind::TokenKind,
+};
 
 pub trait AstNode {
     fn can_cast(token_kind: TokenKind) -> bool;
@@ -85,4 +87,3 @@ impl PragmaDef {
         self.syntax.children().find_map(Version::cast)
     }
 }
-

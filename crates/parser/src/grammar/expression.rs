@@ -44,7 +44,7 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
         }
         Identifier => {
             let m = p.open();
-            p.advance(); 
+            p.advance();
             m_close = p.close(m, Identifier);
             return Some(m_close);
         }
@@ -108,7 +108,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
             if pp <= pb {
                 return None;
             }
-            let m = p.open_before(lhs); 
+            let m = p.open_before(lhs);
             p.advance();
             if matches!(current_kind, LBracket) {
                 expression_rec(p, 0);
@@ -132,7 +132,6 @@ fn circom_expression(p: &mut Parser) {
     if let Some(mut lhs) = expression_rec(p, 0) {
         let current_kind = p.current();
         if matches!(current_kind, MarkQuestion) {
-
             let m = p.open_before(lhs);
             lhs = p.close(m, Condition);
 
@@ -151,7 +150,6 @@ fn circom_expression(p: &mut Parser) {
 
             p.close(m, TenaryConditional);
         } else {
-            
         }
     }
 }

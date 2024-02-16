@@ -1,8 +1,6 @@
 use logos::Logos;
 
-
-#[derive(Logos, Debug, PartialEq, Clone, Copy)]
-#[derive(Eq, PartialOrd, Ord, Hash)]
+#[derive(Logos, Debug, PartialEq, Clone, Copy, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 pub enum TokenKind {
@@ -152,7 +150,7 @@ pub enum TokenKind {
     Statement,
     EOF,
     ROOT,
-    __LAST
+    __LAST,
 }
 
 impl From<u16> for TokenKind {
@@ -166,7 +164,7 @@ impl From<u16> for TokenKind {
 impl From<rowan::SyntaxKind> for TokenKind {
     fn from(value: rowan::SyntaxKind) -> Self {
         match value {
-            rowan::SyntaxKind(id) => TokenKind::from(id)
+            rowan::SyntaxKind(id) => TokenKind::from(id),
         }
     }
 }

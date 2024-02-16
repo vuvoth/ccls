@@ -176,7 +176,7 @@ impl Parser<'_> {
     }
 
     pub fn parse_circom(source: &str) -> GreenNode {
-        Self::parse_scope(source, Scope::CircomProgram)        
+        Self::parse_scope(source, Scope::CircomProgram)
     }
 
     pub fn parse_scope(source: &str, scope: Scope) -> GreenNode {
@@ -186,10 +186,9 @@ impl Parser<'_> {
         let mut builder = CircomParser::new(&input);
         let tree = covert_to_tree_format(&mut p.events);
         builder.build(tree);
-        builder.finish() 
+        builder.finish()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -240,7 +239,6 @@ mod tests {
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
-        // find token 
-
+        // find token
     }
 }
