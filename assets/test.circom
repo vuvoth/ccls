@@ -7,10 +7,3 @@ template Adder() {
 }
 
 
-function add() {
-<<<<<<< HEAD
-=======
-    template 
-    
->>>>>>> master
-}

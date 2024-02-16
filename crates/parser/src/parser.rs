@@ -3,10 +3,9 @@ use std::{cell::Cell, usize::MAX};
 use rowan::GreenNode;
 
 use crate::{
-    event::{self, Event},
+    event::Event,
     grammar::entry::Scope,
     input::Input,
-    node::{Child, Tree},
     syntax::{covert_to_tree_format, CircomParser},
     token_kind::TokenKind,
 };
@@ -194,7 +193,10 @@ impl Parser<'_> {
 mod tests {
     use rowan::SyntaxNode;
 
-    use crate::{ast::{AstNode, CircomProgramAST}, syntax_node::CircomLang};
+    use crate::{
+        ast::{AstNode, CircomProgramAST},
+        syntax_node::CircomLang,
+    };
 
     use super::Parser;
 
@@ -223,17 +225,25 @@ mod tests {
         let source: String = r#"
         pragma circom 2.0.0;
 
-        
-        template Multiplier2 () {  
-        
-           // Declaration of signals.  
-           signal input a;  
-           signal input b;  
-           signal output c;  
-        
-           // Constraints.  
-           c <== a * b;  
-        }
+template X() {
+   component x = Multiplier2();
+}
+
+template Multiplier2 () {  
+
+   // Declaration of signals.  
+   signal input a;  
+   signal input b;  
+   signal output c;  
+
+
+   signal output d;
+   // Constraints.  
+   c <== a * b;  
+}
+
+
+
         "#
         .to_string();
 
@@ -242,8 +252,14 @@ mod tests {
 
         let program_ast = CircomProgramAST::cast(syntax_node);
 
-
-        assert!(program_ast.unwrap().template_list()[0].func_name().unwrap().name().text() == "Multiplier2");
+        assert!(
+            program_ast.unwrap().template_list()[0]
+                .func_name()
+                .unwrap()
+                .name()
+                .text()
+                == "X"
+        );
         // find token
     }
 }

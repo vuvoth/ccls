@@ -70,6 +70,25 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     p.close(m, SignalKw);
 }
 
+pub(super) fn component_declaration(p: &mut Parser) {
+    let m = p.open();
+    p.expect(ComponentKw);
+    p.expect(Identifier);
+    p.expect(Assign);
+    p.expect(Identifier);
+    p.expect(LParen);
+    if p.at(Identifier) {
+        p.expect(Identifier);
+        while !p.at(RParen) && !p.eof(){
+            p.expect(Comma);
+            p.expect(Identifier);
+        } 
+    } 
+    p.expect(RParen);
+    
+    p.close(m, ComponentDecl);
+}
+
 pub(super) fn declaration(p: &mut Parser) {
     match p.current() {
         SignalKw => signal_declaration(p),
