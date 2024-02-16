@@ -1,6 +1,5 @@
 pub mod event;
 pub mod grammar;
-pub mod node;
 pub mod parser;
 pub mod token_kind;
 

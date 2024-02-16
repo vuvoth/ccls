@@ -1,133 +1,136 @@
-use std::fmt::format;
-use std::sync::Arc;
+#![allow(clippy::print_stderr)]
 
-use ::parser::node::Tree;
-use ::parser::parser::Parser;
-use dashmap::DashMap;
-use parser::parser;
-use tower_lsp::jsonrpc::Result;
-use tower_lsp::lsp_types::notification::DidChangeTextDocument;
-use tower_lsp::lsp_types::request::GotoDefinition;
-use tower_lsp::lsp_types::{
-    CompletionOptions, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    GotoDefinitionParams, GotoDefinitionResponse, HoverProviderCapability, InitializedParams,
-    Location, OneOf, Position, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
-};
-use tower_lsp::LspService;
-use tower_lsp::{
-    lsp_types::{InitializeParams, InitializeResult, MessageType, ServerCapabilities},
-    Client, LanguageServer, Server,
+use std::collections::HashMap;
+use std::error::Error;
+use std::hash::Hash;
+
+use lsp_types::OneOf;
+use lsp_types::{
+    request::GotoDefinition, GotoDefinitionResponse, InitializeParams, ServerCapabilities,
 };
 
-#[derive(Debug)]
-struct Backend {
-    client: Client,
-    parse_map: DashMap<String, Tree>,
+use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
+use parser::ast::{AstNode, CircomProgramAST};
+use parser::parser::Parser;
+use parser::syntax_node::SyntaxNode;
+use tower_lsp::lsp_types::notification::DidOpenTextDocument;
+use tower_lsp::lsp_types::{self, TextDocumentSyncCapability, TextDocumentSyncKind};
+
+struct GlobalState {
+    pub ast: HashMap<String, CircomProgramAST>,
 }
 
-#[derive(Debug, Clone)]
-struct TextDocumentItem<'a> {
-    uri: Url,
-    text: &'a str,
+fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
+    // Note that  we must have our logging only write out to stderr.
+    eprintln!("starting generic LSP server");
+
+    // Create the transport. Includes the stdio (stdin and stdout) versions but this could
+    // also be implemented to use sockets or HTTP.
+    let (connection, io_threads) = Connection::stdio();
+
+    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
+    let server_capabilities = serde_json::to_value(&ServerCapabilities {
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        definition_provider: Some(OneOf::Left(true)),
+        ..Default::default()
+    })
+    .unwrap();
+
+    let initialization_params = match connection.initialize(server_capabilities) {
+        Ok(it) => it,
+        Err(e) => {
+            if e.channel_is_disconnected() {
+                io_threads.join()?;
+            }
+            return Err(e.into());
+        }
+    };
+    main_loop(connection, initialization_params)?;
+    io_threads.join()?;
+
+    // Shut down gracefully.
+    eprintln!("shutting down server");
+    Ok(())
 }
 
-#[tower_lsp::async_trait]
-impl LanguageServer for Backend {
-    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
-        self.client
-            .log_message(MessageType::INFO, "initializing!")
-            .await;
+fn main_loop(
+    connection: Connection,
+    params: serde_json::Value,
+) -> Result<(), Box<dyn Error + Sync + Send>> {
+    let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
-        Ok(InitializeResult {
-            server_info: None,
-            offset_encoding: None,
-            capabilities: ServerCapabilities {
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
-                )),
-                definition_provider: Some(OneOf::Left(true)),
-                ..ServerCapabilities::default()
-            },
-        })
-    }
+    let mut global_state = GlobalState {
+        ast: HashMap::new(),
+    };
 
-    async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "server initialized!")
-            .await;
-    }
+    for msg in &connection.receiver {
+        eprintln!("got msg: {msg:?}");
+        match msg {
+            Message::Request(req) => {
+                if connection.handle_shutdown(&req)? {
+                    return Ok(());
+                }
+                eprintln!("got request: {req:?}");
+                match cast::<GotoDefinition>(req) {
+                    Ok((id, params)) => {
+                        
+                        let url = params.text_document_position_params.text_document.uri.to_string();
 
-    async fn shutdown(&self) -> Result<()> {
-        Ok(())
-    }
-    async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", params))
-            .await;
-        self.on_change(&TextDocumentItem {
-            uri: params.text_document.uri,
-            text: &params.text_document.text,
-        })
-        .await;
-    }
+                        let ast = global_state.ast.get(&url).unwrap();
 
-    async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, "This is info change")
-            .await;
-        self.on_change(&TextDocumentItem {
-            uri: params.text_document.uri,
-            text: &params.content_changes[0].text,
-        })
-        .await;
-    }
+                        eprintln!("{ast:?}");
+                        
+                        let result = Some(GotoDefinitionResponse::Array(Vec::new()));
+                        let result = serde_json::to_value(&result).unwrap();
+                        let resp = Response {
+                            id,
+                            result: Some(result),
+                            error: None,
+                        };
+                        connection.sender.send(Message::Response(resp))?;
+                        continue;
+                    }
+                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                    Err(ExtractError::MethodMismatch(req)) => req,
+                };
+            }
+            Message::Response(resp) => {
+                eprintln!("got response: {resp:?}");
+            }
+            Message::Notification(not) => {
+                match cast_notification::<DidOpenTextDocument>(not) {
+                    Ok(params) => {
+                        let text = params.text_document.text;
+                        let url = params.text_document.uri.to_string();
 
-    async fn goto_definition(
-        &self,
-        params: GotoDefinitionParams,
-    ) -> Result<Option<GotoDefinitionResponse>> {
-        let position = params.text_document_position_params.clone();
-        let ast = self
-            .parse_map
-            .get(&position.text_document.uri.to_string())
-            .unwrap();
-        let pos = Position {
-            line: position.position.line + 1,
-            character: position.position.character,
-        };
+                        let green = Parser::parse_circom(&text);
+                        let syntax = SyntaxNode::new_root(green);
 
-        if let Some(token) = ast.lookup_element_by_range(pos) {
-            let ranges = ast.lookup_definition(token);
-
-            let result = ranges
-                .iter()
-                .map(move |range| Location {
-                    uri: position.text_document.uri.clone(),
-                    range: *range,
-                })
-                .collect();
-
-            Ok(Some(GotoDefinitionResponse::Array(result)))
-        } else {
-            Ok(None)
+                        global_state
+                            .ast
+                            .insert(url, CircomProgramAST::cast(syntax).unwrap());
+                    }
+                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                    Err(ExtractError::MethodMismatch(_not)) => (),
+                };
+            }
         }
     }
+    Ok(())
 }
 
-impl Backend {
-    async fn on_change(&self, text_document: &TextDocumentItem<'_>) {
-        todo!()
-    }
+fn cast<R>(req: Request) -> Result<(RequestId, R::Params), ExtractError<Request>>
+where
+    R: lsp_types::request::Request,
+    R::Params: serde::de::DeserializeOwned,
+{
+    req.extract(R::METHOD)
 }
 
-#[tokio::main]
-async fn main() {
-    let stdin = tokio::io::stdin();
-    let stdout = tokio::io::stdout();
-
-    let (service, socket) = LspService::new(|client| Backend {
-        client,
-        parse_map: DashMap::new(),
-    });
-    Server::new(stdin, stdout, socket).serve(service).await;
+fn cast_notification<R>(not: Notification) -> Result<R::Params, ExtractError<Notification>>
+where
+    R: lsp_types::notification::Notification,
+    R::Params: serde::de::DeserializeOwned,
+{
+    not.extract(R::METHOD)
 }
