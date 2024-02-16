@@ -175,23 +175,27 @@ impl Parser<'_> {
         scope.parse(self);
     }
 
-    pub fn parse_source(source: &str) -> GreenNode {
+    pub fn parse_circom(source: &str) -> GreenNode {
+        Self::parse_scope(source, Scope::CircomProgram)        
+    }
+
+    pub fn parse_scope(source: &str, scope: Scope) -> GreenNode {
         let input = Input::new(source);
         let mut p = Parser::new(&input);
-        p.parse(Scope::CircomProgram);
+        p.parse(scope);
         let mut builder = CircomParser::new(&input);
         let tree = covert_to_tree_format(&mut p.events);
-        println!("{:?}", tree);
         builder.build(tree);
-        builder.finish()
+        builder.finish() 
     }
 }
+
 
 #[cfg(test)]
 mod tests {
     use rowan::SyntaxNode;
 
-    use crate::syntax::{CircomLang, CircomParser};
+    use crate::syntax_node::CircomLang;
 
     use super::Parser;
 
@@ -212,7 +216,7 @@ mod tests {
 "#
         .to_string();
 
-        let cst = Parser::parse_source(&source);
+        let cst = Parser::parse_circom(&source);
     }
 
     #[test]
@@ -233,18 +237,10 @@ mod tests {
         "#
         .to_string();
 
-        let green_node = Parser::parse_source(&source);
+        let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
-        for child in syntax_node.children() {
-            println!("{:?}", child.kind());
-            for c in child.children() {
-                println!("{:?}", c.kind());
-                for a in c.children() {
-                    println!("{:?}", a.text());                    
-                }
-            }
-        }
-        
+        // find token 
+
     }
 }

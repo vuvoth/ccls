@@ -1,4 +1,4 @@
-use std::{ops::Range};
+use std::ops::Range;
 
 use logos::Lexer;
 
@@ -8,24 +8,24 @@ use crate::token_kind::TokenKind;
 pub struct Input<'a> {
     kind: Vec<TokenKind>,
     source: &'a str,
-    position: Vec<Range<usize>>
+    position: Vec<Range<usize>>,
 }
-
 
 impl<'a> Input<'a> {
     pub fn new(source: &'a str) -> Self {
         let mut input = Input {
             source,
             kind: Vec::new(),
-            position: Vec::new()
+            position: Vec::new(),
         };
 
         let mut lex = Lexer::<TokenKind>::new(source);
 
         while let Some(tk) = lex.next() {
-            input.kind.push(tk);
-
-            input.position.push(lex.span())
+            if !tk.is_travial() {
+                input.kind.push(tk);
+                input.position.push(lex.span())
+            }
         }
         input
     }
@@ -35,7 +35,7 @@ impl<'a> Input<'a> {
     }
 
     pub fn kind_of(&self, index: usize) -> TokenKind {
-        if index < self.kind.len() { 
+        if index < self.kind.len() {
             self.kind[index]
         } else {
             TokenKind::EOF

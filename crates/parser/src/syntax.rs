@@ -1,6 +1,5 @@
 use rowan::{GreenNode, GreenNodeBuilder};
 
-use crate::event;
 use crate::{event::Event, input::Input};
 
 use crate::token_kind::TokenKind::{self, *};
@@ -10,25 +9,6 @@ pub struct CircomParser<'a> {
     input: &'a Input<'a>,
 }
 
-impl From<TokenKind> for rowan::SyntaxKind {
-    fn from(kind: TokenKind) -> Self {
-        Self(kind as u16)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum CircomLang {}
-
-impl rowan::Language for CircomLang {
-    type Kind = TokenKind;
-    fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
-        assert!(raw.0 <= ROOT as u16);
-        unsafe { std::mem::transmute::<u16, TokenKind>(raw.0) }
-    }
-    fn kind_to_raw(kind: Self::Kind) -> rowan::SyntaxKind {
-        kind.into()
-    }
-}
 
 #[derive(Debug)]
 pub enum Child {
@@ -99,12 +79,42 @@ impl<'a> CircomParser<'a> {
     }
 
     pub fn build(&mut self, tree: Tree) {
-        self.builder.start_node(ROOT.into());
         self.build_rec(tree);
-        self.builder.finish_node();
     }
 
     pub fn finish(self) -> GreenNode {
         self.builder.finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rowan::SyntaxNode;
+
+    use crate::{parser::Parser, syntax_node::CircomLang};
+
+    #[test]
+    fn other_parser_test() {
+        let source: String = r#"pragma circom 2.0.0;
+
+        
+        template Multiplier2 () {  
+        
+           // Declaration of signals.  
+           signal input a;  
+           signal input b;  
+           signal output c;  
+        
+           // Constraints.  
+           c <== a * b;  
+        }
+        "#
+        .to_string();
+
+        let green_node = Parser::parse_circom(&source);
+        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
+
+        syntax_node.text();
+        // find token
     }
 }

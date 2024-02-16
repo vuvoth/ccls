@@ -27,7 +27,7 @@ pub mod entry {
                 }
                 IncludeKw => {
                     include::include(p);
-                },
+                }
                 ComponentKw => main_component::main_component(p),
                 FunctionKw => template::function_parse(p),
                 _ => {
@@ -41,6 +41,7 @@ pub mod entry {
     pub enum Scope {
         Block,
         CircomProgram,
+        Pragma,
     }
 
     impl Scope {
@@ -48,6 +49,7 @@ pub mod entry {
             match self {
                 Self::Block => block::block(p),
                 Self::CircomProgram => circom_program(p),
+                Self::Pragma => pragma::pragma(p),
             }
         }
     }
