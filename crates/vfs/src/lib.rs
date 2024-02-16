@@ -5,9 +5,7 @@ pub struct VirtualFile {
 
 impl VirtualFile {
     pub fn new(content: String) -> Self {
-        Self {
-            content,
-        }
+        Self { content }
     }
 
     pub fn get_file_content(&self) -> String {
@@ -17,7 +15,7 @@ impl VirtualFile {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct FilePath {
-    pub path: String
+    pub path: String,
 }
 
 impl FilePath {

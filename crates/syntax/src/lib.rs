@@ -1,14 +1,13 @@
 use parser::event::Event;
-use rowan::{GreenNodeBuilder, GreenNode};
+use rowan::{GreenNode, GreenNodeBuilder};
 
 /**
- * This crate receives events list in parser as input and return a tree - support API bellow: 
+ * This crate receives events list in parser as input and return a tree - support API bellow:
  * - Get element/node contain specific position
- * - Query to nodes contain the "same value" with receives node. 
+ * - Query to nodes contain the "same value" with receives node.
  * - Reformat syntax tree
  * - Modify tree with metadata
  */
-
 
 pub struct LosslessSyntaxTree;
 
@@ -17,6 +16,5 @@ pub struct LosslessSyntaxTree;
 //     fn new(events: Vec<Event>) -> GreenNode {
 //         let builder = GreenNodeBuilder::new();
 
-        
 //     }
 // }

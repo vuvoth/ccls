@@ -1,6 +1,8 @@
 use logos::Logos;
 
-#[derive(Logos, Debug, PartialEq, Clone, Copy)]
+#[derive(Logos, Debug, PartialEq, Clone, Copy, Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+#[repr(u16)]
 pub enum TokenKind {
     #[regex(r"//[^\n]*", logos::skip)]
     #[error]
@@ -146,7 +148,33 @@ pub enum TokenKind {
     Expression,
     FunctionDef,
     Statement,
+    StatementList,
     EOF,
+    ROOT,
+    __LAST,
+}
+
+impl From<u16> for TokenKind {
+    #[inline]
+    fn from(d: u16) -> TokenKind {
+        assert!(d <= (TokenKind::__LAST as u16));
+        unsafe { std::mem::transmute::<u16, TokenKind>(d) }
+    }
+}
+
+impl From<rowan::SyntaxKind> for TokenKind {
+    fn from(value: rowan::SyntaxKind) -> Self {
+        match value {
+            rowan::SyntaxKind(id) => TokenKind::from(id),
+        }
+    }
+}
+
+impl From<TokenKind> for u16 {
+    #[inline]
+    fn from(k: TokenKind) -> u16 {
+        k as u16
+    }
 }
 
 impl TokenKind {

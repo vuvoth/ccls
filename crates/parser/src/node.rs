@@ -158,13 +158,13 @@ impl Tree {
             for child in &self.children {
                 match child {
                     Child::Tree(tree) => {
-                       let tmp = tree.lookup_definition(token.clone());
+                        let tmp = tree.lookup_definition(token.clone());
                         ranges.extend(tmp.iter());
                     }
                     _ => {}
                 }
             }
-        } 
+        }
         ranges
     }
 }
@@ -214,4 +214,3 @@ impl fmt::Debug for Tree {
         write!(f, "{}", buf)
     }
 }
-

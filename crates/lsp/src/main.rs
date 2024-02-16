@@ -33,10 +33,7 @@ struct TextDocumentItem<'a> {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
-        self.client
-            .log_message(MessageType::INFO, format!("WE init {:?}", params))
-            .await;
+    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
         self.client
             .log_message(MessageType::INFO, "initializing!")
             .await;
@@ -119,18 +116,7 @@ impl LanguageServer for Backend {
 
 impl Backend {
     async fn on_change(&self, text_document: &TextDocumentItem<'_>) {
-        let cst_result = Parser::parse_source(&text_document.text);
-
-        match cst_result {
-            Ok(cst) => {
-                self.parse_map.insert(text_document.uri.to_string(), cst);
-            }
-            _ => {
-                self.client
-                    .log_message(MessageType::INFO, "Somthing wrong")
-                    .await;
-            }
-        }
+        todo!()
     }
 }
 

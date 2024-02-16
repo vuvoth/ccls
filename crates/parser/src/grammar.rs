@@ -21,13 +21,13 @@ pub mod entry {
         let m = p.open();
         pragma::pragma(p);
         while !p.eof() {
-            match p.current().kind {
+            match p.current() {
                 TemplateKw => {
                     template::template(p);
                 }
                 IncludeKw => {
                     include::include(p);
-                },
+                }
                 ComponentKw => main_component::main_component(p),
                 FunctionKw => template::function_parse(p),
                 _ => {
@@ -41,6 +41,8 @@ pub mod entry {
     pub enum Scope {
         Block,
         CircomProgram,
+        Pragma,
+        Template,
     }
 
     impl Scope {
@@ -48,6 +50,14 @@ pub mod entry {
             match self {
                 Self::Block => block::block(p),
                 Self::CircomProgram => circom_program(p),
+                Self::Pragma => {
+                    let m = p.open();
+                    pragma::pragma(p);
+                    p.close(m, ROOT);
+                }
+                Self::Template => {
+                    template::template(p);
+                }
             }
         }
     }

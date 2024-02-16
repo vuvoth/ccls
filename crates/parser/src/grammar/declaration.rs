@@ -3,7 +3,6 @@ use super::{
     *,
 };
 
-
 fn signal_header(p: &mut Parser) {
     let m = p.open();
     p.expect(SignalKw);
@@ -54,7 +53,7 @@ pub(super) fn signal_declaration(p: &mut Parser) {
 
     let m = p.open();
     signal_header(p);
-   
+
     if p.at(LParen) {
         tuple(p);
         if p.at_any(&[Assign, RAssignSignal, RAssignConstraintSignal]) {
@@ -67,15 +66,14 @@ pub(super) fn signal_declaration(p: &mut Parser) {
             p.skip();
             p.expect(Identifier);
         }
-    } 
+    }
     p.close(m, SignalKw);
 }
 
-
 pub(super) fn declaration(p: &mut Parser) {
-    match p.current().kind {
+    match p.current() {
         SignalKw => signal_declaration(p),
         VarKw => var_declaration(p),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }

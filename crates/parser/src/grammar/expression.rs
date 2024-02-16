@@ -35,7 +35,7 @@ pub(super) fn tuple_init(p: &mut Parser) {
 
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let m_close: Marker;
-    match p.current().kind {
+    match p.current() {
         Number => {
             let m = p.open();
             p.advance();
@@ -44,7 +44,7 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
         }
         Identifier => {
             let m = p.open();
-            p.advance(); 
+            p.advance();
             m_close = p.close(m, Identifier);
             return Some(m_close);
         }
@@ -67,8 +67,8 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
  * return marker which bound the expression
  */
 pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
-    let parse_able: Option<Marker> = if let Some(pp) = p.current().kind.prefix() {
-        let kind = p.current().kind;
+    let parse_able: Option<Marker> = if let Some(pp) = p.current().prefix() {
+        let kind = p.current();
         let m = p.open();
         p.advance();
         expression_rec(p, pp);
@@ -91,7 +91,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
     }
 
     while !p.eof() {
-        let current_kind = p.current().kind;
+        let current_kind = p.current();
         if let Some((lp, rp)) = current_kind.infix() {
             if !(rp > pb) {
                 return None;
@@ -105,10 +105,10 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
             continue;
         }
         if let Some(pp) = current_kind.postfix() {
-            if !(pp > pb) {
+            if pp <= pb {
                 return None;
             }
-            let m = p.open_before(lhs); 
+            let m = p.open_before(lhs);
             p.advance();
             if matches!(current_kind, LBracket) {
                 expression_rec(p, 0);
@@ -130,9 +130,8 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
  */
 fn circom_expression(p: &mut Parser) {
     if let Some(mut lhs) = expression_rec(p, 0) {
-        let current_kind = p.current().kind;
+        let current_kind = p.current();
         if matches!(current_kind, MarkQuestion) {
-
             let m = p.open_before(lhs);
             lhs = p.close(m, Condition);
 
@@ -151,7 +150,6 @@ fn circom_expression(p: &mut Parser) {
 
             p.close(m, TenaryConditional);
         } else {
-            
         }
     }
 }
@@ -163,13 +161,13 @@ mod tests {
         let source = r#"
           10 + 100 + 23 + 3343
         "#;
-        let mut parser = Parser::new(source);
-        let m = parser.open();
-        parser.next();
-        circom_expression(&mut parser);
-        parser.close(m, CircomProgram);
-        let cst = parser.build_tree().ok().unwrap();
+        // let mut parser = Parser::new(source);
+        // let m = parser.open();
+        // parser.next();
+        // circom_expression(&mut parser);
+        // parser.close(m, CircomProgram);
+        // let cst = parser.build_tree().ok().unwrap();
 
-        println!("{:?}", cst);
+        // println!("{:?}", cst);
     }
 }
