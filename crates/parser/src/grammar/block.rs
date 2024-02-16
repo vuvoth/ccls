@@ -6,6 +6,7 @@ pub fn block(p: &mut Parser) {
     } else {
         let m = p.open();
         p.eat(LCurly);
+        let stmt_marker = p.open();
         while !p.at(RCurly) && !p.eof() {
             let kind = p.current();
             match kind {
@@ -21,6 +22,8 @@ pub fn block(p: &mut Parser) {
             }
         }
 
+        p.close(stmt_marker, StatementList);
+
         p.expect(RCurly);
 
         p.close(m, Block);
@@ -30,7 +33,11 @@ pub fn block(p: &mut Parser) {
 #[cfg(test)]
 mod tests {
 
-    use crate::grammar::entry::Scope;
+    use crate::{
+        ast::{AstNode, Block},
+        grammar::entry::Scope,
+        syntax_node::SyntaxNode,
+    };
 
     use super::*;
     #[test]
@@ -51,12 +58,11 @@ mod tests {
                a ==>b;
             }
         "#;
-        // let mut parser = Parser::new(source);
+        let green_node = Parser::parse_scope(source, Scope::Block);
+        let syntax_node = SyntaxNode::new_root(green_node);
 
-        // parser.parse(Scope::Block);
-
-        // let cst = parser.build_tree().ok().unwrap();
-
-        // println!("{:?}", cst);
+        if let Some(ast_block) = Block::cast(syntax_node) {
+            println!("{:?}", ast_block.statement().unwrap().syntax().kind());
+        }
     }
 }

@@ -1,5 +1,7 @@
+use std::marker::PhantomData;
+
 use crate::{
-    syntax_node::{SyntaxNode, SyntaxToken},
+    syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
     token_kind::TokenKind,
 };
 
@@ -25,9 +27,90 @@ pub trait AstToken {
     fn syntax(&self) -> &SyntaxNode;
 }
 
+#[derive(Debug, Clone)]
+pub struct AstChildren<N> {
+    inner: SyntaxNodeChildren,
+    ph: PhantomData<N>,
+}
+
+impl<N> AstChildren<N> {
+    fn new(parent: &SyntaxNode) -> Self {
+        AstChildren {
+            inner: parent.children(),
+            ph: PhantomData,
+        }
+    }
+}
+
+impl<N: AstNode> Iterator for AstChildren<N> {
+    type Item = N;
+    fn next(&mut self) -> Option<N> {
+        self.inner.find_map(N::cast)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Statement {
+    syntax: SyntaxNode,
+}
+
+#[derive(Debug, Clone)]
+pub struct StatementList {
+    syntax: SyntaxNode,
+}
+
+impl AstNode for StatementList {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::StatementList
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+
+#[derive(Debug, Clone)]
 pub struct Block {
     syntax: SyntaxNode,
 }
+
+impl AstNode for Block {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::Block
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+impl Block {
+    pub fn statement(&self) -> Option<StatementList> {
+        self.syntax().children().find_map(StatementList::cast)
+    }
+}
+
 
 pub struct IfStatement {
     syntax: SyntaxNode,
@@ -85,5 +168,70 @@ impl AstNode for PragmaDef {
 impl PragmaDef {
     pub fn version(&self) -> Option<Version> {
         self.syntax.children().find_map(Version::cast)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IdentifierDef {
+    syntax: SyntaxNode,
+}
+
+impl AstNode for IdentifierDef {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::Identifier
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+impl IdentifierDef {
+    pub fn name(&self) -> &SyntaxNode {
+        self.syntax()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TemplateDef {
+    syntax: SyntaxNode,
+}
+
+impl AstNode for TemplateDef {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::TemplateKw
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(TemplateDef { syntax });
+        }
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+impl TemplateDef {
+    pub fn func_name(&self) -> Option<IdentifierDef> {
+        self.syntax.children().find_map(IdentifierDef::cast)
+    }
+    pub fn func_body(&self) -> Option<Block> {
+        self.syntax.children().find_map(Block::cast)
     }
 }

@@ -148,6 +148,7 @@ pub enum TokenKind {
     Expression,
     FunctionDef,
     Statement,
+    StatementList,
     EOF,
     ROOT,
     __LAST,

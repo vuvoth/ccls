@@ -33,10 +33,7 @@ struct TextDocumentItem<'a> {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
-        self.client
-            .log_message(MessageType::INFO, format!("WE init {:?}", params))
-            .await;
+    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
         self.client
             .log_message(MessageType::INFO, "initializing!")
             .await;

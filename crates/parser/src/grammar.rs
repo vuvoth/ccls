@@ -42,6 +42,7 @@ pub mod entry {
         Block,
         CircomProgram,
         Pragma,
+        Template,
     }
 
     impl Scope {
@@ -53,6 +54,9 @@ pub mod entry {
                     let m = p.open();
                     pragma::pragma(p);
                     p.close(m, ROOT);
+                }
+                Self::Template => {
+                    template::template(p);
                 }
             }
         }
