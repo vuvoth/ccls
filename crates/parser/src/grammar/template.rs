@@ -49,7 +49,8 @@ mod tests {
            c <== a * b;  
         }
 
-        "#.to_string();
+        "#
+        .to_string();
 
         let green_node = Parser::parse_scope(&source, Scope::Template);
         let node = SyntaxNode::new_root(green_node);
@@ -57,7 +58,10 @@ mod tests {
         let ast_template = TemplateDef::cast(node);
 
         if let Some(ast_internal) = ast_template {
-            println!("name {:?}", ast_internal.func_name().unwrap().syntax().text());
+            println!(
+                "name {:?}",
+                ast_internal.template_name().unwrap().syntax().text()
+            );
         }
     }
 }

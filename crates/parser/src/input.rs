@@ -22,11 +22,10 @@ impl<'a> Input<'a> {
         let mut lex = Lexer::<TokenKind>::new(source);
 
         while let Some(tk) = lex.next() {
-            if !tk.is_travial() {
-                input.kind.push(tk);
-                input.position.push(lex.span())
-            }
+            input.kind.push(tk);
+            input.position.push(lex.span());
         }
+
         input
     }
 
