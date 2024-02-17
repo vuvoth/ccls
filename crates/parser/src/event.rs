@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use crate::token_kind::TokenKind;
 
 #[derive(Debug, Clone, Copy)]

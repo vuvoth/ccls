@@ -266,13 +266,15 @@ impl AstNode for CircomProgramAST {
     }
 }
 
-
 impl CircomProgramAST {
     pub fn pragma(&self) -> Option<PragmaDef> {
         self.syntax().children().find_map(PragmaDef::cast)
     }
 
     pub fn template_list(&self) -> Vec<TemplateDef> {
-        self.syntax().children().filter_map(TemplateDef::cast).collect()
+        self.syntax()
+            .children()
+            .filter_map(TemplateDef::cast)
+            .collect()
     }
 }

@@ -79,13 +79,13 @@ pub(super) fn component_declaration(p: &mut Parser) {
     p.expect(LParen);
     if p.at(Identifier) {
         p.expect(Identifier);
-        while !p.at(RParen) && !p.eof(){
+        while !p.at(RParen) && !p.eof() {
             p.expect(Comma);
             p.expect(Identifier);
-        } 
-    } 
+        }
+    }
     p.expect(RParen);
-    
+
     p.close(m, ComponentDecl);
 }
 
@@ -93,6 +93,7 @@ pub(super) fn declaration(p: &mut Parser) {
     match p.current() {
         SignalKw => signal_declaration(p),
         VarKw => var_declaration(p),
+        ComponentKw => component_declaration(p),
         _ => unreachable!(),
     }
 }

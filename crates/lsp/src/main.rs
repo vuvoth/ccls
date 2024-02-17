@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::hash::Hash;
 
 use lsp_types::OneOf;
 use lsp_types::{
@@ -13,8 +12,10 @@ use lsp_server::{Connection, ExtractError, Message, Notification, Request, Reque
 use parser::ast::{AstNode, CircomProgramAST};
 use parser::parser::Parser;
 use parser::syntax_node::SyntaxNode;
-use tower_lsp::lsp_types::notification::DidOpenTextDocument;
+use tower_lsp::lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use tower_lsp::lsp_types::{self, TextDocumentSyncCapability, TextDocumentSyncKind};
+
+mod handler;
 
 struct GlobalState {
     pub ast: HashMap<String, CircomProgramAST>,
@@ -73,13 +74,14 @@ fn main_loop(
                 eprintln!("got request: {req:?}");
                 match cast::<GotoDefinition>(req) {
                     Ok((id, params)) => {
-                        
-                        let url = params.text_document_position_params.text_document.uri.to_string();
+                        let url = params
+                            .text_document_position_params
+                            .text_document
+                            .uri
+                            .to_string();
 
                         let ast = global_state.ast.get(&url).unwrap();
 
-                        eprintln!("{ast:?}");
-                        
                         let result = Some(GotoDefinitionResponse::Array(Vec::new()));
                         let result = serde_json::to_value(&result).unwrap();
                         let resp = Response {
@@ -98,7 +100,7 @@ fn main_loop(
                 eprintln!("got response: {resp:?}");
             }
             Message::Notification(not) => {
-                match cast_notification::<DidOpenTextDocument>(not) {
+                match cast_notification::<DidOpenTextDocument>(not.clone()) {
                     Ok(params) => {
                         let text = params.text_document.text;
                         let url = params.text_document.uri.to_string();
@@ -113,6 +115,21 @@ fn main_loop(
                     Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
                     Err(ExtractError::MethodMismatch(_not)) => (),
                 };
+
+                match cast_notification::<DidChangeTextDocument>(not.clone()) {
+                    Ok(params) => {
+                        let text = &params.content_changes[0].text;
+                        let url = params.text_document.uri.to_string();
+                        let green = Parser::parse_circom(text);
+                        let syntax = SyntaxNode::new_root(green);
+
+                        global_state
+                            .ast
+                            .insert(url, CircomProgramAST::cast(syntax).unwrap());
+                    }
+                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
+                    Err(ExtractError::MethodMismatch(_)) => {}
+                }
             }
         }
     }
