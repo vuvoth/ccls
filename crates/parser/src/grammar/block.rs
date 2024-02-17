@@ -58,8 +58,8 @@ mod tests {
                signal a, b;
                signal (a, b);
                signal (a, b) = a - b;
-               a <== 12 + 1;
-               a ==>b;
+               a <== 12 + 1
+               a ==>b
             }
         "#;
         let green_node = Parser::parse_scope(source, Scope::Block);

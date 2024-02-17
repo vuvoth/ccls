@@ -1,4 +1,3 @@
-use crate::SyntaxNode;
 use lsp_types::{Position, Range};
 use parser::{
     ast::{AstNode, CircomProgramAST},
@@ -9,11 +8,11 @@ use parser::{
 
 pub fn lookup_token_at_postion(
     file: &FileUtils,
-    ast: &SyntaxNode,
+    ast: &CircomProgramAST,
     position: Position,
 ) -> Option<SyntaxToken> {
     let off_set = file.off_set(position);
-    ast.token_at_offset(off_set).find_map(|token| {
+    ast.syntax().token_at_offset(off_set).find_map(|token| {
         let kind = token.kind();
 
         if kind == TokenKind::Identifier {
@@ -35,8 +34,8 @@ pub fn lookup_definition(
         let template_name = template.template_name().unwrap();
         if template_name.name().text() == token.text() {
             let range = Some(Range {
-                start: file.position(template_name.syntax().text_range().start()),
-                end: file.position(template_name.syntax().text_range().end()),
+                start: file.position(template.syntax().text_range().start()),
+                end: file.position(template.syntax().text_range().end()),
             });
             return range;
         }

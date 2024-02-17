@@ -4,9 +4,10 @@ use logos::Logos;
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 pub enum TokenKind {
-    #[regex(r"//[^\n]*", logos::skip)]
     #[error]
     Error = 0,
+    #[regex(r"//[^\n]*")]
+    CommentLine,
     #[regex("[ \t]+")]
     WhiteSpace,
     #[regex("[\n]")]
@@ -230,7 +231,7 @@ impl TokenKind {
     }
     pub fn is_travial(self) -> bool {
         match self {
-            Self::WhiteSpace | Self::EndLine => true,
+            Self::WhiteSpace | Self::EndLine | Self::CommentLine => true,
             _ => false,
         }
     }

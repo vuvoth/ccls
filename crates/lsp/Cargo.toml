@@ -17,6 +17,8 @@ lsp-server = "0.7.6"
 lsp-types = {version = "0.94.1", features = ["proposed"]}
 parser.workspace = true
 vfs.workspace = true
+anyhow = "1.0.79"
+dashmap = "5.5.3"
 
 [profile]
 dev.debug = 2

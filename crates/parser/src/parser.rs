@@ -86,10 +86,7 @@ impl<'a> Parser<'a> {
         // TODO: Error reporting.
         if !self.eof() {
             self.advance();
-        } else {
-            // TODO: make this logic more sense
-            self.events.push(Event::TokenPosition(MAX))
-        }
+    }
         self.close(m, TokenKind::Error);
     }
 }
@@ -165,11 +162,17 @@ impl<'a> Parser<'a> {
             self.advance();
         }
     }
+
+    // pub fn expect_with_error(&mut self, kind: TokenKind) {
+    // }
+
     pub fn expect(&mut self, kind: TokenKind) {
+        let current = self.current();
+
         if self.at(kind) {
             self.advance();
         } else {
-            println!("expect {:?} but got {:?}", kind, self.current());
+            self.advance_with_error(&format!("expect {:?} but got {:?}", kind, current));
         }
     }
 
@@ -271,4 +274,63 @@ template Multiplier2 () {
         );
         // find token
     }
+
+
+    #[test]
+    fn parse_un_complete_program() {
+        let source: String = r#"
+        pragma circom 2.0.0;
+
+        template X() {
+           component x = Multiplier2();
+           component y = X();
+           component y = Multiplier2();
+           component z = Multiplier2();
+              
+        }
+    
+        template M() {
+           component h = X();
+           component k = Multiplier2(); 
+            test
+        }
+
+        template Multiplier2 () {  
+        
+           // hello world
+           signal input a;  
+           signal input b;  
+              signal output c;  
+           component y = X();
+        
+           component e = Y();
+           component z = Y();
+           component h = Y();
+           signal output d;
+           c <== a * b; 
+        }
+        
+        template Y() {
+           component y = X();
+        }
+        
+        "#
+        .to_string();
+
+        let green_node = Parser::parse_circom(&source);
+        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
+
+        let program_ast = CircomProgramAST::cast(syntax_node);
+
+        assert!(
+            program_ast.unwrap().template_list()[0]
+                .template_name()
+                .unwrap()
+                .name()
+                .text()
+                == "X"
+        );
+        // find token
+    }
+
 }
