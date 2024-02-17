@@ -105,12 +105,21 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current(&mut self) -> TokenKind {
-        // we skip whitespace token
-        // TODO: process this for format
-        while self.input.kind_of(self.pos).is_travial() {
+        let mut kind: TokenKind;
+
+        loop {
+            kind = self.input.kind_of(self.pos);
+
+            if !kind.is_travial() {
+                break;
+            }
+
+            let m = self.open();
             self.advance();
+            self.close(m, kind);
         }
-        self.input.kind_of(self.pos)
+
+        kind
     }
 
     pub fn next(&mut self) -> TokenKind {
@@ -254,7 +263,7 @@ template Multiplier2 () {
 
         assert!(
             program_ast.unwrap().template_list()[0]
-                .func_name()
+                .template_name()
                 .unwrap()
                 .name()
                 .text()

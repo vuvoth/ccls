@@ -1,5 +1,3 @@
-use num_traits::FromPrimitive;
-
 use crate::token_kind::TokenKind;
 
 impl From<TokenKind> for rowan::SyntaxKind {

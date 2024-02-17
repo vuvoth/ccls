@@ -48,7 +48,11 @@ pub mod entry {
     impl Scope {
         pub fn parse(self, p: &mut Parser) {
             match self {
-                Self::Block => block::block(p),
+                Self::Block => {
+                    let m = p.open();
+                    block::block(p);
+                    p.close(m, ROOT);
+                }
                 Self::CircomProgram => circom_program(p),
                 Self::Pragma => {
                     let m = p.open();

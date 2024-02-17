@@ -17,15 +17,11 @@ pub fn block(p: &mut Parser) {
                 VarKw => {
                     declaration::var_declaration(p);
                     p.expect(Semicolon);
-                },
-                ComponentKw => {
-                    declaration::component_declaration(p);
-                    p.expect(Semicolon);
                 }
                 ComponentKw => {
                     declaration::component_declaration(p);
                     p.expect(Semicolon);
-                }
+                } 
                 _ => statement::statement(p),
             }
         }

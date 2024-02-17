@@ -60,7 +60,7 @@ mod tests {
         if let Some(ast_internal) = ast_template {
             println!(
                 "name {:?}",
-                ast_internal.func_name().unwrap().syntax().text()
+                ast_internal.template_name().unwrap().syntax().text()
             );
         }
     }

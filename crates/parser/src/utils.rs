@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use lsp_types::Position;
+use rowan::TextSize;
 
 pub struct FileId(u32);
 
@@ -10,6 +9,10 @@ pub struct FileUtils {
 }
 
 impl FileUtils {
+    pub fn create(content: &str) -> Self {
+        Self::new(FileId(0), content)
+    }
+
     pub fn new(file_id: FileId, content: &str) -> Self {
         let mut file_utils = Self {
             file_id,
@@ -27,15 +30,15 @@ impl FileUtils {
         file_utils
     }
 
-    pub fn off_set(&self, position: Position) -> u32 {
+    pub fn off_set(&self, position: Position) -> TextSize {
         if position.line == 0 {
-            return position.character;
+            return position.character.into();
         }
-        self.end_line_vec[position.line as usize - 1] + position.character + 1
+        (self.end_line_vec[position.line as usize - 1] + position.character + 1).into()
     }
 
-    pub fn position(&self, off_set: u32) -> Position {
-        let line = match self.end_line_vec.binary_search(&off_set) {
+    pub fn position(&self, off_set: TextSize) -> Position {
+        let line = match self.end_line_vec.binary_search(&(off_set.into())) {
             Ok(l) => l,
             Err(l) => l,
         };
@@ -43,9 +46,9 @@ impl FileUtils {
         Position::new(
             line as u32,
             if line > 0 {
-                off_set - self.end_line_vec[line - 1] - 1
+                (u32::from(off_set)) - self.end_line_vec[line - 1] - 1
             } else {
-                off_set
+                off_set.into()
             },
         )
     }
@@ -68,11 +71,11 @@ three
 
         let position = Position::new(0, 1);
 
-        assert_eq!(file_utils.off_set(position), 1);
+        assert_eq!(file_utils.off_set(position), 1.into());
 
         let position = Position::new(1, 1);
 
-        assert_eq!(file_utils.off_set(position), 2);
+        assert_eq!(file_utils.off_set(position), 2.into());
     }
 
     #[test]
@@ -85,7 +88,7 @@ three
 
         // 0, 4, 8
         let file_utils = FileUtils::new(FileId(1), str);
-        assert_eq!(Position::new(1, 1), file_utils.position(2));
-        assert_eq!(Position::new(0, 0), file_utils.position(0));
+        assert_eq!(Position::new(1, 1), file_utils.position(2.into()));
+        assert_eq!(Position::new(0, 0), file_utils.position(0.into()));
     }
 }

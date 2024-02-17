@@ -2,23 +2,27 @@
 
 use std::collections::HashMap;
 use std::error::Error;
+use std::hash::Hash;
 
-use lsp_types::OneOf;
+use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::{
     request::GotoDefinition, GotoDefinitionResponse, InitializeParams, ServerCapabilities,
 };
+use lsp_types::{Location, OneOf, TextDocumentSyncCapability, TextDocumentSyncKind};
 
 use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
 use parser::ast::{AstNode, CircomProgramAST};
 use parser::parser::Parser;
 use parser::syntax_node::SyntaxNode;
-use tower_lsp::lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
-use tower_lsp::lsp_types::{self, TextDocumentSyncCapability, TextDocumentSyncKind};
+use parser::utils::{FileId, FileUtils};
+
+use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
 mod handler;
 
 struct GlobalState {
     pub ast: HashMap<String, CircomProgramAST>,
+    pub file_map: HashMap<String, FileUtils>,
 }
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -62,6 +66,7 @@ fn main_loop(
 
     let mut global_state = GlobalState {
         ast: HashMap::new(),
+        file_map: HashMap::new(),
     };
 
     for msg in &connection.receiver {
@@ -74,15 +79,23 @@ fn main_loop(
                 eprintln!("got request: {req:?}");
                 match cast::<GotoDefinition>(req) {
                     Ok((id, params)) => {
-                        let url = params
-                            .text_document_position_params
-                            .text_document
-                            .uri
-                            .to_string();
+                        let uri = params.text_document_position_params.text_document.uri;
 
-                        let ast = global_state.ast.get(&url).unwrap();
+                        let ast = global_state.ast.get(&uri.to_string()).unwrap();
+                        let file = global_state.file_map.get(&uri.to_string()).unwrap();
+                        let token = lookup_token_at_postion(
+                            &file,
+                            ast.syntax(),
+                            params.text_document_position_params.position,
+                        );
 
-                        let result = Some(GotoDefinitionResponse::Array(Vec::new()));
+                        let range = lookup_definition(file, &ast, token.unwrap());
+
+                        eprintln!("{range:?}");
+                        let result = Some(GotoDefinitionResponse::Scalar(Location::new(
+                            uri,
+                            range.unwrap(),
+                        )));
                         let result = serde_json::to_value(&result).unwrap();
                         let resp = Response {
                             id,
@@ -110,7 +123,9 @@ fn main_loop(
 
                         global_state
                             .ast
-                            .insert(url, CircomProgramAST::cast(syntax).unwrap());
+                            .insert(url.clone(), CircomProgramAST::cast(syntax).unwrap());
+
+                        global_state.file_map.insert(url, FileUtils::create(&text));
                     }
                     Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
                     Err(ExtractError::MethodMismatch(_not)) => (),
@@ -125,7 +140,9 @@ fn main_loop(
 
                         global_state
                             .ast
-                            .insert(url, CircomProgramAST::cast(syntax).unwrap());
+                            .insert(url.clone(), CircomProgramAST::cast(syntax).unwrap());
+
+                        global_state.file_map.insert(url, FileUtils::create(&text));
                     }
                     Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
                     Err(ExtractError::MethodMismatch(_)) => {}

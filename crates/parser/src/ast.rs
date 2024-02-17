@@ -232,7 +232,7 @@ impl AstNode for TemplateDef {
 }
 
 impl TemplateDef {
-    pub fn func_name(&self) -> Option<IdentifierDef> {
+    pub fn template_name(&self) -> Option<IdentifierDef> {
         self.syntax.children().find_map(IdentifierDef::cast)
     }
     pub fn func_body(&self) -> Option<Block> {
