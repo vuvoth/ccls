@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::error::Error;
-use std::hash::Hash;
 
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::{
@@ -70,13 +69,11 @@ fn main_loop(
     };
 
     for msg in &connection.receiver {
-        eprintln!("got msg: {msg:?}");
         match msg {
             Message::Request(req) => {
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
-                eprintln!("got request: {req:?}");
                 match cast::<GotoDefinition>(req) {
                     Ok((id, params)) => {
                         let uri = params.text_document_position_params.text_document.uri;
@@ -91,7 +88,6 @@ fn main_loop(
 
                         let range = lookup_definition(file, &ast, token.unwrap());
 
-                        eprintln!("{range:?}");
                         let result = Some(GotoDefinitionResponse::Scalar(Location::new(
                             uri,
                             range.unwrap(),
