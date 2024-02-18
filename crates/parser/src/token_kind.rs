@@ -185,10 +185,7 @@ impl From<TokenKind> for u16 {
 
 impl TokenKind {
     pub fn is_literal(self) -> bool {
-        match self {
-            Self::Number | Self::Identifier => true,
-            _ => false,
-        }
+        matches!(self, Self::Number | Self::Identifier)
     }
 
     pub fn infix(self) -> Option<(u16, u16)> {
@@ -228,15 +225,9 @@ impl TokenKind {
         }
     }
     pub fn is_declaration_kw(self) -> bool {
-        match self {
-            Self::VarKw | Self::ComponentKw | Self::SignalKw => true,
-            _ => false,
-        }
+        matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
     }
     pub fn is_travial(self) -> bool {
-        match self {
-            Self::WhiteSpace | Self::EndLine | Self::CommentLine => true,
-            _ => false,
-        }
+        matches!(self, Self::WhiteSpace | Self::EndLine | Self::CommentLine)
     }
 }
