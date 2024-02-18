@@ -26,3 +26,4 @@ pub type SyntaxElement = rowan::SyntaxElement<CircomLang>;
 pub type SyntaxNodeChildren = rowan::SyntaxNodeChildren<CircomLang>;
 pub type SyntaxElementChildren = rowan::SyntaxElementChildren<CircomLang>;
 pub type PreorderWithTokens = rowan::api::PreorderWithTokens<CircomLang>;
+pub type CircomLanguage = CircomLang;

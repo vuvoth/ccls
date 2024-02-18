@@ -1,32 +1,18 @@
+/// This code borrow from rust analyzer
+/// Thank you for amazing implementation.
+///
 use std::marker::PhantomData;
 
+pub use rowan::ast::{support, AstChildren, AstNode};
+use crate::syntax_node::CircomLanguage;
 
 use crate::{
     syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
-    token_kind::{self, TokenKind, TokenKind::*},
+    token_kind::{TokenKind, TokenKind::*},
 };
 
-pub trait AstNode {
-    fn can_cast(token_kind: TokenKind) -> bool;
 
-    fn cast(syntax: SyntaxNode) -> Option<Self>
-    where
-        Self: Sized;
 
-    fn syntax(&self) -> &SyntaxNode;
-}
-
-pub trait AstToken {
-    fn can_cast(token: TokenKind) -> bool
-    where
-        Self: Sized;
-
-    fn cast(syntax: SyntaxToken) -> Option<Self>
-    where
-        Self: Sized;
-
-    fn syntax(&self) -> &SyntaxNode;
-}
 
 macro_rules! ast_node {
     ($ast_name: ident, $kind: expr) => {
@@ -35,6 +21,7 @@ macro_rules! ast_node {
             syntax: SyntaxNode,
         }
         impl AstNode for $ast_name {
+            type Language = CircomLanguage;
             fn can_cast(token_kind: TokenKind) -> bool {
                 token_kind == $kind
             }
@@ -56,41 +43,19 @@ macro_rules! ast_node {
     };
 }
 
-#[derive(Debug, Clone)]
-pub struct AstChildren<N> {
-    inner: SyntaxNodeChildren,
-    ph: PhantomData<N>,
-}
-
-impl<N> AstChildren<N> {
-    fn new(parent: &SyntaxNode) -> Self {
-        AstChildren {
-            inner: parent.children(),
-            ph: PhantomData,
-        }
-    }
-}
-
-impl<N: AstNode> Iterator for AstChildren<N> {
-    type Item = N;
-    fn next(&mut self) -> Option<N> {
-        self.inner.find_map(N::cast)
-    }
-}
-
 ast_node!(AstStatement, Statement);
 ast_node!(AstStatementList, StatementList);
 
 impl AstStatementList {
     pub fn statement_list(&self) -> AstChildren<AstStatement> {
-        AstChildren::<AstStatement>::new(self.syntax())
+        support::children(self.syntax())
     }
 }
 
 ast_node!(AstBlock, Block);
 impl AstBlock {
     pub fn statement(&self) -> Option<AstStatementList> {
-        self.syntax().children().find_map(AstStatementList::cast)
+        support::child::<AstStatementList>(self.syntax())
     }
 }
 
@@ -99,7 +64,7 @@ ast_node!(AstPragma, Pragma);
 
 impl AstPragma {
     pub fn version(&self) -> Option<AstVersion> {
-        self.syntax.children().find_map(AstVersion::cast)
+        support::child(self.syntax())
     }
 }
 ast_node!(AstParameterList, TokenKind::ParameterList);
@@ -113,7 +78,7 @@ ast_node!(AstTemplateDef, TemplateDef);
 impl AstTemplateName {
     pub fn name(&self) -> Option<AstIdentifier> {
         self.syntax().children().find_map(AstIdentifier::cast)
-    } 
+    }
 }
 
 impl AstTemplateDef {

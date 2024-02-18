@@ -2,6 +2,7 @@ use std::{cell::Cell, usize::MAX};
 
 use rowan::GreenNode;
 
+
 use crate::{
     event::Event,
     grammar::entry::Scope,
