@@ -1,4 +1,4 @@
-use std::{cell::Cell, usize::MAX};
+use std::cell::Cell;
 
 use rowan::GreenNode;
 
@@ -10,8 +10,13 @@ use crate::{
     token_kind::TokenKind,
 };
 
+pub struct Context {
+    pub r_curly_count: i32,
+}
+
 pub struct Parser<'a> {
     pub(crate) input: &'a Input<'a>,
+    pub context: Context,
     pos: usize,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
@@ -81,14 +86,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn advance_with_error(&mut self, error: &str) {
+    pub fn advance_with_error(&mut self, _error: &str) {
         let m = self.open();
         // TODO: Error reporting.
         if !self.eof() {
             self.advance();
-        } else {
-            // TODO: make this logic more sense
-            self.events.push(Event::TokenPosition(MAX))
         }
         self.close(m, TokenKind::Error);
     }
@@ -99,9 +101,18 @@ impl<'a> Parser<'a> {
         Self {
             input,
             pos: 0,
+            context: Context { r_curly_count: 0 },
             fuel: Cell::new(256),
             events: Vec::new(),
         }
+    }
+
+    pub fn inc_rcurly(&mut self) {
+        self.context.r_curly_count += 1;
+    }
+
+    pub fn dec_rcurly(&mut self) {
+        self.context.r_curly_count += 1;
     }
 
     pub fn current(&mut self) -> TokenKind {
@@ -163,13 +174,20 @@ impl<'a> Parser<'a> {
         let kind = self.current();
         if kinds.contains(&kind) {
             self.advance();
+        } else {
+            // error report
+            // println!("expect {:?} but got {:?}", kinds, kind);
         }
     }
+
     pub fn expect(&mut self, kind: TokenKind) {
+        let _current = self.current();
+
         if self.at(kind) {
             self.advance();
         } else {
-            println!("expect {:?} but got {:?}", kind, self.current());
+            // error report
+            // println!("expect {:?} but got {:?}", kind, current);
         }
     }
 
@@ -203,7 +221,7 @@ mod tests {
     use rowan::SyntaxNode;
 
     use crate::{
-        ast::{AstNode, CircomProgramAST},
+        ast::{AstCircomProgram, AstNode},
         syntax_node::CircomLang,
     };
 
@@ -226,7 +244,7 @@ mod tests {
 "#
         .to_string();
 
-        let cst = Parser::parse_circom(&source);
+        let _cst = Parser::parse_circom(&source);
     }
 
     #[test]
@@ -259,16 +277,81 @@ template Multiplier2 () {
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
-        let program_ast = CircomProgramAST::cast(syntax_node);
+        let program_ast = AstCircomProgram::cast(syntax_node);
 
         assert!(
             program_ast.unwrap().template_list()[0]
                 .template_name()
                 .unwrap()
                 .name()
+                .unwrap()
+                .syntax()
                 .text()
                 == "X"
         );
         // find token
+    }
+
+    #[test]
+    fn parse_un_complete_program() {
+        let source: String = r#"
+        pragma circom 2.0.0;
+
+        template X() {
+           component x = Multiplier2();
+           component y = X();
+           component y = Multiplier2();
+           component z = Multiplier2();
+              
+        }
+template M() {
+           component h = X();
+           component k = Multiplier2(); 
+           test
+        }
+template Multiplier2 () {  
+           template m = M();
+           // hello world
+           signal input a;  
+           signal input b;  
+              signal output c;  
+           component y = X();
+           
+           mintlkrekerjke;
+           component e = Y();
+           component z = Y();
+           component h = Y();
+           signal output d;
+           c <== a * b; 
+        }
+template Y() {
+           component y = X();
+           component a = X();
+           
+        }        
+        "#
+        .to_string();
+
+        let green_node = Parser::parse_circom(&source);
+        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
+        if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
+            for template in program_ast.template_list() {
+                println!("{template:?}");
+            }
+
+            println!("{}", program_ast.syntax().green());
+
+            // if let Some(token) =
+            assert!(
+                program_ast.template_list()[0]
+                    .template_name()
+                    .unwrap()
+                    .name()
+                    .unwrap()
+                    .syntax()
+                    .text()
+                    == "X"
+            );
+        }
     }
 }

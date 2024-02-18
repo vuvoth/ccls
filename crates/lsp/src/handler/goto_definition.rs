@@ -1,7 +1,6 @@
-use crate::SyntaxNode;
 use lsp_types::{Position, Range};
 use parser::{
-    ast::{AstNode, CircomProgramAST},
+    ast::{AstCircomProgram, AstNode},
     syntax_node::SyntaxToken,
     token_kind::TokenKind,
     utils::FileUtils,
@@ -9,11 +8,11 @@ use parser::{
 
 pub fn lookup_token_at_postion(
     file: &FileUtils,
-    ast: &SyntaxNode,
+    ast: &AstCircomProgram,
     position: Position,
 ) -> Option<SyntaxToken> {
     let off_set = file.off_set(position);
-    ast.token_at_offset(off_set).find_map(|token| {
+    ast.syntax().token_at_offset(off_set).find_map(|token| {
         let kind = token.kind();
 
         if kind == TokenKind::Identifier {
@@ -26,21 +25,20 @@ pub fn lookup_token_at_postion(
 
 pub fn lookup_definition(
     file: &FileUtils,
-    ast: &CircomProgramAST,
+    ast: &AstCircomProgram,
     token: SyntaxToken,
 ) -> Option<Range> {
     let template_list = ast.template_list();
 
     for template in template_list {
         let template_name = template.template_name().unwrap();
-        if template_name.name().text() == token.text() {
+        if template_name.name().unwrap().syntax().text() == token.text() {
             let range = Some(Range {
-                start: file.position(template_name.syntax().text_range().start()),
-                end: file.position(template_name.syntax().text_range().end()),
+                start: file.position(template.syntax().text_range().start()),
+                end: file.position(template.syntax().text_range().end()),
             });
             return range;
         }
     }
-
     None
 }

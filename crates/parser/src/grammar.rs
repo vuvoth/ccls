@@ -4,12 +4,14 @@ use crate::token_kind::TokenKind::*;
 mod block;
 mod declaration;
 mod expression;
+mod function;
 mod include;
 mod list_identity;
 mod main_component;
 mod pragma;
 mod statement;
 mod template;
+
 /**
  * parse circom program
  */
@@ -29,7 +31,7 @@ pub mod entry {
                     include::include(p);
                 }
                 ComponentKw => main_component::main_component(p),
-                FunctionKw => template::function_parse(p),
+                FunctionKw => function::function_parse(p),
                 _ => {
                     p.advance_with_error("invalid token");
                 }

@@ -1,6 +1,7 @@
 use super::*;
 
 pub fn block(p: &mut Parser) {
+    p.inc_rcurly();
     if !p.at(LCurly) {
         p.advance_with_error("Miss {");
     } else {
@@ -21,7 +22,7 @@ pub fn block(p: &mut Parser) {
                 ComponentKw => {
                     declaration::component_declaration(p);
                     p.expect(Semicolon);
-                } 
+                }
                 _ => statement::statement(p),
             }
         }
@@ -31,6 +32,8 @@ pub fn block(p: &mut Parser) {
         p.expect(RCurly);
 
         p.close(m, Block);
+
+        p.dec_rcurly();
     }
 }
 
@@ -38,7 +41,7 @@ pub fn block(p: &mut Parser) {
 mod tests {
 
     use crate::{
-        ast::{AstNode, Block},
+        ast::{AstBlock, AstNode},
         grammar::entry::Scope,
         syntax_node::SyntaxNode,
     };
@@ -58,14 +61,14 @@ mod tests {
                signal a, b;
                signal (a, b);
                signal (a, b) = a - b;
-               a <== 12 + 1;
-               a ==>b;
+               a <== 12 + 1
+               a ==>b
             }
         "#;
         let green_node = Parser::parse_scope(source, Scope::Block);
         let syntax_node = SyntaxNode::new_root(green_node);
 
-        if let Some(ast_block) = Block::cast(syntax_node) {
+        if let Some(ast_block) = AstBlock::cast(syntax_node) {
             println!("{:?}", ast_block.statement().unwrap().syntax().kind());
         }
     }

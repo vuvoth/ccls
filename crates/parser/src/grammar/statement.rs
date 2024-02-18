@@ -119,25 +119,29 @@ fn return_statement(p: &mut Parser) {
 fn assignment_statement(p: &mut Parser) {
     let m = p.open();
     expression(p);
-    p.expect_any(&[
+
+    if p.at_any(&[
         Assign,
         RAssignSignal,
         RAssignConstraintSignal,
         LAssignContraintSignal,
         LAssignSignal,
         EqualSignal,
-    ]);
-    expression(p);
-    p.close(m, AssignStatement);
+    ]) {
+        p.advance();
+        expression(p);
+        p.close(m, AssignStatement);
+    } else {
+        p.close(m, Error);
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn if_statement_test() {
-        let source = r#"
+        let _source = r#"
             assert(1 == 2);
         "#;
         // let mut parser = Parser::new(source);

@@ -19,12 +19,10 @@ impl FileUtils {
             end_line_vec: Vec::new(),
         };
 
-        let mut id = 0;
-        for c in content.chars() {
+        for (id, c) in content.chars().enumerate() {
             if c == '\n' {
-                file_utils.end_line_vec.push(id);
+                file_utils.end_line_vec.push(id as u32);
             }
-            id += 1;
         }
 
         file_utils
@@ -54,10 +52,11 @@ impl FileUtils {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use lsp_types::Position;
 
-    use super::{FileId, FileUtils};
+    use crate::utils::{FileId, FileUtils};
 
     #[test]
     fn off_set_test() {

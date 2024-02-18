@@ -40,13 +40,13 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
             let m = p.open();
             p.advance();
             m_close = p.close(m, Number);
-            return Some(m_close);
+            Some(m_close)
         }
         Identifier => {
             let m = p.open();
             p.advance();
             m_close = p.close(m, Identifier);
-            return Some(m_close);
+            Some(m_close)
         }
         LParen => {
             let m = p.open();
@@ -54,11 +54,11 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
             expression_rec(p, 0);
             p.expect(RParen);
             m_close = p.close(m, Tuple);
-            return Some(m_close);
+            Some(m_close)
         }
         _ => {
             p.advance_with_error("Invalid Token");
-            return None;
+            None
         }
     }
 }
@@ -77,9 +77,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
         expression_atom(p)
     };
 
-    if parse_able.is_none() {
-        return None;
-    }
+    parse_able?;
 
     let mut lhs = parse_able.unwrap();
 
@@ -93,7 +91,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
     while !p.eof() {
         let current_kind = p.current();
         if let Some((lp, rp)) = current_kind.infix() {
-            if !(rp > pb) {
+            if rp <= pb {
                 return None;
             }
 
@@ -149,16 +147,15 @@ fn circom_expression(p: &mut Parser) {
             p.close(last_expression, Expression);
 
             p.close(m, TenaryConditional);
-        } else {
         }
     }
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     #[test]
     fn test_expression() {
-        let source = r#"
+        let _source = r#"
           10 + 100 + 23 + 3343
         "#;
         // let mut parser = Parser::new(source);
