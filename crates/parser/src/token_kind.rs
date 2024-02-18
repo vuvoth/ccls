@@ -151,6 +151,8 @@ pub enum TokenKind {
     Statement,
     StatementList,
     ComponentDecl,
+    TemplateDef,
+    TemplateName,
     FunctionName,
     ParameterList,
     EOF,

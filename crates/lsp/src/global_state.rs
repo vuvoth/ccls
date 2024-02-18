@@ -4,7 +4,7 @@ use lsp_server::{RequestId, Response};
 use lsp_types::{
     request::GotoDeclarationResponse, DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, Location, Url
 };
-use parser::{ast::{AstNode, CircomProgramAST}, parser::Parser, syntax_node::SyntaxNode, utils::FileUtils};
+use parser::{ast::{AstNode, AstCircomProgram}, parser::Parser, syntax_node::SyntaxNode, utils::FileUtils};
 
 use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
@@ -33,7 +33,7 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 }
 
 pub struct GlobalState {
-    pub ast_map: DashMap<String, CircomProgramAST>,
+    pub ast_map: DashMap<String, AstCircomProgram>,
     pub file_map: DashMap<String, FileUtils>,
 }
 
@@ -85,7 +85,7 @@ impl GlobalState {
         let syntax = SyntaxNode::new_root(green);
 
         self.ast_map
-            .insert(url.clone(), CircomProgramAST::cast(syntax).unwrap());
+            .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());
 
         self.file_map.insert(url, FileUtils::create(&text));
         Ok(())

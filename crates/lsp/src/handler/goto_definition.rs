@@ -1,7 +1,7 @@
 use lsp_server::RequestId;
 use lsp_types::{request::GotoDeclarationResponse, GotoDefinitionParams, Position, Range};
 use parser::{
-    ast::{AstNode, CircomProgramAST},
+    ast::{AstNode, AstCircomProgram},
     syntax_node::SyntaxToken,
     token_kind::TokenKind,
     utils::FileUtils,
@@ -9,7 +9,7 @@ use parser::{
 
 pub fn lookup_token_at_postion(
     file: &FileUtils,
-    ast: &CircomProgramAST,
+    ast: &AstCircomProgram,
     position: Position,
 ) -> Option<SyntaxToken> {
     let off_set = file.off_set(position);
@@ -26,14 +26,14 @@ pub fn lookup_token_at_postion(
 
 pub fn lookup_definition(
     file: &FileUtils,
-    ast: &CircomProgramAST,
+    ast: &AstCircomProgram,
     token: SyntaxToken,
 ) -> Option<Range> {
     let template_list = ast.template_list();
 
     for template in template_list {
         let template_name = template.template_name().unwrap();
-        if template_name.name().text() == token.text() {
+        if template_name.name().unwrap().syntax().text() == token.text() {
             let range = Some(Range {
                 start: file.position(template.syntax().text_range().start()),
                 end: file.position(template.syntax().text_range().end()),

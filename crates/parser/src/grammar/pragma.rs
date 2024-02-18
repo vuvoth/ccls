@@ -19,7 +19,7 @@ mod tests {
     #[test]
     fn pragam_test() {
         use crate::{
-            ast::{AstNode, PragmaDef},
+            ast::{AstNode, AstPragma},
             syntax_node::SyntaxNode,
             token_kind::TokenKind,
         };
@@ -31,7 +31,7 @@ mod tests {
         let green_node = Parser::parse_scope(&source, Scope::Pragma);
         let node = SyntaxNode::new_root(green_node);
 
-        let pragma = PragmaDef::cast(node.last_child().unwrap()).unwrap();
+        let pragma = AstPragma::cast(node.last_child().unwrap()).unwrap();
 
         assert!(pragma.version().unwrap().syntax().kind() == TokenKind::Version);
     }

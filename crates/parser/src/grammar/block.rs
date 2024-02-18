@@ -41,7 +41,7 @@ pub fn block(p: &mut Parser) {
 mod tests {
 
     use crate::{
-        ast::{AstNode, Block},
+        ast::{AstBlock, AstNode},
         grammar::entry::Scope,
         syntax_node::SyntaxNode,
     };
@@ -68,7 +68,7 @@ mod tests {
         let green_node = Parser::parse_scope(source, Scope::Block);
         let syntax_node = SyntaxNode::new_root(green_node);
 
-        if let Some(ast_block) = Block::cast(syntax_node) {
+        if let Some(ast_block) = AstBlock::cast(syntax_node) {
             println!("{:?}", ast_block.statement().unwrap().syntax().kind());
         }
     }

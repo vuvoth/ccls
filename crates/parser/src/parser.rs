@@ -221,7 +221,7 @@ mod tests {
     use rowan::SyntaxNode;
 
     use crate::{
-        ast::{AstNode, CircomProgramAST},
+        ast::{AstCircomProgram, AstNode},
         syntax_node::CircomLang,
     };
 
@@ -277,13 +277,15 @@ template Multiplier2 () {
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
 
-        let program_ast = CircomProgramAST::cast(syntax_node);
+        let program_ast = AstCircomProgram::cast(syntax_node);
 
         assert!(
             program_ast.unwrap().template_list()[0]
                 .template_name()
                 .unwrap()
                 .name()
+                .unwrap()
+                .syntax()
                 .text()
                 == "X"
         );
@@ -332,19 +334,21 @@ template Y() {
 
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
-        if let Some(program_ast) = CircomProgramAST::cast(syntax_node) {
+        if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
             for template in program_ast.template_list() {
                 println!("{template:?}");
             }
 
             println!("{}", program_ast.syntax().green());
 
-            // if let Some(token) = 
+            // if let Some(token) =
             assert!(
                 program_ast.template_list()[0]
                     .template_name()
                     .unwrap()
                     .name()
+                    .unwrap()
+                    .syntax()
                     .text()
                     == "X"
             );

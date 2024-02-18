@@ -7,7 +7,10 @@ pub fn template(p: &mut Parser) {
     // assert!(p.at(TemplateKw));
     let m = p.open();
     p.expect(TemplateKw);
+    let name_marker = p.open();
     p.expect(Identifier);
+    p.close(name_marker, TemplateName);
+    
     p.expect(LParen);
     let arg_marker = p.open();
     while !p.at(RParen) && !p.eof() {
@@ -20,16 +23,18 @@ pub fn template(p: &mut Parser) {
     p.close(arg_marker, ParameterList);
     p.expect(RParen);
     block::block(p);
-    p.close(m, TemplateKw);
+    p.close(m, TemplateDef);
 }
 
 mod tests {
-    use crate::ast::TemplateDef;
+    use crate::ast::AstTemplateDef;
+
+    
 
     #[test]
     fn template_parse_test() {
         use crate::{
-            ast::{AstNode, PragmaDef},
+            ast::{AstNode, AstPragma},
             syntax_node::SyntaxNode,
             token_kind::TokenKind,
         };
@@ -54,7 +59,7 @@ mod tests {
         let green_node = Parser::parse_scope(&source, Scope::Template);
         let node = SyntaxNode::new_root(green_node);
 
-        let ast_template = TemplateDef::cast(node);
+        let ast_template = AstTemplateDef::cast(node);
 
         if let Some(ast_internal) = ast_template {
             println!(
