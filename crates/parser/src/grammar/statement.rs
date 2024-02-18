@@ -138,11 +138,10 @@ fn assignment_statement(p: &mut Parser) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn if_statement_test() {
-        let source = r#"
+        let _source = r#"
             assert(1 == 2);
         "#;
         // let mut parser = Parser::new(source);

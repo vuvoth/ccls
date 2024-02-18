@@ -50,6 +50,7 @@ impl<'a> Input<'a> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::Input;
 

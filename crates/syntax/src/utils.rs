@@ -1,6 +1,6 @@
 use lsp_types::{Position, Range};
 use parser::{
-    ast::{AstNode, AstCircomProgram},
+    ast::{AstCircomProgram, AstNode},
     syntax_node::SyntaxToken,
     token_kind::TokenKind,
     utils::FileUtils,
@@ -44,17 +44,19 @@ pub fn lookup_definition(
     None
 }
 
-
+#[cfg(test)]
 mod tests {
     use lsp_types::Position;
-    use parser::{ast::{AstNode, AstCircomProgram}, parser::Parser, syntax_node::SyntaxNode, utils::FileUtils};
+    use parser::{
+        ast::AstCircomProgram, parser::Parser, syntax_node::SyntaxNode, utils::FileUtils,
+    };
+    use rowan::ast::AstNode;
 
     use super::{lookup_definition, lookup_token_at_postion};
 
     #[test]
     fn parse_un_complete_program() {
-        let source: String = 
-r#"
+        let source: String = r#"
 pragma circom 2.0.0;
 
 template X() {

@@ -10,7 +10,7 @@ pub fn template(p: &mut Parser) {
     let name_marker = p.open();
     p.expect(Identifier);
     p.close(name_marker, TemplateName);
-    
+
     p.expect(LParen);
     let arg_marker = p.open();
     while !p.at(RParen) && !p.eof() {
@@ -26,18 +26,13 @@ pub fn template(p: &mut Parser) {
     p.close(m, TemplateDef);
 }
 
+#[cfg(test)]
 mod tests {
     use crate::ast::AstTemplateDef;
 
-    
-
     #[test]
     fn template_parse_test() {
-        use crate::{
-            ast::{AstNode, AstPragma},
-            syntax_node::SyntaxNode,
-            token_kind::TokenKind,
-        };
+        use crate::{ast::AstNode, syntax_node::SyntaxNode};
 
         use super::{entry::Scope, Parser};
 

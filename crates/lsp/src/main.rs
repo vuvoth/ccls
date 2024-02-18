@@ -1,17 +1,13 @@
-use dashmap::{self, DashMap};
 use global_state::GlobalState;
 use std::error::Error;
 
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
-use lsp_types::{
-    request::GotoDefinition, GotoDefinitionResponse, InitializeParams, ServerCapabilities,
-};
-use lsp_types::{Location, OneOf, TextDocumentSyncCapability, TextDocumentSyncKind};
+use lsp_types::{request::GotoDefinition, InitializeParams, ServerCapabilities};
+use lsp_types::{OneOf, TextDocumentSyncCapability, TextDocumentSyncKind};
 
-use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
+use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId};
 
 use crate::global_state::TextDocument;
-use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
 mod global_state;
 mod handler;
@@ -25,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let (connection, io_threads) = Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(&ServerCapabilities {
+    let server_capabilities = serde_json::to_value(ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         definition_provider: Some(OneOf::Left(true)),
         ..Default::default()

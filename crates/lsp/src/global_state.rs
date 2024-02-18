@@ -2,9 +2,15 @@ use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
 use lsp_types::{
-    request::GotoDeclarationResponse, DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams, GotoDefinitionResponse, Location, Url
+    DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
+    GotoDefinitionResponse, Location, Url,
 };
-use parser::{ast::{AstNode, AstCircomProgram}, parser::Parser, syntax_node::SyntaxNode, utils::FileUtils};
+use parser::{
+    ast::{AstCircomProgram, AstNode},
+    parser::Parser,
+    syntax_node::SyntaxNode,
+    utils::FileUtils,
+};
 
 use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
@@ -45,11 +51,7 @@ impl GlobalState {
         }
     }
 
-    pub fn goto_definition_handler(
-        &self,
-        id: RequestId,
-        params: GotoDefinitionParams,
-    ) -> Response {
+    pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
         let uri = params.text_document_position_params.text_document.uri;
 
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
@@ -66,28 +68,26 @@ impl GlobalState {
             };
         }
 
-        let result = serde_json::to_value(&result).unwrap();
-        
-        let resp = Response {
+        let result = serde_json::to_value(result).unwrap();
+
+        Response {
             id,
             result: Some(result),
             error: None,
-        };
-
-        resp
+        }
     }
 
     pub(crate) fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
         let text = &text_document.text;
         let url = text_document.uri.to_string();
 
-        let green = Parser::parse_circom(&text);
+        let green = Parser::parse_circom(text);
         let syntax = SyntaxNode::new_root(green);
 
         self.ast_map
             .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());
 
-        self.file_map.insert(url, FileUtils::create(&text));
+        self.file_map.insert(url, FileUtils::create(text));
         Ok(())
     }
 }

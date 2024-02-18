@@ -15,6 +15,7 @@ pub fn pragma(p: &mut Parser) {
     p.close(m, Pragma);
 }
 
+#[cfg(test)]
 mod tests {
     #[test]
     fn pragam_test() {

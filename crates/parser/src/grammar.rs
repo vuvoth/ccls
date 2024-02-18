@@ -4,13 +4,13 @@ use crate::token_kind::TokenKind::*;
 mod block;
 mod declaration;
 mod expression;
+mod function;
 mod include;
 mod list_identity;
 mod main_component;
 mod pragma;
 mod statement;
 mod template;
-mod function;
 
 /**
  * parse circom program

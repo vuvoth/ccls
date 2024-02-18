@@ -2,7 +2,7 @@ use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::{event::Event, input::Input};
 
-use crate::token_kind::TokenKind::{self, *};
+use crate::token_kind::TokenKind::{self};
 
 pub struct CircomParser<'a> {
     builder: GreenNodeBuilder<'static>,
@@ -50,9 +50,7 @@ pub fn covert_to_tree_format(events: &mut Vec<Event>) -> Tree {
         }
     }
 
-    let tree = stack.pop().unwrap();
-
-    tree
+    stack.pop().unwrap()
 }
 
 impl<'a> CircomParser<'a> {

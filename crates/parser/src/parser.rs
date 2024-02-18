@@ -1,7 +1,6 @@
-use std::{cell::Cell, usize::MAX};
+use std::cell::Cell;
 
 use rowan::GreenNode;
-
 
 use crate::{
     event::Event,
@@ -87,7 +86,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn advance_with_error(&mut self, error: &str) {
+    pub fn advance_with_error(&mut self, _error: &str) {
         let m = self.open();
         // TODO: Error reporting.
         if !self.eof() {
@@ -182,7 +181,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expect(&mut self, kind: TokenKind) {
-        let current = self.current();
+        let _current = self.current();
 
         if self.at(kind) {
             self.advance();
@@ -245,7 +244,7 @@ mod tests {
 "#
         .to_string();
 
-        let cst = Parser::parse_circom(&source);
+        let _cst = Parser::parse_circom(&source);
     }
 
     #[test]

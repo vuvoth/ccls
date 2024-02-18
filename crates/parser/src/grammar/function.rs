@@ -10,12 +10,12 @@ pub fn function_parse(p: &mut Parser) {
     p.expect(LParen);
     let arg_marker = p.open();
     while !p.at(RParen) && !p.eof() {
-        p.expect(Identifier); 
+        p.expect(Identifier);
         if p.at(Comma) {
             p.expect(Comma);
-        }  
+        }
     }
-    
+
     p.close(arg_marker, ParameterList);
 
     p.expect(RParen);

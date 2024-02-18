@@ -1,18 +1,10 @@
-/// This code borrow from rust analyzer
-/// Thank you for amazing implementation.
-///
-use std::marker::PhantomData;
-
-pub use rowan::ast::{support, AstChildren, AstNode};
 use crate::syntax_node::CircomLanguage;
+pub use rowan::ast::{support, AstChildren, AstNode};
 
 use crate::{
-    syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
+    syntax_node::SyntaxNode,
     token_kind::{TokenKind, TokenKind::*},
 };
-
-
-
 
 macro_rules! ast_node {
     ($ast_name: ident, $kind: expr) => {

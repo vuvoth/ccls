@@ -1,7 +1,6 @@
-use lsp_server::RequestId;
-use lsp_types::{request::GotoDeclarationResponse, GotoDefinitionParams, Position, Range};
+use lsp_types::{Position, Range};
 use parser::{
-    ast::{AstNode, AstCircomProgram},
+    ast::{AstCircomProgram, AstNode},
     syntax_node::SyntaxToken,
     token_kind::TokenKind,
     utils::FileUtils,

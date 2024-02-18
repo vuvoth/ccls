@@ -54,10 +54,11 @@ impl FileUtils {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use lsp_types::Position;
 
-    use super::{FileId, FileUtils};
+    use crate::utils::{FileId, FileUtils};
 
     #[test]
     fn off_set_test() {
