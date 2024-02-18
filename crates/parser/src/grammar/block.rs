@@ -1,6 +1,7 @@
 use super::*;
 
 pub fn block(p: &mut Parser) {
+    p.inc_rcurly();
     if !p.at(LCurly) {
         p.advance_with_error("Miss {");
     } else {
@@ -21,7 +22,7 @@ pub fn block(p: &mut Parser) {
                 ComponentKw => {
                     declaration::component_declaration(p);
                     p.expect(Semicolon);
-                } 
+                }
                 _ => statement::statement(p),
             }
         }
@@ -31,6 +32,8 @@ pub fn block(p: &mut Parser) {
         p.expect(RCurly);
 
         p.close(m, Block);
+
+        p.dec_rcurly();
     }
 }
 

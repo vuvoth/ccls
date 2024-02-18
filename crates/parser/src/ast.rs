@@ -5,6 +5,7 @@ use crate::{
     token_kind::{self, TokenKind},
 };
 
+
 pub trait AstNode {
     fn can_cast(token_kind: TokenKind) -> bool;
 
@@ -26,6 +27,36 @@ pub trait AstToken {
 
     fn syntax(&self) -> &SyntaxNode;
 }
+
+
+macro_rules! ast_node {
+    ($ast_name: ident, $kind: expr) => {
+        #[derive(Debug, Clone)]
+        pub struct $ast_name {
+            syntax: SyntaxNode
+        }
+        impl AstNode for $ast_name {
+            fn can_cast(token_kind: TokenKind) -> bool {
+                token_kind == $kind
+            }
+        
+            fn cast(syntax: SyntaxNode) -> Option<Self>
+            where
+                Self: Sized,
+            {
+                if Self::can_cast(syntax.kind().into()) {
+                    return Some(Self { syntax });
+                }
+                None
+            }
+        
+            fn syntax(&self) -> &SyntaxNode {
+                &self.syntax
+            }
+        }
+    };
+}
+
 
 #[derive(Debug, Clone)]
 pub struct AstChildren<N> {
@@ -49,37 +80,16 @@ impl<N: AstNode> Iterator for AstChildren<N> {
     }
 }
 
+
 #[derive(Debug, Clone)]
 pub struct Statement {
     syntax: SyntaxNode,
 }
 
-#[derive(Debug, Clone)]
-pub struct StatementList {
-    syntax: SyntaxNode,
-}
+ast_node!(AstStatementList, TokenKind::StatementList);
 
-impl AstNode for StatementList {
-    fn can_cast(token_kind: TokenKind) -> bool {
-        token_kind == TokenKind::StatementList
-    }
 
-    fn cast(syntax: SyntaxNode) -> Option<Self>
-    where
-        Self: Sized,
-    {
-        if Self::can_cast(syntax.kind().into()) {
-            return Some(Self { syntax });
-        }
-        None
-    }
-
-    fn syntax(&self) -> &SyntaxNode {
-        &self.syntax
-    }
-}
-
-impl StatementList {
+impl AstStatementList {
     pub fn statement_list(&self) -> AstChildren<Statement> {
         AstChildren::<Statement>::new(self.syntax())
     }
@@ -111,8 +121,8 @@ impl AstNode for Block {
 }
 
 impl Block {
-    pub fn statement(&self) -> Option<StatementList> {
-        self.syntax().children().find_map(StatementList::cast)
+    pub fn statement(&self) -> Option<AstStatementList> {
+        self.syntax().children().find_map(AstStatementList::cast)
     }
 }
 
@@ -238,6 +248,78 @@ impl TemplateDef {
     pub fn func_body(&self) -> Option<Block> {
         self.syntax.children().find_map(Block::cast)
     }
+}
+
+
+#[derive(Debug)]
+pub struct AstFunctionName {
+    syntax: SyntaxNode
+}
+
+impl AstNode for AstFunctionName {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::FunctionName
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+
+
+#[derive(Debug, Clone)]
+pub struct ASTFunction {
+    syntax: SyntaxNode
+}
+
+
+impl AstNode for ASTFunction {
+    fn can_cast(token_kind: TokenKind) -> bool {
+        token_kind == TokenKind::FunctionDef
+    }
+
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind().into()) {
+            return Some(Self { syntax });
+        }
+
+        None
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+
+ast_node!(AstParameterList, TokenKind::ParameterList);
+
+impl ASTFunction {
+    pub fn body(&self) -> Option<Block> {
+        self.syntax().children().find_map(Block::cast)
+    } 
+
+    pub fn function_name(&self) -> Option<AstFunctionName> {
+        self.syntax().children().find_map(AstFunctionName::cast)
+    }
+
+    pub fn argument_list(&self) -> Option<AstParameterList> {
+        self.syntax().children().find_map(AstParameterList::cast)
+    }   
 }
 
 #[derive(Debug, Clone)]

@@ -119,16 +119,21 @@ fn return_statement(p: &mut Parser) {
 fn assignment_statement(p: &mut Parser) {
     let m = p.open();
     expression(p);
-    p.expect_any(&[
+
+    if p.at_any(&[
         Assign,
         RAssignSignal,
         RAssignConstraintSignal,
         LAssignContraintSignal,
         LAssignSignal,
         EqualSignal,
-    ]);
-    expression(p);
-    p.close(m, AssignStatement);
+    ]) {
+        p.advance();
+        expression(p);
+        p.close(m, AssignStatement);
+    } else {
+        p.close(m, Error);
+    }
 }
 
 #[cfg(test)]

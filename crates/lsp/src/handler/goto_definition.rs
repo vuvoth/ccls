@@ -1,4 +1,5 @@
-use lsp_types::{Position, Range};
+use lsp_server::RequestId;
+use lsp_types::{request::GotoDeclarationResponse, GotoDefinitionParams, Position, Range};
 use parser::{
     ast::{AstNode, CircomProgramAST},
     syntax_node::SyntaxToken,
@@ -40,6 +41,5 @@ pub fn lookup_definition(
             return range;
         }
     }
-
     None
 }

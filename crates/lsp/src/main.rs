@@ -1,72 +1,21 @@
-#![allow(clippy::print_stderr)]
-
-use anyhow::Result;
 use dashmap::{self, DashMap};
+use global_state::GlobalState;
 use std::error::Error;
 
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::{
     request::GotoDefinition, GotoDefinitionResponse, InitializeParams, ServerCapabilities,
 };
-use lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, OneOf,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Url,
-};
+use lsp_types::{Location, OneOf, TextDocumentSyncCapability, TextDocumentSyncKind};
 
 use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
-use parser::ast::{AstNode, CircomProgramAST};
-use parser::parser::Parser;
-use parser::syntax_node::SyntaxNode;
-use parser::utils::{FileId, FileUtils};
 
+use crate::global_state::TextDocument;
 use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
+mod global_state;
 mod handler;
 
-struct GlobalState {
-    pub ast_map: DashMap<String, CircomProgramAST>,
-    pub file_map: DashMap<String, FileUtils>,
-}
-
-#[derive(Debug)]
-struct TextDocument {
-    text: String,
-    uri: Url,
-}
-
-impl From<DidOpenTextDocumentParams> for TextDocument {
-    fn from(value: DidOpenTextDocumentParams) -> Self {
-        Self {
-            text: value.text_document.text,
-            uri: value.text_document.uri,
-        }
-    }
-}
-
-impl From<DidChangeTextDocumentParams> for TextDocument {
-    fn from(value: DidChangeTextDocumentParams) -> Self {
-        Self {
-            text: value.content_changes[0].text.to_string(),
-            uri: value.text_document.uri,
-        }
-    }
-}
-
-impl GlobalState {
-    fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
-        let text = &text_document.text;
-        let url = text_document.uri.to_string();
-
-        let green = Parser::parse_circom(&text);
-        let syntax = SyntaxNode::new_root(green);
-
-        self.ast_map
-            .insert(url.clone(), CircomProgramAST::cast(syntax).unwrap());
-
-        self.file_map.insert(url, FileUtils::create(&text));
-        Ok(())
-    }
-}
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Note that  we must have our logging only write out to stderr.
     eprintln!("starting generic LSP server");
@@ -106,10 +55,7 @@ fn main_loop(
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
-    let mut global_state = GlobalState {
-        ast_map: DashMap::new(),
-        file_map: DashMap::new(),
-    };
+    let mut global_state = GlobalState::new();
 
     for msg in &connection.receiver {
         match msg {
@@ -119,35 +65,7 @@ fn main_loop(
                 }
                 match cast::<GotoDefinition>(req) {
                     Ok((id, params)) => {
-                        let uri = params.text_document_position_params.text_document.uri;
-
-                        let ast = global_state.ast_map.get(&uri.to_string()).unwrap();
-                        let file = global_state.file_map.get(&uri.to_string()).unwrap();
-
-                        let result = if let Some(token) = lookup_token_at_postion(
-                            &file,
-                            &ast,
-                            params.text_document_position_params.position,
-                        ) {
-                            let range = lookup_definition(&file, &ast, token);
-
-                            let result = Some(GotoDefinitionResponse::Scalar(Location::new(
-                                uri,
-                                range.unwrap(),
-                            )));
-                            let result = serde_json::to_value(&result).unwrap();
-                            result
-                        } else {
-                            let result = Some(GotoDefinitionResponse::Array(Vec::new()));
-                            let result = serde_json::to_value(&result).unwrap();
-                            result
-                        };
-                       
-                        let resp = Response {
-                            id,
-                            result: Some(result),
-                            error: None,
-                        };
+                        let resp = global_state.goto_definition_handler(id, params);
                         connection.sender.send(Message::Response(resp))?;
                         continue;
                     }
@@ -155,6 +73,7 @@ fn main_loop(
                     Err(ExtractError::MethodMismatch(req)) => req,
                 };
             }
+
             Message::Response(resp) => {
                 eprintln!("got response: {resp:?}");
             }

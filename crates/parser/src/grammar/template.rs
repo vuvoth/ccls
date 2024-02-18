@@ -9,19 +9,18 @@ pub fn template(p: &mut Parser) {
     p.expect(TemplateKw);
     p.expect(Identifier);
     p.expect(LParen);
+    let arg_marker = p.open();
+    while !p.at(RParen) && !p.eof() {
+        p.expect(Identifier);
+        if p.at(Comma) {
+            p.expect(Comma);
+        }
+    }
+
+    p.close(arg_marker, ParameterList);
     p.expect(RParen);
     block::block(p);
     p.close(m, TemplateKw);
-}
-
-pub fn function_parse(p: &mut Parser) {
-    let m = p.open();
-    p.expect(FunctionKw);
-    p.expect(Identifier);
-    p.expect(LParen);
-    p.expect(RParen);
-    block::block(p);
-    p.close(m, FunctionDef);
 }
 
 mod tests {
@@ -38,7 +37,7 @@ mod tests {
         use super::{entry::Scope, Parser};
 
         let source: String = r#"
-        template Multiplier2 () {  
+        template Multiplier2 (a, b, c) {  
         
            // Declaration of signals.  
            signal input a;  
