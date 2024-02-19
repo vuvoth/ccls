@@ -40,6 +40,10 @@ pub fn lookup_definition(
             result.push(range);
         }
 
+        if !template.syntax().text_range().contains_range(token.text_range()) {
+            break;
+        }
+        
         if let Some(fn_body) = template.func_body() {
             if let Some(statements) = fn_body.statement_list() {
                 for signal in statements.input_signals() {
@@ -50,6 +54,7 @@ pub fn lookup_definition(
                     }
                 }
 
+               
                 for signal in statements.output_signals() {
                     if let Some(name) = signal.signal_name() {
                         if name.syntax().text() == token.text() {
