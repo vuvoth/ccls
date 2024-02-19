@@ -3,7 +3,7 @@
   "description": "Better circom support",
   "author": "Vu Vo",
   "license": "MIT",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "repository": {
     "type": "git",
     "url": "https://github.com/vuvoth/circom-plus"
