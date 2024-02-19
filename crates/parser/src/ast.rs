@@ -220,6 +220,21 @@ impl AstTemplateDef {
         }
         None
     }
+
+    pub fn find_component(&self, name: &str) -> Option<AstComponentDecl> {
+        if let Some(statements) = self.statements() {
+            for component in statements.components() {
+                if let Some(signal_name) = component.component_identifier() {
+                    if let Some(component_name) = signal_name.name() {
+                        if component_name.syntax().text() == name {
+                            return Some(component);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 ast_node!(AstFunctionName, FunctionName);

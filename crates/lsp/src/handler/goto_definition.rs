@@ -63,15 +63,17 @@ pub fn lookup_definition(
     ast: &AstCircomProgram,
     token: &SyntaxToken,
 ) -> Vec<Range> {
+    eprintln!("{token:?}");
     let template_list = ast.template_list();
 
     let mut res = Vec::new();
-
+    let mut signal_outside = false;
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
         // find template called.
         if let Some(ast_component_call) = AstComponentCall::cast(component_call) {
             if let Some(signal) = ast_component_call.signal() {
                 if signal.syntax().text() == token.text() {
+                    signal_outside = true;
                     // lookup template of componenet
                     if let Some(current_template) =
                         lookup_node_wrap_token(TokenKind::TemplateDef, token)
@@ -99,7 +101,9 @@ pub fn lookup_definition(
                 }
             }
         }
-    } else {
+    }
+
+    if !signal_outside {
         for template in template_list {
             let template_name = template.template_name().unwrap();
             if template_name.name().unwrap().syntax().text() == token.text() {
@@ -114,7 +118,13 @@ pub fn lookup_definition(
             {
                 continue;
             }
+
             res.extend(lookup_signal_in_template(file, &template, token).into_iter());
+
+            if let Some(component_decl) = template.find_component(token.text()) {
+                res.push(file.range(component_decl.syntax()));
+            }
+
             if let Some(fn_body) = template.func_body() {
                 if let Some(statements) = fn_body.statement_list() {
                     for var in statements.variables() {
