@@ -35,18 +35,74 @@ macro_rules! ast_node {
     };
 }
 
+ast_node!(AstSignalHeader, SignalHeader);
+ast_node!(AstInputSignalDecl, InputSignalDecl);
+ast_node!(AstOutputSignalDecl, OutputSignalDecl);
+ast_node!(AstSignalDecl, SignalDecl);
+
+impl AstInputSignalDecl {
+    pub fn signal_name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
+impl AstOutputSignalDecl {
+    pub fn signal_name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
+impl AstSignalDecl {
+    pub fn signal_name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
+ast_node!(AstVarDecl, VarDecl);
+
+impl AstVarDecl {
+    pub fn variable_name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
 ast_node!(AstStatement, Statement);
+
 ast_node!(AstStatementList, StatementList);
 
 impl AstStatementList {
     pub fn statement_list(&self) -> AstChildren<AstStatement> {
         support::children(self.syntax())
     }
+
+    pub fn input_signals(&self) -> Vec<AstInputSignalDecl> {
+        self.syntax()
+            .children()
+            .filter_map(AstInputSignalDecl::cast)
+            .collect()
+    }
+
+    pub fn output_signals(&self) -> Vec<AstOutputSignalDecl> {
+        self.syntax()
+            .children()
+            .filter_map(AstOutputSignalDecl::cast)
+            .collect()
+    }
+
+    pub fn internal_signals(&self) -> Vec<AstSignalDecl> {
+        self.syntax()
+            .children()
+            .filter_map(AstSignalDecl::cast)
+            .collect()
+    }
+    pub fn variables(&self) -> Vec<AstVarDecl> {
+        self.syntax()
+            .children()
+            .filter_map(AstVarDecl::cast)
+            .collect()
+    }
 }
 
 ast_node!(AstBlock, Block);
 impl AstBlock {
-    pub fn statement(&self) -> Option<AstStatementList> {
+    pub fn statement_list(&self) -> Option<AstStatementList> {
         support::child::<AstStatementList>(self.syntax())
     }
 }

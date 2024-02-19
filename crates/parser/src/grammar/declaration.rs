@@ -3,13 +3,20 @@ use super::{
     *,
 };
 
-fn signal_header(p: &mut Parser) {
+fn signal_header(p: &mut Parser) -> Option<bool> {
+    let mut res = None;
     let m = p.open();
     p.expect(SignalKw);
     if p.at_any(&[InputKw, OutputKw]) {
+        if p.at(InputKw) {
+            res = Some(true);
+        } else {
+            res = Some(false);
+        }
         p.advance();
     }
     p.close(m, SignalHeader);
+    res
 }
 
 /**
@@ -42,7 +49,7 @@ pub(super) fn var_declaration(p: &mut Parser) {
             }
         }
     }
-    p.close(m, VarKw);
+    p.close(m, VarDecl);
 }
 
 pub(super) fn signal_declaration(p: &mut Parser) {
@@ -52,7 +59,7 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     }
 
     let m = p.open();
-    signal_header(p);
+    let io_signal = signal_header(p);
 
     if p.at(LParen) {
         tuple(p);
@@ -67,7 +74,16 @@ pub(super) fn signal_declaration(p: &mut Parser) {
             p.expect(Identifier);
         }
     }
-    p.close(m, SignalKw);
+
+    if let Some(is_input) = io_signal {
+        if is_input {
+            p.close(m, InputSignalDecl);
+        } else {
+            p.close(m, OutputSignalDecl);
+        }
+    } else {
+        p.close(m, SignalDecl);
+    }
 }
 
 pub(super) fn component_declaration(p: &mut Parser) {
@@ -77,13 +93,15 @@ pub(super) fn component_declaration(p: &mut Parser) {
     p.expect(Assign);
     p.expect(Identifier);
     p.expect(LParen);
+
     if p.at(Identifier) {
-        p.expect(Identifier);
+        expression::expression(p);
         while !p.at(RParen) && !p.eof() {
             p.expect(Comma);
-            p.expect(Identifier);
+            expression::expression(p);
         }
     }
+
     p.expect(RParen);
 
     p.close(m, ComponentDecl);

@@ -1,4 +1,5 @@
-use lsp_types::Position;
+use lsp_types::{Position, Range};
+use parser::syntax_node::SyntaxNode;
 use rowan::TextSize;
 
 pub struct FileId(u32);
@@ -13,7 +14,7 @@ impl FileUtils {
         Self::new(FileId(0), content)
     }
 
-    pub fn new(file_id: FileId, content: &str) -> Self {
+    pub(super) fn new(file_id: FileId, content: &str) -> Self {
         let mut file_utils = Self {
             file_id,
             end_line_vec: Vec::new(),
@@ -50,13 +51,21 @@ impl FileUtils {
             },
         )
     }
+
+    pub fn range(&self, syntax: &SyntaxNode) -> Range {
+        let syntax_range = syntax.text_range();
+        Range {
+            start: self.position(syntax_range.start()),
+            end: self.position(syntax_range.end()),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use lsp_types::Position;
 
-    use crate::utils::{FileId, FileUtils};
+    use crate::handler::lsp_utils::{FileId, FileUtils};
 
     #[test]
     fn off_set_test() {
