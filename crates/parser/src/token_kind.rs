@@ -161,7 +161,7 @@ pub enum TokenKind {
     InputSignalDecl,
     OutputSignalDecl,
     ComponentCall,
-    ComponentIdentifier, 
+    ComponentIdentifier,
     SignalIdentifier,
     ArrayQuery,
     EOF,
