@@ -1,15 +1,15 @@
-use std::any::Any;
+
 
 use lsp_types::{Position, Range};
 use parser::{
     ast::{
-        AstCircomProgram, AstComponentCall, AstComponentIdentifier, AstNode, AstTemplateDef,
+        AstCircomProgram, AstComponentCall, AstNode, AstTemplateDef,
         AstTemplateName,
     },
     syntax_node::{SyntaxNode, SyntaxToken},
     token_kind::TokenKind,
 };
-use rowan::{SyntaxText, TextSize};
+use rowan::{SyntaxText};
 
 use super::lsp_utils::FileUtils;
 

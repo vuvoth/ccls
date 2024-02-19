@@ -1,6 +1,6 @@
-use crate::syntax_node::{CircomLang, CircomLanguage};
+use crate::syntax_node::{CircomLanguage};
 pub use rowan::ast::{support, AstChildren, AstNode};
-use rowan::{Language, SyntaxText};
+use rowan::{SyntaxText};
 
 use crate::{
     syntax_node::SyntaxNode,
@@ -212,7 +212,7 @@ impl AstTemplateDef {
         if let Some(statements) = self.statements() {
             for signal in statements.internal_signals() {
                 if let Some(signal_name) = signal.signal_name() {
-                    if signal_name.equal(&name) {
+                    if signal_name.equal(name) {
                         return Some(signal);
                     }
                 }

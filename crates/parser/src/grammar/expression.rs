@@ -157,12 +157,12 @@ fn circom_expression(p: &mut Parser) {
 }
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+    
 
-    use rowan::api;
+    
     use rowan::SyntaxNode;
 
-    use crate::{syntax_node::CircomLang, token_kind::TokenKind};
+    use crate::{syntax_node::CircomLang};
 
     use super::{entry::Scope, Parser};
 
@@ -174,7 +174,7 @@ mod tests {
           b[1].c <== 10;
     }   
         "#;
-        let green = Parser::parse_scope(&source, Scope::Block);
+        let green = Parser::parse_scope(source, Scope::Block);
         let node = SyntaxNode::<CircomLang>::new_root(green);
         println!("{:#?}", node);
     }
