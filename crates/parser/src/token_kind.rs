@@ -139,6 +139,7 @@ pub enum TokenKind {
     ForLoop,
     AssignStatement,
     CircomProgram,
+    SignalOfComponent,
     SignalHeader,
     Block,
     Tuple,
@@ -159,6 +160,10 @@ pub enum TokenKind {
     VarDecl,
     InputSignalDecl,
     OutputSignalDecl,
+    ComponentCall,
+    ComponentIdentifier,
+    SignalIdentifier,
+    ArrayQuery,
     EOF,
     ROOT,
     __LAST,
@@ -224,7 +229,7 @@ impl TokenKind {
     pub fn postfix(self) -> Option<u16> {
         match self {
             Self::Dot => Some(200),
-            Self::LBracket => Some(200),
+            Self::LBracket => Some(201),
             _ => None,
         }
     }

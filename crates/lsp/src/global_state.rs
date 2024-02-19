@@ -64,7 +64,7 @@ impl GlobalState {
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
-            ranges = lookup_definition(&file, &ast, token);
+            ranges = lookup_definition(&file, &ast, &token);
         };
 
         let locations = ranges

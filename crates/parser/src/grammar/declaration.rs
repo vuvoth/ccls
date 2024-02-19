@@ -89,9 +89,14 @@ pub(super) fn signal_declaration(p: &mut Parser) {
 pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
+    let m_c = p.open();
     p.expect(Identifier);
+    p.close(m_c, ComponentIdentifier);
+
     p.expect(Assign);
+    let m_c = p.open();
     p.expect(Identifier);
+    p.close(m_c, TemplateName);
     p.expect(LParen);
 
     if p.at(Identifier) {

@@ -118,7 +118,27 @@ fn return_statement(p: &mut Parser) {
 
 fn assignment_statement(p: &mut Parser) {
     let m = p.open();
-    expression(p);
+
+    if p.at(Identifier) {
+        let m_id = p.open();
+        let m_name = p.open();
+        p.expect(Identifier);
+        p.close(m_name, ComponentIdentifier);
+        if p.at(LBracket) {
+            p.expect(LBracket);
+            expression(p);
+            p.expect(RBracket);
+        }
+        if p.at(Dot) {
+            p.expect(Dot);
+            p.expect(Identifier);
+            p.close(m_id, ComponentCall);
+        } else {
+            p.close(m_id, Expression);
+        }
+    } else {
+        expression(p);
+    }
 
     if p.at_any(&[
         Assign,
