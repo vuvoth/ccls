@@ -9,10 +9,12 @@ use parser::{
     ast::{AstCircomProgram, AstNode},
     parser::Parser,
     syntax_node::SyntaxNode,
-    utils::FileUtils,
 };
 
-use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
+use crate::handler::{
+    goto_definition::{lookup_definition, lookup_token_at_postion},
+    lsp_utils::FileUtils,
+};
 
 #[derive(Debug)]
 pub struct TextDocument {
@@ -57,16 +59,20 @@ impl GlobalState {
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
         let file = self.file_map.get(&uri.to_string()).unwrap();
 
-        let mut result = Some(GotoDefinitionResponse::Array(Vec::new()));
+        let mut ranges = Vec::new();
 
-        eprintln!("{:?}", params.text_document_position_params.position);
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
-            if let Some(range) = lookup_definition(&file, &ast, token) {
-                result = Some(GotoDefinitionResponse::Scalar(Location::new(uri, range)));
-            };
-        }
+            ranges = lookup_definition(&file, &ast, token);
+        };
+
+        let locations = ranges
+            .into_iter()
+            .map(|range| Location::new(uri.clone(), range))
+            .collect();
+
+        let result = Some(GotoDefinitionResponse::Array(locations));
 
         let result = serde_json::to_value(result).unwrap();
 

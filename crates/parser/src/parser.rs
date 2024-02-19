@@ -341,7 +341,6 @@ template Y() {
 
             println!("{}", program_ast.syntax().green());
 
-            // if let Some(token) =
             assert!(
                 program_ast.template_list()[0]
                     .template_name()

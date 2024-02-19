@@ -69,7 +69,7 @@ mod tests {
         let syntax_node = SyntaxNode::new_root(green_node);
 
         if let Some(ast_block) = AstBlock::cast(syntax_node) {
-            println!("{:?}", ast_block.statement().unwrap().syntax().kind());
+            println!("{:?}", ast_block.statement_list().unwrap().syntax().kind());
         }
     }
 }
