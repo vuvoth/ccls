@@ -40,10 +40,14 @@ pub fn lookup_definition(
             result.push(range);
         }
 
-        if !template.syntax().text_range().contains_range(token.text_range()) {
-            break;
+        if !template
+            .syntax()
+            .text_range()
+            .contains_range(token.text_range())
+        {
+            continue;
         }
-        
+
         if let Some(fn_body) = template.func_body() {
             if let Some(statements) = fn_body.statement_list() {
                 for signal in statements.input_signals() {
@@ -54,7 +58,6 @@ pub fn lookup_definition(
                     }
                 }
 
-               
                 for signal in statements.output_signals() {
                     if let Some(name) = signal.signal_name() {
                         if name.syntax().text() == token.text() {
@@ -71,6 +74,13 @@ pub fn lookup_definition(
                     }
                 }
 
+                for var in statements.variables() {
+                    if let Some(name) = var.variable_name() {
+                        if name.syntax().text() == token.text() {
+                            result.push(file.range(var.syntax()));
+                        }
+                    }
+                }
             }
         }
     }
@@ -80,7 +90,7 @@ pub fn lookup_definition(
 #[cfg(test)]
 mod tests {
     use parser::{ast::AstCircomProgram, parser::Parser, syntax_node::SyntaxNode};
-    use rowan::{ast::AstNode, TextSize};
+    use rowan::ast::AstNode;
 
     use crate::handler::lsp_utils::FileUtils;
 
@@ -126,7 +136,7 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileUtils::create(&source);
+        let _file = FileUtils::create(&source);
 
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::new_root(green_node.clone());

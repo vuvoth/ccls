@@ -49,7 +49,7 @@ pub(super) fn var_declaration(p: &mut Parser) {
             }
         }
     }
-    p.close(m, VarKw);
+    p.close(m, VarDecl);
 }
 
 pub(super) fn signal_declaration(p: &mut Parser) {

@@ -42,22 +42,27 @@ ast_node!(AstSignalDecl, SignalDecl);
 
 impl AstInputSignalDecl {
     pub fn signal_name(&self) -> Option<AstIdentifier> {
-        support::child(&self.syntax())
+        support::child(self.syntax())
     }
 }
 
 impl AstOutputSignalDecl {
     pub fn signal_name(&self) -> Option<AstIdentifier> {
-        support::child(&self.syntax())
+        support::child(self.syntax())
     }
 }
 impl AstSignalDecl {
     pub fn signal_name(&self) -> Option<AstIdentifier> {
-        support::child(&self.syntax())
+        support::child(self.syntax())
     }
 }
 ast_node!(AstVarDecl, VarDecl);
 
+impl AstVarDecl {
+    pub fn variable_name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
 ast_node!(AstStatement, Statement);
 
 ast_node!(AstStatementList, StatementList);

@@ -56,10 +56,9 @@ impl FileUtils {
         let syntax_range = syntax.text_range();
         Range {
             start: self.position(syntax_range.start()),
-            end: self.position(syntax_range.end())
+            end: self.position(syntax_range.end()),
         }
     }
-    
 }
 
 #[cfg(test)]
