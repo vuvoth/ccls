@@ -1,6 +1,7 @@
-use crate::syntax_node::{CircomLanguage};
+use crate::syntax_node::CircomLanguage;
+use logos::Source;
 pub use rowan::ast::{support, AstChildren, AstNode};
-use rowan::{SyntaxText};
+use rowan::SyntaxText;
 
 use crate::{
     syntax_node::SyntaxNode,
@@ -261,6 +262,12 @@ impl AstCircomProgram {
     pub fn pragma(&self) -> Option<AstPragma> {
         self.syntax().children().find_map(AstPragma::cast)
     }
+    pub fn libs(&self) -> Vec<AstInclude> {
+        self.syntax()
+            .children()
+            .filter_map(AstInclude::cast)
+            .collect()
+    }
 
     pub fn template_list(&self) -> Vec<AstTemplateDef> {
         self.syntax()
@@ -306,6 +313,22 @@ ast_node!(AstComponentIdentifier, ComponentIdentifier);
 
 impl AstComponentIdentifier {
     pub fn name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
+ast_node!(AstCircomString, CircomString);
+impl AstCircomString {
+    pub fn value(&self) -> String {
+        let text = self.syntax().to_string();
+
+        text.slice(1..text.len() - 1).unwrap().to_string()
+    }
+}
+ast_node!(AstInclude, IncludeKw);
+
+impl AstInclude {
+    pub fn lib(&self) -> Option<AstCircomString> {
         support::child(self.syntax())
     }
 }

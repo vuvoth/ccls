@@ -1,22 +1,26 @@
-use lsp_types::{Position, Range};
+use std::path::{self, Path, PathBuf};
+
+use lsp_types::{Position, Range, Url};
 use parser::syntax_node::SyntaxNode;
 use rowan::TextSize;
 
 pub struct FileId(u32);
 
 pub struct FileUtils {
-    file_id: FileId,
-    end_line_vec: Vec<u32>,
+    pub file_id: FileId,
+    pub file_path: Url,
+    pub end_line_vec: Vec<u32>,
 }
 
 impl FileUtils {
-    pub fn create(content: &str) -> Self {
-        Self::new(FileId(0), content)
+    pub fn create(content: &str, file_path: Url) -> Self {
+        Self::new(FileId(0), content, file_path)
     }
 
-    pub(super) fn new(file_id: FileId, content: &str) -> Self {
+    pub(super) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
         let mut file_utils = Self {
             file_id,
+            file_path,
             end_line_vec: Vec::new(),
         };
 
@@ -27,6 +31,11 @@ impl FileUtils {
         }
 
         file_utils
+    }
+
+    pub fn get_path(&self) -> PathBuf {
+        let p = self.file_path.path();
+        PathBuf::from(p)
     }
 
     pub fn off_set(&self, position: Position) -> TextSize {
@@ -63,7 +72,9 @@ impl FileUtils {
 
 #[cfg(test)]
 mod tests {
-    use lsp_types::Position;
+    use std::path::Path;
+
+    use lsp_types::{Position, Url};
 
     use crate::handler::lsp_utils::{FileId, FileUtils};
 
@@ -75,7 +86,11 @@ two
 three
        "#;
 
-        let file_utils = FileUtils::new(FileId(1), str);
+        let file_utils = FileUtils::new(
+            FileId(1),
+            str,
+            Url::from_file_path(Path::new("tmp.txt")).unwrap(),
+        );
 
         let position = Position::new(0, 1);
 
@@ -95,7 +110,11 @@ three
                "#;
 
         // 0, 4, 8
-        let file_utils = FileUtils::new(FileId(1), str);
+        let file_utils = FileUtils::new(
+            FileId(1),
+            str,
+            Url::from_file_path(Path::new("tmp.txt")).unwrap(),
+        );
         assert_eq!(Position::new(1, 1), file_utils.position(2.into()));
         assert_eq!(Position::new(0, 0), file_utils.position(0.into()));
     }

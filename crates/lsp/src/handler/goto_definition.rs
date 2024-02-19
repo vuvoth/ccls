@@ -1,15 +1,15 @@
+use std::env;
+use std::fs;
+use std::path::PathBuf;
 
-
+use lsp_types::Location;
 use lsp_types::{Position, Range};
 use parser::{
-    ast::{
-        AstCircomProgram, AstComponentCall, AstNode, AstTemplateDef,
-        AstTemplateName,
-    },
+    ast::{AstCircomProgram, AstComponentCall, AstNode, AstTemplateDef, AstTemplateName},
     syntax_node::{SyntaxNode, SyntaxToken},
     token_kind::TokenKind,
 };
-use rowan::{SyntaxText};
+use rowan::SyntaxText;
 
 use super::lsp_utils::FileUtils;
 
@@ -62,7 +62,7 @@ pub fn lookup_definition(
     file: &FileUtils,
     ast: &AstCircomProgram,
     token: &SyntaxToken,
-) -> Vec<Range> {
+) -> Vec<Location> {
     eprintln!("{token:?}");
     let template_list = ast.template_list();
 
@@ -138,7 +138,13 @@ pub fn lookup_definition(
             }
         }
     }
-    res
+
+    let locations = res
+        .into_iter()
+        .map(|range| Location::new(file.file_path.clone(), range))
+        .collect();
+
+    locations
 }
 
 fn lookup_signal_in_template(
@@ -178,6 +184,9 @@ fn lookup_signal_in_template(
 }
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
+    use lsp_types::Url;
     use parser::{
         ast::AstCircomProgram, parser::Parser, syntax_node::SyntaxNode, token_kind::TokenKind,
     };
@@ -230,7 +239,7 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileUtils::create(&source);
+        let file = FileUtils::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
 
         let green_node = Parser::parse_circom(&source);
         let syntax_node = SyntaxNode::new_root(green_node.clone());
@@ -256,5 +265,13 @@ template Y() {
                 );
             }
         }
+    }
+
+    #[test]
+    fn url_test() {
+        let url = Url::from_file_path(Path::new("/hello/abc.tx"));
+        let binding = url.unwrap();
+        let p = binding.path();
+        println!("{:?}", Path::new(p).parent());
     }
 }
