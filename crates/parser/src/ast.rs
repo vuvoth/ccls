@@ -1,5 +1,6 @@
-use crate::syntax_node::CircomLanguage;
+use crate::syntax_node::{CircomLang, CircomLanguage};
 pub use rowan::ast::{support, AstChildren, AstNode};
+use rowan::{Language, SyntaxText};
 
 use crate::{
     syntax_node::SyntaxNode,
@@ -44,6 +45,13 @@ impl AstInputSignalDecl {
     pub fn signal_name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
+
+    pub fn same_name(&self, other: &SyntaxText) -> bool {
+        if let Some(name) = self.signal_name() {
+            return name.equal(other);
+        }
+        false
+    }
 }
 
 impl AstOutputSignalDecl {
@@ -63,6 +71,18 @@ impl AstVarDecl {
         support::child(self.syntax())
     }
 }
+
+ast_node!(AstComponentDecl, ComponentDecl);
+
+impl AstComponentDecl {
+    pub fn template(&self) -> Option<AstTemplateName> {
+        support::child(self.syntax())
+    }
+    pub fn component_identifier(&self) -> Option<AstComponentIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
 ast_node!(AstStatement, Statement);
 
 ast_node!(AstStatementList, StatementList);
@@ -98,6 +118,13 @@ impl AstStatementList {
             .filter_map(AstVarDecl::cast)
             .collect()
     }
+
+    pub fn components(&self) -> Vec<AstComponentDecl> {
+        self.syntax()
+            .children()
+            .filter_map(AstComponentDecl::cast)
+            .collect()
+    }
 }
 
 ast_node!(AstBlock, Block);
@@ -119,6 +146,12 @@ ast_node!(AstParameterList, TokenKind::ParameterList);
 
 ast_node!(AstIdentifier, Identifier);
 
+impl AstIdentifier {
+    pub fn equal(&self, other: &SyntaxText) -> bool {
+        self.syntax().text() == *other
+    }
+}
+
 ast_node!(AstTemplateName, TemplateName);
 
 ast_node!(AstTemplateDef, TemplateDef);
@@ -126,6 +159,9 @@ ast_node!(AstTemplateDef, TemplateDef);
 impl AstTemplateName {
     pub fn name(&self) -> Option<AstIdentifier> {
         self.syntax().children().find_map(AstIdentifier::cast)
+    }
+    pub fn same_name<M: AstNode<Language = CircomLanguage>>(&self, other: &M) -> bool {
+        self.syntax().text() == other.syntax().text()
     }
 }
 
@@ -138,6 +174,51 @@ impl AstTemplateDef {
     }
     pub fn parameter_list(&self) -> Option<AstParameterList> {
         self.syntax().children().find_map(AstParameterList::cast)
+    }
+    pub fn statements(&self) -> Option<AstStatementList> {
+        if let Some(body) = self.func_body() {
+            return body.statement_list();
+        }
+        None
+    }
+
+    pub fn find_input_signal(&self, name: &SyntaxText) -> Option<AstInputSignalDecl> {
+        if let Some(statements) = self.statements() {
+            for input_signal in statements.input_signals() {
+                if let Some(signal_name) = input_signal.signal_name() {
+                    if signal_name.equal(name) {
+                        return Some(input_signal);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn find_output_signal(&self, name: &SyntaxText) -> Option<AstOutputSignalDecl> {
+        if let Some(statements) = self.statements() {
+            for input_signal in statements.output_signals() {
+                if let Some(signal_name) = input_signal.signal_name() {
+                    if signal_name.equal(name) {
+                        return Some(input_signal);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn find_internal_signal(&self, name: &SyntaxText) -> Option<AstSignalDecl> {
+        if let Some(statements) = self.statements() {
+            for signal in statements.internal_signals() {
+                if let Some(signal_name) = signal.signal_name() {
+                    if signal_name.equal(&name) {
+                        return Some(signal);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -178,5 +259,38 @@ impl AstCircomProgram {
             .children()
             .filter_map(AstFunctionDef::cast)
             .collect()
+    }
+
+    pub fn get_template_by_name(
+        &self,
+        ast_template_name: &AstTemplateName,
+    ) -> Option<AstTemplateDef> {
+        for template in self.template_list() {
+            if let Some(template_name) = template.template_name() {
+                if template_name.same_name(ast_template_name) {
+                    return Some(template);
+                }
+            }
+        }
+        None
+    }
+}
+
+ast_node!(AstComponentCall, ComponentCall);
+
+impl AstComponentCall {
+    pub fn component_name(&self) -> Option<AstComponentIdentifier> {
+        support::child(self.syntax())
+    }
+    pub fn signal(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
+ast_node!(AstComponentIdentifier, ComponentIdentifier);
+
+impl AstComponentIdentifier {
+    pub fn name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
     }
 }
