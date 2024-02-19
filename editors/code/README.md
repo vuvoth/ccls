@@ -5,13 +5,32 @@ Better support for circom.
 ## Features 
 
 - Go to definition
-- Simple code autocompletion
+- Support circom 2 
 
 
-## TODOs
+## What make it different? 
 
-- Diagnosis support
-- autocompletion for function and data field.
-- Support circom 2
+This can process invalid circom file :D. 
+
+For example this circom-plus can process this file.
+
+```circom
+pragma circom 2.0.1;
+
+template Adder() {
+    // config signal for x
+    signal input x;
+    x <== 100;
+    test
+}
+
+template Another() {
+    component adder = Adder(); 
+
+}
+```
 
 
+## Bugs 
+
+If you want to request feature or report bug, please create issue on this repo: https://github.com/vuvoth/ccls

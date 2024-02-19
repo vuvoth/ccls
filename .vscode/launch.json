@@ -47,7 +47,7 @@
           "<node_internals>/**/*.js"
         ],
         "env": {
-          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/debug/circom-lsp"
+          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/debug/ccls"
         }
       },
       {
@@ -68,7 +68,7 @@
           "<node_internals>/**/*.js"
         ],
         "env": {
-          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/circom-lsp"
+          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/ccls"
         }
       },
       {
@@ -90,7 +90,7 @@
           "<node_internals>/**/*.js"
         ],
         "env": {
-          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/circom-lsp"
+          "__CIRCOM_LSP_SERVER_DEBUG": "${workspaceFolder}/target/release/ccls"
         }
       },
       {
@@ -104,7 +104,7 @@
         "name": "Attach To Server",
         "type": "lldb",
         "request": "attach",
-        "program": "${workspaceFolder}/target/debug/circom-lsp",
+        "program": "${workspaceFolder}/target/debug/ccls",
         "pid": "${command:pickMyProcess}",
         "sourceLanguages": [
           "rust"
