@@ -1,14 +1,17 @@
+use std::env;
+use std::{fs, path::PathBuf};
+
 use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
 use lsp_types::{
     DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Location, Url,
+    GotoDefinitionResponse, Location, Range, Url,
 };
 use parser::{
     ast::{AstCircomProgram, AstNode},
     parser::Parser,
-    syntax_node::SyntaxNode,
+    syntax_node::{SyntaxNode, SyntaxToken},
 };
 
 use crate::handler::{
@@ -53,26 +56,54 @@ impl GlobalState {
         }
     }
 
+    pub fn lookup_definition(
+        &self,
+        root: &FileUtils,
+        ast: &AstCircomProgram,
+        token: &SyntaxToken,
+    ) -> Vec<Location> {
+        let mut result = lookup_definition(root, ast, token);
+
+        let p = root.get_path();
+
+        for lib in ast.libs() {
+            let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
+            let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
+            let url = Url::from_file_path(lib_path.clone()).unwrap();
+            if let Ok(src) = fs::read_to_string(lib_path) {
+                let text_doc = TextDocument {
+                    text: src,
+                    uri: url.clone(),
+                };
+
+                let file = &FileUtils::create(&text_doc.text, url.clone());
+                let green = Parser::parse_circom(&text_doc.text);
+                let syntax = SyntaxNode::new_root(green);
+
+                if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
+                    let ans = lookup_definition(file, &lib_ast, token);
+                    result.extend(ans);
+                }
+
+            }
+        }
+
+        result
+    }
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
         let uri = params.text_document_position_params.text_document.uri;
 
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
         let file = self.file_map.get(&uri.to_string()).unwrap();
 
-        let mut ranges = Vec::new();
-
+        let mut locations = Vec::new();
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
-            ranges = lookup_definition(&file, &ast, &token);
+            locations = self.lookup_definition(&file, &ast, &token);
         };
 
-        let locations = ranges
-            .into_iter()
-            .map(|range| Location::new(uri.clone(), range))
-            .collect();
-
-        let result = Some(GotoDefinitionResponse::Array(locations));
+        let result: Option<GotoDefinitionResponse> = Some(GotoDefinitionResponse::Array(locations));
 
         let result = serde_json::to_value(result).unwrap();
 
@@ -83,7 +114,7 @@ impl GlobalState {
         }
     }
 
-    pub(crate) fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
+    pub(crate) fn handle_update(&self, text_document: &TextDocument) -> Result<()> {
         let text = &text_document.text;
         let url = text_document.uri.to_string();
 
@@ -93,7 +124,8 @@ impl GlobalState {
         self.ast_map
             .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());
 
-        self.file_map.insert(url, FileUtils::create(text));
+        self.file_map
+            .insert(url, FileUtils::create(text, text_document.uri.clone()));
         Ok(())
     }
 }
