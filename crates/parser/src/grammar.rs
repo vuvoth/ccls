@@ -17,7 +17,6 @@ mod template;
  */
 
 pub mod entry {
-    use crate::output::Output;
 
     use super::*;
 

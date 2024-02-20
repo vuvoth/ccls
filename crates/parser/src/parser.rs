@@ -1,4 +1,4 @@
-use std::{cell::Cell, thread::scope};
+use std::cell::Cell;
 
 use crate::{
     event::Event, grammar::entry::Scope, input::Input, output::Output, token_kind::TokenKind,
@@ -192,7 +192,7 @@ impl<'a> Parser<'a> {
 
 impl Parser<'_> {
     pub fn parsing_with_scrope(input: &Input, scope: Scope) -> Output {
-        let mut p = Parser::new(&input);
+        let mut p = Parser::new(input);
         scope.parse(&mut p);
         Output::from(p.events)
     }

@@ -1,7 +1,3 @@
-use std::env;
-use std::fs;
-use std::path::PathBuf;
-
 use lsp_types::Location;
 use lsp_types::{Position, Range};
 use parser::token_kind::TokenKind;
@@ -142,12 +138,9 @@ pub fn lookup_definition(
         }
     }
 
-    let locations = res
-        .into_iter()
+    res.into_iter()
         .map(|range| Location::new(file.file_path.clone(), range))
-        .collect();
-
-    locations
+        .collect()
 }
 
 fn lookup_signal_in_template(
@@ -190,13 +183,9 @@ mod tests {
     use std::path::Path;
 
     use lsp_types::Url;
-    use parser::{parser::Parser, token_kind::TokenKind};
+    use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
-    use syntax::{
-        abstract_syntax_tree::AstCircomProgram,
-        syntax::SyntaxTreeBuilder,
-        syntax_node::{self, SyntaxNode},
-    };
+    use syntax::{abstract_syntax_tree::AstCircomProgram, syntax::SyntaxTreeBuilder};
 
     use crate::handler::{
         goto_definition::{lookup_node_wrap_token, lookup_token_at_postion},

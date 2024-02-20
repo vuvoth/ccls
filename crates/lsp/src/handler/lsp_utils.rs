@@ -1,4 +1,4 @@
-use std::path::{self, Path, PathBuf};
+use std::path::PathBuf;
 
 use lsp_types::{Position, Range, Url};
 use rowan::TextSize;

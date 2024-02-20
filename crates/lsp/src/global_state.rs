@@ -1,4 +1,3 @@
-use std::env;
 use std::{fs, path::PathBuf};
 
 use anyhow::Result;
@@ -6,7 +5,7 @@ use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
 use lsp_types::{
     DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Location, Range, Url,
+    GotoDefinitionResponse, Location, Url,
 };
 
 use rowan::ast::AstNode;
@@ -117,7 +116,7 @@ impl GlobalState {
         let text = &text_document.text;
         let url = text_document.uri.to_string();
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(&text);
+        let syntax = SyntaxTreeBuilder::syntax_tree(text);
 
         self.ast_map
             .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());

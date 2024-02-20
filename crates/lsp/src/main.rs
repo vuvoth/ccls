@@ -51,7 +51,7 @@ fn main_loop(
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
 
-    let mut global_state = GlobalState::new();
+    let global_state = GlobalState::new();
 
     for msg in &connection.receiver {
         match msg {
