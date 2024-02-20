@@ -1,8 +1,8 @@
 use std::path::{self, Path, PathBuf};
 
 use lsp_types::{Position, Range, Url};
-use parser::syntax_node::SyntaxNode;
 use rowan::TextSize;
+use syntax::syntax_node::SyntaxNode;
 
 pub struct FileId(u32);
 

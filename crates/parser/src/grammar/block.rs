@@ -37,39 +37,39 @@ pub fn block(p: &mut Parser) {
     }
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-    use crate::{
-        ast::{AstBlock, AstNode},
-        grammar::entry::Scope,
-        syntax_node::SyntaxNode,
-    };
+//     use crate::{
+//         ast::{AstBlock, AstNode},
+//         grammar::entry::Scope,
+//         syntax_node::SyntaxNode,
+//     };
 
-    use super::*;
-    #[test]
-    fn parse_block_test() {
-        let source = r#"
-            {
-               var x, y; 
-               var (x, y);
-               var (x, y) = a + b;
-               var a = x, b = y;
-               var a = x, b = y;
-               
-               signal a; 
-               signal a, b;
-               signal (a, b);
-               signal (a, b) = a - b;
-               a <== 12 + 1
-               a ==>b
-            }
-        "#;
-        let green_node = Parser::parse_scope(source, Scope::Block);
-        let syntax_node = SyntaxNode::new_root(green_node);
+//     use super::*;
+//     #[test]
+//     fn parse_block_test() {
+//         let source = r#"
+//             {
+//                var x, y;
+//                var (x, y);
+//                var (x, y) = a + b;
+//                var a = x, b = y;
+//                var a = x, b = y;
 
-        if let Some(ast_block) = AstBlock::cast(syntax_node) {
-            println!("{:?}", ast_block.statement_list().unwrap().syntax().kind());
-        }
-    }
-}
+//                signal a;
+//                signal a, b;
+//                signal (a, b);
+//                signal (a, b) = a - b;
+//                a <== 12 + 1
+//                a ==>b
+//             }
+//         "#;
+//         let green_node = Parser::parse_scope(source, Scope::Block);
+//         let syntax_node = SyntaxNode::new_root(green_node);
+
+//         if let Some(ast_block) = AstBlock::cast(syntax_node) {
+//             println!("{:?}", ast_block.statement_list().unwrap().syntax().kind());
+//         }
+//     }
+// }

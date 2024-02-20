@@ -8,11 +8,11 @@ use lsp_types::{
     DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
     GotoDefinitionResponse, Location, Range, Url,
 };
-use parser::{
-    ast::{AstCircomProgram, AstNode},
-    parser::Parser,
-    syntax_node::{SyntaxNode, SyntaxToken},
-};
+
+use rowan::ast::AstNode;
+use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::syntax::SyntaxTreeBuilder;
+use syntax::syntax_node::SyntaxToken;
 
 use crate::handler::{
     goto_definition::{lookup_definition, lookup_token_at_postion},
@@ -77,14 +77,13 @@ impl GlobalState {
                 };
 
                 let file = &FileUtils::create(&text_doc.text, url.clone());
-                let green = Parser::parse_circom(&text_doc.text);
-                let syntax = SyntaxNode::new_root(green);
+
+                let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
 
                 if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
                     let ans = lookup_definition(file, &lib_ast, token);
                     result.extend(ans);
                 }
-
             }
         }
 
@@ -118,8 +117,7 @@ impl GlobalState {
         let text = &text_document.text;
         let url = text_document.uri.to_string();
 
-        let green = Parser::parse_circom(text);
-        let syntax = SyntaxNode::new_root(green);
+        let syntax = SyntaxTreeBuilder::syntax_tree(&text);
 
         self.ast_map
             .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());

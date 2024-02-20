@@ -1,12 +1,10 @@
 use crate::syntax_node::CircomLanguage;
-use logos::Source;
 pub use rowan::ast::{support, AstChildren, AstNode};
 use rowan::SyntaxText;
 
-use crate::{
-    syntax_node::SyntaxNode,
-    token_kind::{TokenKind, TokenKind::*},
-};
+use crate::syntax_node::SyntaxNode;
+
+use parser::token_kind::{TokenKind, TokenKind::*};
 
 macro_rules! ast_node {
     ($ast_name: ident, $kind: expr) => {
@@ -320,11 +318,11 @@ impl AstComponentIdentifier {
 ast_node!(AstCircomString, CircomString);
 impl AstCircomString {
     pub fn value(&self) -> String {
-        let text = self.syntax().to_string();
-
-        text.slice(1..text.len() - 1).unwrap().to_string()
+        let text = &self.syntax().text().to_string();
+        text[1..text.len() - 1].to_string()
     }
 }
+
 ast_node!(AstInclude, IncludeKw);
 
 impl AstInclude {

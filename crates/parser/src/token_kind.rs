@@ -164,6 +164,7 @@ pub enum TokenKind {
     ComponentIdentifier,
     SignalIdentifier,
     ArrayQuery,
+    ParserError,
     EOF,
     ROOT,
     __LAST,
@@ -189,6 +190,12 @@ impl From<TokenKind> for u16 {
     #[inline]
     fn from(k: TokenKind) -> u16 {
         k as u16
+    }
+}
+
+impl From<TokenKind> for rowan::SyntaxKind {
+    fn from(kind: TokenKind) -> Self {
+        Self(kind as u16)
     }
 }
 

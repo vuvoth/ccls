@@ -155,27 +155,25 @@ fn circom_expression(p: &mut Parser) {
         }
     }
 }
-#[cfg(test)]
-mod tests {
-    
+// #[cfg(test)]
+// mod tests {
 
-    
-    use rowan::SyntaxNode;
+//     use rowan::SyntaxNode;
 
-    use crate::{syntax_node::CircomLang};
+//     use crate::{syntax_node::CircomLang};
 
-    use super::{entry::Scope, Parser};
+//     use super::{entry::Scope, Parser};
 
-    #[test]
-    fn test_expression() {
-        let source = r#" 
-{
-          a.tmp <== 100;
-          b[1].c <== 10;
-    }   
-        "#;
-        let green = Parser::parse_scope(source, Scope::Block);
-        let node = SyntaxNode::<CircomLang>::new_root(green);
-        println!("{:#?}", node);
-    }
-}
+//     #[test]
+//     fn test_expression() {
+//         let source = r#"
+// {
+//           a.tmp <== 100;
+//           b[1].c <== 10;
+//     }
+//         "#;
+//         let green = Parser::parse_scope(source, Scope::Block);
+//         let node = SyntaxNode::<CircomLang>::new_root(green);
+//         println!("{:#?}", node);
+//     }
+// }

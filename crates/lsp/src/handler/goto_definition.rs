@@ -4,12 +4,15 @@ use std::path::PathBuf;
 
 use lsp_types::Location;
 use lsp_types::{Position, Range};
-use parser::{
-    ast::{AstCircomProgram, AstComponentCall, AstNode, AstTemplateDef, AstTemplateName},
-    syntax_node::{SyntaxNode, SyntaxToken},
-    token_kind::TokenKind,
-};
+use parser::token_kind::TokenKind;
+use rowan::ast::AstNode;
 use rowan::SyntaxText;
+use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::abstract_syntax_tree::AstComponentCall;
+use syntax::abstract_syntax_tree::AstTemplateDef;
+use syntax::abstract_syntax_tree::AstTemplateName;
+use syntax::syntax_node::SyntaxNode;
+use syntax::syntax_node::SyntaxToken;
 
 use super::lsp_utils::FileUtils;
 
@@ -187,10 +190,13 @@ mod tests {
     use std::path::Path;
 
     use lsp_types::Url;
-    use parser::{
-        ast::AstCircomProgram, parser::Parser, syntax_node::SyntaxNode, token_kind::TokenKind,
-    };
+    use parser::{parser::Parser, token_kind::TokenKind};
     use rowan::ast::AstNode;
+    use syntax::{
+        abstract_syntax_tree::AstCircomProgram,
+        syntax::SyntaxTreeBuilder,
+        syntax_node::{self, SyntaxNode},
+    };
 
     use crate::handler::{
         goto_definition::{lookup_node_wrap_token, lookup_token_at_postion},
@@ -241,8 +247,8 @@ template Y() {
 
         let file = FileUtils::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
 
-        let green_node = Parser::parse_circom(&source);
-        let syntax_node = SyntaxNode::new_root(green_node.clone());
+        let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
+
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
             for template in program_ast.template_list() {
                 println!("{template:?}");
