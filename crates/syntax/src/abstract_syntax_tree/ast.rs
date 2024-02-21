@@ -176,7 +176,7 @@ impl AstCircomProgram {
         ast_template_name: &AstTemplateName,
     ) -> Option<AstTemplateDef> {
         for template in self.template_list() {
-            if let Some(template_name) = template.template_name() {
+            if let Some(template_name) = template.name() {
                 if template_name.same_name(ast_template_name) {
                     return Some(template);
                 }

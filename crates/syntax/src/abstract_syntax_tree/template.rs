@@ -4,7 +4,7 @@ use rowan::SyntaxText;
 use crate::syntax_node::CircomLanguage;
 use crate::syntax_node::SyntaxNode;
 use parser::token_kind::TokenKind;
-use rowan::ast::{support, AstNode};
+use rowan::ast::AstNode;
 
 use super::ast::AstBlock;
 use super::ast::AstComponentDecl;
@@ -29,7 +29,7 @@ impl AstTemplateName {
 }
 
 impl AstTemplateDef {
-    pub fn template_name(&self) -> Option<AstTemplateName> {
+    pub fn name(&self) -> Option<AstTemplateName> {
         self.syntax.children().find_map(AstTemplateName::cast)
     }
     pub fn func_body(&self) -> Option<AstBlock> {

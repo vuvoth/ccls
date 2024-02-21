@@ -10,11 +10,7 @@ use syntax::abstract_syntax_tree::AstTemplateName;
 use syntax::syntax_node::SyntaxNode;
 use syntax::syntax_node::SyntaxToken;
 
-use super::lsp_utils::FileUtils;
-
-/**
- * api: lookup template have name,
- */
+use crate::database::{FileDB, SemanticData, TokenId};
 
 pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Option<SyntaxNode> {
     let mut p = token.parent();
@@ -28,7 +24,7 @@ pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Optio
 }
 
 pub fn lookup_token_at_postion(
-    file: &FileUtils,
+    file: &FileDB,
     ast: &AstCircomProgram,
     position: Position,
 ) -> Option<SyntaxToken> {
@@ -58,12 +54,14 @@ pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<A
 }
 
 pub fn lookup_definition(
-    file: &FileUtils,
+    file: &FileDB,
     ast: &AstCircomProgram,
+    semantic_data: &SemanticData,
     token: &SyntaxToken,
 ) -> Vec<Location> {
-    eprintln!("{token:?}");
     let template_list = ast.template_list();
+
+    let file_id = file.file_id;
 
     let mut res = Vec::new();
     let mut signal_outside = false;
@@ -84,15 +82,15 @@ pub fn lookup_definition(
                             if let Some(other_template) =
                                 ast.get_template_by_name(&ast_template_name)
                             {
-                                if let Some(inp) =
-                                    other_template.find_input_signal(&signal.syntax().text())
+                                eprintln!("{:?}", other_template);
+                                eprintln!("{:?}", signal);
+                                let template_id = other_template.syntax().token_id();
+                                if let Some(semantic) =
+                                    semantic_data.template_data_semantic.get(&template_id)
                                 {
-                                    res.push(file.range(inp.syntax()));
-                                }
-                                if let Some(out) =
-                                    other_template.find_output_signal(&signal.syntax().text())
-                                {
-                                    res.push(file.range(out.syntax()));
+                                    res.extend(
+                                        semantic.signal.0.get(&signal.syntax().token_id()).unwrap(),
+                                    )
                                 }
                             }
                         }
@@ -104,7 +102,7 @@ pub fn lookup_definition(
 
     if !signal_outside {
         for template in template_list {
-            let template_name = template.template_name().unwrap();
+            let template_name = template.name().unwrap();
             if template_name.name().unwrap().syntax().text() == token.text() {
                 let range = file.range(template.syntax());
                 res.push(range);
@@ -144,7 +142,7 @@ pub fn lookup_definition(
 }
 
 fn lookup_signal_in_template(
-    file: &FileUtils,
+    file: &FileDB,
     ast_template: &AstTemplateDef,
     signal_token: &SyntaxToken,
 ) -> Vec<Range> {
@@ -187,14 +185,13 @@ mod tests {
     use rowan::ast::AstNode;
     use syntax::{abstract_syntax_tree::AstCircomProgram, syntax::SyntaxTreeBuilder};
 
-    use crate::handler::{
-        goto_definition::{lookup_node_wrap_token, lookup_token_at_postion},
-        lsp_utils::FileUtils,
-    };
+    use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
+
+    use super::lookup_token_at_postion;
 
     #[test]
     fn goto_decl_test() {
-        let source: String = r#"
+        let source = r#"
         pragma circom 2.0.0;
 
         template X() {
@@ -234,7 +231,7 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileUtils::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
+        let file = FileDB::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
 

@@ -55,6 +55,13 @@ impl<'a> SyntaxTreeBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
+
+    use std::hash::{DefaultHasher, Hash, Hasher};
+
+    use rowan::ast::AstNode;
+
+    use crate::abstract_syntax_tree::AstCircomProgram;
+
     use super::SyntaxTreeBuilder;
 
     #[test]
@@ -62,21 +69,39 @@ mod tests {
         let source: String = r#"pragma circom 2.0.0;
 
         
-        template Multiplier2 () {  
-        
-           // Declaration of signals.  
-           signal input a;  
-           signal input b;  
-           signal output c;  
-        
-           // Constraints.  
-           c <== a * b;  
-        }
+        template Multiplier2 () {}
+        template Multiplier2 () {} 
         "#
         .to_string();
 
         let syntax = SyntaxTreeBuilder::syntax_tree(&source);
-        println!("{:#?}", syntax);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            let mut hasher = DefaultHasher::default();
+            ast.syntax().hash(&mut hasher);
+            // println!("{:#?}", syntax);
+            println!("{:?}", hasher.finish());
+
+            let mut h1 = DefaultHasher::default();
+
+            let mut h2 = DefaultHasher::default();
+
+            let template = ast.template_list();
+
+            template[0].syntax().hash(&mut h1);
+            template[1].syntax().hash(&mut h2);
+
+            println!("{}", h1.finish());
+            println!("{}", h2.finish());
+            println!("{:?}", template[0].syntax().text());
+            println!("{:?}", template[1].syntax().text());
+            println!("{}", template[0].syntax() == template[0].syntax());
+            println!(
+                "{}",
+                template[0].syntax().green() == template[1].syntax().green()
+            );
+        }
+
         // find token
     }
 }
