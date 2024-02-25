@@ -127,8 +127,11 @@ impl SemanticLocations {
         if let Some(locations) = self.0.get_mut(&token_id) {
             locations.push(range);
         } else {
-            self.0.insert(token_id, Vec::new());
+            self.0.insert(token_id, vec![range]);
         }
+    }
+    pub fn new() -> Self {
+        Self(HashMap::new())
     }
 }
 
@@ -138,6 +141,17 @@ pub struct TemplateDataSemantic {
     pub variable: SemanticLocations,
     pub component: SemanticLocations,
 }
+
+impl TemplateDataSemantic {
+    fn new() -> Self {
+        Self {
+            signal: SemanticLocations::new(),
+            variable: SemanticLocations::new(),
+            component: SemanticLocations::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SemanticData {
     pub template: SemanticLocations,
@@ -173,24 +187,31 @@ impl SemanticDB {
     }
 
     pub fn insert(&mut self, file_id: FileId, semantic_info: SemanticInfo) {
-        if let Some(semantic) = self.semantic.get_mut(&file_id) {
-            match semantic_info {
-                SemanticInfo::Template((id, range)) => semantic.template.insert(id, range),
-                SemanticInfo::TemplateData((template_id, template_data_info)) => {
-                    if let Some(template_semantic) =
-                        semantic.template_data_semantic.get_mut(&template_id)
-                    {
-                        match template_data_info {
-                            TemplateDataInfo::Component((id, r)) => {
-                                template_semantic.component.insert(id, r)
-                            }
-                            TemplateDataInfo::Variable((id, r)) => {
-                                template_semantic.variable.insert(id, r)
-                            }
-                            TemplateDataInfo::Signal((id, r)) => {
-                                template_semantic.signal.insert(id, r)
-                            }
+        let semantic = self.semantic.entry(file_id).or_insert(SemanticData {
+            template: SemanticLocations::new(),
+            template_data_semantic: HashMap::new(),
+        });
+
+        match semantic_info {
+            SemanticInfo::Template((id, range)) => {
+                semantic.template.insert(id, range);
+            }
+            SemanticInfo::TemplateData((template_id, template_data_info)) => {
+                let template_semantic = semantic
+                    .template_data_semantic
+                    .entry(template_id)
+                    .or_insert(TemplateDataSemantic::new());
+                if let Some(template_semantic) =
+                    semantic.template_data_semantic.get_mut(&template_id)
+                {
+                    match template_data_info {
+                        TemplateDataInfo::Component((id, r)) => {
+                            template_semantic.component.insert(id, r)
                         }
+                        TemplateDataInfo::Variable((id, r)) => {
+                            template_semantic.variable.insert(id, r)
+                        }
+                        TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
                     }
                 }
             }
@@ -268,7 +289,7 @@ impl SemanticDB {
                         file_db.file_id,
                         SemanticInfo::TemplateData((
                             template_id,
-                            TemplateDataInfo::Signal((
+                            TemplateDataInfo::Variable((
                                 name.syntax().token_id(),
                                 file_db.range(var.syntax()),
                             )),
@@ -279,7 +300,6 @@ impl SemanticDB {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
 

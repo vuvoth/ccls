@@ -66,36 +66,27 @@ impl GlobalState {
         &self,
         root: &FileDB,
         ast: &AstCircomProgram,
-        semantic_data: &SemanticData,
         token: &SyntaxToken,
     ) -> Vec<Location> {
-        let mut result = lookup_definition(root, ast, semantic_data,  token);
+        let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
+        let mut result = lookup_definition(root, ast, semantic_data, token);
 
         let p = root.get_path();
 
         for lib in ast.libs() {
             let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
             let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
-            let url = Url::from_file_path(lib_path.clone()).unwrap();
-            if let Ok(src) = fs::read_to_string(lib_path) {
-                let text_doc = TextDocument {
-                    text: src,
-                    uri: url.clone(),
-                };
+            let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
 
-                let file = &FileDB::create(&text_doc.text, url.clone());
+            let file_lib = self.file_map.get(&lib_url.to_string()).unwrap();
+            let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
 
-                let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
+            let semantic_data_lib = self.db.semantic.get(&file_lib.file_id).unwrap();
+ 
+            let lib_result = lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
 
-                if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
-                    let lib_id = file.file_id;
-                    let lib_semantic = self.db.semantic.get(&lib_id).unwrap();
-                    let ans = lookup_definition(file, &lib_ast, &lib_semantic, token);
-                    result.extend(ans);
-                }
-            }
+            result.extend(lib_result);
         }
-
         result
     }
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
@@ -103,14 +94,12 @@ impl GlobalState {
 
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
         let file = self.file_map.get(&uri.to_string()).unwrap();
-        eprintln!("goto {:?}", file.file_id);
-        eprintln!("{:?}", self.db.semantic);
-        let semantic_data = self.db.semantic.get(&file.file_id).unwrap();
+
         let mut locations = Vec::new();
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
-            locations = self.lookup_definition(&file, &ast, &semantic_data, &token);
+            locations = self.lookup_definition(&file, &ast, &token);
         };
 
         let result: Option<GotoDefinitionResponse> = Some(GotoDefinitionResponse::Array(locations));
@@ -132,12 +121,34 @@ impl GlobalState {
         let file_db = FileDB::create(text, text_document.uri.clone());
         let file_id = file_db.file_id;
 
-        eprintln!("{}", AstCircomProgram::can_cast(TokenKind::CircomProgram));
+        let p = file_db.get_path();
+
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            eprintln!("{}", url.to_string());
-            eprintln!("{:?}", file_id);
             self.db.semantic.remove(&file_id);
             self.db.circom_program_semantic(&file_db, &ast);
+
+            for lib in ast.libs() {
+                let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
+                let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
+                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
+                if let Ok(src) = fs::read_to_string(lib_path) {
+                    let text_doc = TextDocument {
+                        text: src,
+                        uri: lib_url.clone(),
+                    };
+
+                    let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
+                    let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
+
+                    if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
+                        self.db.semantic.remove(&lib_file.file_id);
+                        self.db.circom_program_semantic(&lib_file, &lib_ast);
+                        self.ast_map.insert(lib_url.to_string(), lib_ast);
+                    }
+                    
+                    self.file_map.insert(lib_url.to_string(), lib_file);
+                }
+            }
             self.ast_map.insert(url.to_string(), ast);
         }
 

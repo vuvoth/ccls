@@ -61,8 +61,6 @@ pub fn lookup_definition(
 ) -> Vec<Location> {
     let template_list = ast.template_list();
 
-    let file_id = file.file_id;
-
     let mut res = Vec::new();
     let mut signal_outside = false;
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
@@ -82,15 +80,16 @@ pub fn lookup_definition(
                             if let Some(other_template) =
                                 ast.get_template_by_name(&ast_template_name)
                             {
-                                eprintln!("{:?}", other_template);
-                                eprintln!("{:?}", signal);
                                 let template_id = other_template.syntax().token_id();
                                 if let Some(semantic) =
                                     semantic_data.template_data_semantic.get(&template_id)
                                 {
-                                    res.extend(
-                                        semantic.signal.0.get(&signal.syntax().token_id()).unwrap(),
-                                    )
+                                    eprintln!("{} {:?}", signal.syntax().text(), signal.syntax().token_id());
+                                    if let Some(tmp) =
+                                        semantic.signal.0.get(&signal.syntax().token_id())
+                                    {
+                                        res.extend(tmp)
+                                    }
                                 }
                             }
                         }
