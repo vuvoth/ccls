@@ -30,6 +30,16 @@ template Another() {
 }
 ```
 
+## Install 
+I remcoment install via those commands:
+
+```bash
+git clone https://github.com/vuvoth/ccls
+cd ccls 
+cargo xtask install --server 
+cargo xtask install --client
+```
+This make install extension flow work more smooth. 
 
 ## Bugs 
 
