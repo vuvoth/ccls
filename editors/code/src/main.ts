@@ -14,7 +14,7 @@ let client: LanguageClient;
 export async function activate(context: ExtensionContext) {
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
-  const ccls_path = path.join(__dirname, '../bin/ccls');
+  const ccls_path = 'ccls';
   const run: Executable = {
     command: process.env.__CIRCOM_LSP_SERVER_DEBUG ?? ccls_path,
   };
