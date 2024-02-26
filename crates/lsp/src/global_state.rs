@@ -1,23 +1,21 @@
-use std::env;
 use std::{fs, path::PathBuf};
 
+use crate::database::{FileDB, SemanticDB, SemanticData, SemanticInfo, TokenId};
 use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
 use lsp_types::{
     DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Location, Range, Url,
-};
-use parser::{
-    ast::{AstCircomProgram, AstNode},
-    parser::Parser,
-    syntax_node::{SyntaxNode, SyntaxToken},
+    GotoDefinitionResponse, Location, Url,
 };
 
-use crate::handler::{
-    goto_definition::{lookup_definition, lookup_token_at_postion},
-    lsp_utils::FileUtils,
-};
+use parser::token_kind::TokenKind;
+use rowan::ast::AstNode;
+use syntax::abstract_syntax_tree::{self, AstCircomProgram};
+use syntax::syntax::SyntaxTreeBuilder;
+use syntax::syntax_node::SyntaxToken;
+
+use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
 
 #[derive(Debug)]
 pub struct TextDocument {
@@ -45,7 +43,14 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 
 pub struct GlobalState {
     pub ast_map: DashMap<String, AstCircomProgram>,
-    pub file_map: DashMap<String, FileUtils>,
+    pub file_map: DashMap<String, FileDB>,
+    pub db: SemanticDB,
+}
+
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GlobalState {
@@ -53,41 +58,35 @@ impl GlobalState {
         Self {
             ast_map: DashMap::new(),
             file_map: DashMap::new(),
+            db: SemanticDB::new(),
         }
     }
 
     pub fn lookup_definition(
         &self,
-        root: &FileUtils,
+        root: &FileDB,
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
-        let mut result = lookup_definition(root, ast, token);
+        let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
+        let mut result = lookup_definition(root, ast, semantic_data, token);
 
         let p = root.get_path();
 
         for lib in ast.libs() {
             let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
             let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
-            let url = Url::from_file_path(lib_path.clone()).unwrap();
-            if let Ok(src) = fs::read_to_string(lib_path) {
-                let text_doc = TextDocument {
-                    text: src,
-                    uri: url.clone(),
-                };
+            let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
 
-                let file = &FileUtils::create(&text_doc.text, url.clone());
-                let green = Parser::parse_circom(&text_doc.text);
-                let syntax = SyntaxNode::new_root(green);
+            let file_lib = self.file_map.get(&lib_url.to_string()).unwrap();
+            let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
 
-                if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
-                    let ans = lookup_definition(file, &lib_ast, token);
-                    result.extend(ans);
-                }
+            let semantic_data_lib = self.db.semantic.get(&file_lib.file_id).unwrap();
+ 
+            let lib_result = lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
 
-            }
+            result.extend(lib_result);
         }
-
         result
     }
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
@@ -114,18 +113,47 @@ impl GlobalState {
         }
     }
 
-    pub(crate) fn handle_update(&self, text_document: &TextDocument) -> Result<()> {
+    pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
         let text = &text_document.text;
-        let url = text_document.uri.to_string();
+        let url = &text_document.uri.to_string();
 
-        let green = Parser::parse_circom(text);
-        let syntax = SyntaxNode::new_root(green);
+        let syntax = SyntaxTreeBuilder::syntax_tree(text);
+        let file_db = FileDB::create(text, text_document.uri.clone());
+        let file_id = file_db.file_id;
 
-        self.ast_map
-            .insert(url.clone(), AstCircomProgram::cast(syntax).unwrap());
+        let p = file_db.get_path();
 
-        self.file_map
-            .insert(url, FileUtils::create(text, text_document.uri.clone()));
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            self.db.semantic.remove(&file_id);
+            self.db.circom_program_semantic(&file_db, &ast);
+
+            for lib in ast.libs() {
+                let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
+                let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
+                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
+                if let Ok(src) = fs::read_to_string(lib_path) {
+                    let text_doc = TextDocument {
+                        text: src,
+                        uri: lib_url.clone(),
+                    };
+
+                    let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
+                    let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
+
+                    if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
+                        self.db.semantic.remove(&lib_file.file_id);
+                        self.db.circom_program_semantic(&lib_file, &lib_ast);
+                        self.ast_map.insert(lib_url.to_string(), lib_ast);
+                    }
+                    
+                    self.file_map.insert(lib_url.to_string(), lib_file);
+                }
+            }
+            self.ast_map.insert(url.to_string(), ast);
+        }
+
+        self.file_map.insert(url.to_string(), file_db);
+
         Ok(())
     }
 }

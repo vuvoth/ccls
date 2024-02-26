@@ -9,8 +9,9 @@ use lsp_server::{Connection, ExtractError, Message, Notification, Request, Reque
 
 use crate::global_state::TextDocument;
 
-mod global_state;
-mod handler;
+pub mod database;
+pub mod global_state;
+pub mod handler;
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Note that  we must have our logging only write out to stderr.
@@ -71,10 +72,8 @@ fn main_loop(
             }
 
             Message::Response(resp) => {
-                eprintln!("got response: {resp:?}");
             }
             Message::Notification(not) => {
-                eprintln!("This is notification: {:?}", not.clone());
                 match cast_notification::<DidOpenTextDocument>(not.clone()) {
                     Ok(params) => {
                         global_state.handle_update(&TextDocument::from(params))?;

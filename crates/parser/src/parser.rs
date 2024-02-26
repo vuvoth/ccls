@@ -1,13 +1,7 @@
 use std::cell::Cell;
 
-use rowan::GreenNode;
-
 use crate::{
-    event::Event,
-    grammar::entry::Scope,
-    input::Input,
-    syntax::{covert_to_tree_format, CircomParser},
-    token_kind::TokenKind,
+    event::Event, grammar::entry::Scope, input::Input, output::Output, token_kind::TokenKind,
 };
 
 pub struct Context {
@@ -197,160 +191,14 @@ impl<'a> Parser<'a> {
 }
 
 impl Parser<'_> {
-    pub fn parse(&mut self, scope: Scope) {
-        scope.parse(self);
+    pub fn parsing_with_scrope(input: &Input, scope: Scope) -> Output {
+        let mut p = Parser::new(input);
+        scope.parse(&mut p);
+        Output::from(p.events)
     }
 
-    pub fn parse_circom(source: &str) -> GreenNode {
-        Self::parse_scope(source, Scope::CircomProgram)
-    }
-
-    pub fn parse_scope(source: &str, scope: Scope) -> GreenNode {
-        let input = Input::new(source);
-        let mut p = Parser::new(&input);
-        p.parse(scope);
-        let mut builder = CircomParser::new(&input);
-        let tree = covert_to_tree_format(&mut p.events);
-        builder.build(tree);
-        builder.finish()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use rowan::SyntaxNode;
-
-    use crate::{
-        ast::{AstCircomProgram, AstNode},
-        syntax_node::CircomLang,
-    };
-
-    use super::Parser;
-
-    #[test]
-    fn test_parser() {
-        let source: String = r#"
-        pragma circom 2.0.1;
-
-        template Adder() {
-            signal input x;
-            signal input y;   
-            signal input y; 
-            sign
-        } 
-
-
-
-"#
-        .to_string();
-
-        let _cst = Parser::parse_circom(&source);
-    }
-
-    #[test]
-    fn other_parser_test() {
-        let source: String = r#"
-        pragma circom 2.0.0;
-
-template X() {
-   component x = Multiplier2();
-}
-
-template Multiplier2 () {  
-
-   // Declaration of signals.  
-   signal input a;  
-   signal input b;  
-   signal output c;  
-
-
-   signal output d;
-   // Constraints.  
-   c <== a * b;  
-}
-
-
-
-        "#
-        .to_string();
-
-        let green_node = Parser::parse_circom(&source);
-        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
-
-        let program_ast = AstCircomProgram::cast(syntax_node);
-
-        assert!(
-            program_ast.unwrap().template_list()[0]
-                .template_name()
-                .unwrap()
-                .name()
-                .unwrap()
-                .syntax()
-                .text()
-                == "X"
-        );
-        // find token
-    }
-
-    #[test]
-    fn parse_un_complete_program() {
-        let source: String = r#"
-        pragma circom 2.0.0;
-
-        template X() {
-           component x = Multiplier2();
-           component y = X();
-           component y = Multiplier2();
-           component z = Multiplier2();
-              
-        }
-template M() {
-           component h = X();
-           component k = Multiplier2(); 
-           test
-        }
-template Multiplier2 () {  
-           template m = M();
-           // hello world
-           signal input a;  
-           signal input b;  
-              signal output c;  
-           component y = X();
-           
-           mintlkrekerjke;
-           component e = Y();
-           component z = Y();
-           component h = Y();
-           signal output d;
-           c <== a * b; 
-        }
-template Y() {
-           component y = X();
-           component a = X();
-           
-        }        
-        "#
-        .to_string();
-
-        let green_node = Parser::parse_circom(&source);
-        let syntax_node = SyntaxNode::<CircomLang>::new_root(green_node.clone());
-        if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
-            for template in program_ast.template_list() {
-                println!("{template:?}");
-            }
-
-            println!("{}", program_ast.syntax().green());
-
-            assert!(
-                program_ast.template_list()[0]
-                    .template_name()
-                    .unwrap()
-                    .name()
-                    .unwrap()
-                    .syntax()
-                    .text()
-                    == "X"
-            );
-        }
+    pub fn parsing(input: &Input) -> Output {
+        let c = Scope::CircomProgram;
+        Parser::parsing_with_scrope(input, c)
     }
 }

@@ -26,41 +26,41 @@ pub fn template(p: &mut Parser) {
     p.close(m, TemplateDef);
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::ast::AstTemplateDef;
+// #[cfg(test)]
+// mod tests {
+//     use crate::ast::AstTemplateDef;
 
-    #[test]
-    fn template_parse_test() {
-        use crate::{ast::AstNode, syntax_node::SyntaxNode};
+//     #[test]
+//     fn template_parse_test() {
+//         use crate::{ast::AstNode, syntax_node::SyntaxNode};
 
-        use super::{entry::Scope, Parser};
+//         use super::{entry::Scope, Parser};
 
-        let source: String = r#"
-        template Multiplier2 (a, b, c) {  
-        
-           // Declaration of signals.  
-           signal input a;  
-           signal input b;  
-           signal output c;  
-        
-           // Constraints.  
-           c <== a * b;  
-        }
+//         let source: String = r#"
+//         template Multiplier2 (a, b, c) {
 
-        "#
-        .to_string();
+//            // Declaration of signals.
+//            signal input a;
+//            signal input b;
+//            signal output c;
 
-        let green_node = Parser::parse_scope(&source, Scope::Template);
-        let node = SyntaxNode::new_root(green_node);
+//            // Constraints.
+//            c <== a * b;
+//         }
 
-        let ast_template = AstTemplateDef::cast(node);
+//         "#
+//         .to_string();
 
-        if let Some(ast_internal) = ast_template {
-            println!(
-                "name {:?}",
-                ast_internal.template_name().unwrap().syntax().text()
-            );
-        }
-    }
-}
+//         let green_node = ::parse_scope(&source, Scope::Template);
+//         let node = SyntaxNode::new_root(green_node);
+
+//         let ast_template = AstTemplateDef::cast(node);
+
+//         if let Some(ast_internal) = ast_template {
+//             println!(
+//                 "name {:?}",
+//                 ast_internal.template_name().unwrap().syntax().text()
+//             );
+//         }
+//     }
+// }

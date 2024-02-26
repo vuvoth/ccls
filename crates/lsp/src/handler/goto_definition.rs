@@ -1,21 +1,16 @@
-use std::env;
-use std::fs;
-use std::path::PathBuf;
-
 use lsp_types::Location;
 use lsp_types::{Position, Range};
-use parser::{
-    ast::{AstCircomProgram, AstComponentCall, AstNode, AstTemplateDef, AstTemplateName},
-    syntax_node::{SyntaxNode, SyntaxToken},
-    token_kind::TokenKind,
-};
+use parser::token_kind::TokenKind;
+use rowan::ast::AstNode;
 use rowan::SyntaxText;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl, AstVarDecl};
+use syntax::abstract_syntax_tree::AstComponentCall;
+use syntax::abstract_syntax_tree::AstTemplateDef;
+use syntax::abstract_syntax_tree::AstTemplateName;
+use syntax::syntax_node::SyntaxNode;
+use syntax::syntax_node::SyntaxToken;
 
-use super::lsp_utils::FileUtils;
-
-/**
- * api: lookup template have name,
- */
+use crate::database::{FileDB, SemanticData, TokenId};
 
 pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Option<SyntaxNode> {
     let mut p = token.parent();
@@ -29,7 +24,7 @@ pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Optio
 }
 
 pub fn lookup_token_at_postion(
-    file: &FileUtils,
+    file: &FileDB,
     ast: &AstCircomProgram,
     position: Position,
 ) -> Option<SyntaxToken> {
@@ -47,7 +42,7 @@ pub fn lookup_token_at_postion(
 
 pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<AstTemplateName> {
     if let Some(statements) = template.statements() {
-        for component in statements.components() {
+        for component in statements.find_children::<AstComponentDecl>() {
             if let Some(iden) = component.component_identifier() {
                 if iden.name().unwrap().syntax().text() == text {
                     return component.template();
@@ -59,11 +54,11 @@ pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<A
 }
 
 pub fn lookup_definition(
-    file: &FileUtils,
+    file: &FileDB,
     ast: &AstCircomProgram,
+    semantic_data: &SemanticData,
     token: &SyntaxToken,
 ) -> Vec<Location> {
-    eprintln!("{token:?}");
     let template_list = ast.template_list();
 
     let mut res = Vec::new();
@@ -85,15 +80,16 @@ pub fn lookup_definition(
                             if let Some(other_template) =
                                 ast.get_template_by_name(&ast_template_name)
                             {
-                                if let Some(inp) =
-                                    other_template.find_input_signal(&signal.syntax().text())
+                                let template_id = other_template.syntax().token_id();
+                                if let Some(semantic) =
+                                    semantic_data.template_data_semantic.get(&template_id)
                                 {
-                                    res.push(file.range(inp.syntax()));
-                                }
-                                if let Some(out) =
-                                    other_template.find_output_signal(&signal.syntax().text())
-                                {
-                                    res.push(file.range(out.syntax()));
+                                    eprintln!("{} {:?}", signal.syntax().text(), signal.syntax().token_id());
+                                    if let Some(tmp) =
+                                        semantic.signal.0.get(&signal.syntax().token_id())
+                                    {
+                                        res.extend(tmp)
+                                    }
                                 }
                             }
                         }
@@ -105,7 +101,7 @@ pub fn lookup_definition(
 
     if !signal_outside {
         for template in template_list {
-            let template_name = template.template_name().unwrap();
+            let template_name = template.name().unwrap();
             if template_name.name().unwrap().syntax().text() == token.text() {
                 let range = file.range(template.syntax());
                 res.push(range);
@@ -119,7 +115,9 @@ pub fn lookup_definition(
                 continue;
             }
 
-            res.extend(lookup_signal_in_template(file, &template, token).into_iter());
+            if let Some(data) = semantic_data.lookup_signal(template.syntax().token_id(), token) {
+                res.extend(data);
+            }
 
             if let Some(component_decl) = template.find_component(token.text()) {
                 res.push(file.range(component_decl.syntax()));
@@ -127,8 +125,8 @@ pub fn lookup_definition(
 
             if let Some(fn_body) = template.func_body() {
                 if let Some(statements) = fn_body.statement_list() {
-                    for var in statements.variables() {
-                        if let Some(name) = var.variable_name() {
+                    for var in statements.find_children::<AstVarDecl>() {
+                        if let Some(name) = var.name() {
                             if name.syntax().text() == token.text() {
                                 res.push(file.range(var.syntax()));
                             }
@@ -139,67 +137,36 @@ pub fn lookup_definition(
         }
     }
 
-    let locations = res
-        .into_iter()
+    res.into_iter()
         .map(|range| Location::new(file.file_path.clone(), range))
-        .collect();
-
-    locations
+        .collect()
 }
 
-fn lookup_signal_in_template(
-    file: &FileUtils,
-    ast_template: &AstTemplateDef,
-    signal_token: &SyntaxToken,
-) -> Vec<Range> {
-    let mut result = Vec::new();
-    if let Some(block) = ast_template.func_body() {
-        if let Some(statements) = block.statement_list() {
-            for signal in statements.input_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-
-            for signal in statements.output_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-
-            for signal in statements.internal_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-        }
-    }
-    result
-}
+// fn lookup_signal_in_template(
+//     file: &FileDB,
+//     ast_template: &AstTemplateDef,
+//     signal_token: &SyntaxToken,
+// ) -> Vec<Range> {
+//     let mut result = Vec::new();
+    
+//     result
+// }
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
     use lsp_types::Url;
-    use parser::{
-        ast::AstCircomProgram, parser::Parser, syntax_node::SyntaxNode, token_kind::TokenKind,
-    };
+    use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
+    use syntax::{abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl}, syntax::SyntaxTreeBuilder};
 
-    use crate::handler::{
-        goto_definition::{lookup_node_wrap_token, lookup_token_at_postion},
-        lsp_utils::FileUtils,
-    };
+    use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
+
+    use super::lookup_token_at_postion;
 
     #[test]
     fn goto_decl_test() {
-        let source: String = r#"
+        let source = r#"
         pragma circom 2.0.0;
 
         template X() {
@@ -239,10 +206,10 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileUtils::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
+        let file = FileDB::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
 
-        let green_node = Parser::parse_circom(&source);
-        let syntax_node = SyntaxNode::new_root(green_node.clone());
+        let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
+
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
             for template in program_ast.template_list() {
                 println!("{template:?}");
@@ -253,8 +220,8 @@ template Y() {
                 .unwrap()
                 .statement_list()
                 .unwrap()
-                .input_signals();
-            let signal_name = inputs[0].signal_name().unwrap();
+                .find_children::<AstInputSignalDecl>();
+            let signal_name = inputs[0].name().unwrap();
 
             let tmp = signal_name.syntax().text_range().start();
 

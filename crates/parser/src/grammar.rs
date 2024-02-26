@@ -17,6 +17,7 @@ mod template;
  */
 
 pub mod entry {
+
     use super::*;
 
     pub fn circom_program(p: &mut Parser) {
