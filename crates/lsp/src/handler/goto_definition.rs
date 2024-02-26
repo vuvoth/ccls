@@ -1,10 +1,13 @@
 use lsp_types::Location;
 use lsp_types::Position;
+use lsp_types::Range;
+use lsp_types::Url;
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::SyntaxText;
 use syntax::abstract_syntax_tree::template;
 use syntax::abstract_syntax_tree::AstComponentCall;
+use syntax::abstract_syntax_tree::AstInclude;
 use syntax::abstract_syntax_tree::AstTemplateDef;
 use syntax::abstract_syntax_tree::AstTemplateName;
 use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
@@ -37,6 +40,9 @@ pub fn lookup_token_at_postion(
             return Some(token);
         }
 
+        if kind == TokenKind::CircomString {
+            return Some(token);
+        }
         None
     })
 }
@@ -60,10 +66,28 @@ pub fn lookup_definition(
     semantic_data: &SemanticData,
     token: &SyntaxToken,
 ) -> Vec<Location> {
+    eprintln!("{}", token.text());
     let template_list = ast.template_list();
 
     let mut res = Vec::new();
     let mut signal_outside = false;
+
+    if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
+        eprintln!("{}", include_lib.text());
+        if let Some(ast_include) = AstInclude::cast(include_lib) {
+            if let Some(abs_lib_ans) = ast_include.lib() {
+                let lib_path = file
+                    .get_path()
+                    .parent()
+                    .unwrap()
+                    .join(abs_lib_ans.value())
+                    .clone();
+                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
+                return vec![Location::new(lib_url, Range::default())];
+            }
+        }
+    }
+
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
         // find template called.
         if let Some(ast_component_call) = AstComponentCall::cast(component_call) {
@@ -85,11 +109,6 @@ pub fn lookup_definition(
                                 if let Some(semantic) =
                                     semantic_data.template_data_semantic.get(&template_id)
                                 {
-                                    eprintln!(
-                                        "{} {:?}",
-                                        signal.syntax().text(),
-                                        signal.syntax().token_id()
-                                    );
                                     if let Some(tmp) =
                                         semantic.signal.0.get(&signal.syntax().token_id())
                                     {

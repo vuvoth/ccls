@@ -97,6 +97,8 @@ impl GlobalState {
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
+            eprintln!("lookup token at {}", token.text());
+            
             locations = self.lookup_definition(&file, &ast, &token);
         };
 
@@ -119,7 +121,7 @@ impl GlobalState {
         let file_db = FileDB::create(text, text_document.uri.clone());
         let file_id = file_db.file_id;
 
-        let p = file_db.get_path();
+        let p: PathBuf = file_db.get_path();
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
             self.db.semantic.remove(&file_id);
