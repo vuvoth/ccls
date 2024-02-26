@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use parser::token_kind::TokenKind::*;
 use rowan::ast::AstChildren;
 use rowan::SyntaxText;
@@ -16,12 +18,12 @@ ast_node!(AstOutputSignalDecl, OutputSignalDecl);
 ast_node!(AstSignalDecl, SignalDecl);
 
 impl AstInputSignalDecl {
-    pub fn signal_name(&self) -> Option<AstIdentifier> {
+    pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 
     pub fn same_name(&self, other: &SyntaxText) -> bool {
-        if let Some(name) = self.signal_name() {
+        if let Some(name) = self.name() {
             return name.equal(other);
         }
         false
@@ -29,19 +31,19 @@ impl AstInputSignalDecl {
 }
 
 impl AstOutputSignalDecl {
-    pub fn signal_name(&self) -> Option<AstIdentifier> {
+    pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 }
 impl AstSignalDecl {
-    pub fn signal_name(&self) -> Option<AstIdentifier> {
+    pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 }
 ast_node!(AstVarDecl, VarDecl);
 
 impl AstVarDecl {
-    pub fn variable_name(&self) -> Option<AstIdentifier> {
+    pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 }
@@ -66,38 +68,8 @@ impl AstStatementList {
         support::children(self.syntax())
     }
 
-    pub fn input_signals(&self) -> Vec<AstInputSignalDecl> {
-        self.syntax()
-            .children()
-            .filter_map(AstInputSignalDecl::cast)
-            .collect()
-    }
-
-    pub fn output_signals(&self) -> Vec<AstOutputSignalDecl> {
-        self.syntax()
-            .children()
-            .filter_map(AstOutputSignalDecl::cast)
-            .collect()
-    }
-
-    pub fn internal_signals(&self) -> Vec<AstSignalDecl> {
-        self.syntax()
-            .children()
-            .filter_map(AstSignalDecl::cast)
-            .collect()
-    }
-    pub fn variables(&self) -> Vec<AstVarDecl> {
-        self.syntax()
-            .children()
-            .filter_map(AstVarDecl::cast)
-            .collect()
-    }
-
-    pub fn components(&self) -> Vec<AstComponentDecl> {
-        self.syntax()
-            .children()
-            .filter_map(AstComponentDecl::cast)
-            .collect()
+    pub fn find_children<N: AstNode<Language = CircomLanguage>>(&self) -> Vec<N> {
+        self.syntax().children().filter_map(N::cast).collect()
     }
 }
 

@@ -2,14 +2,18 @@ use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
+    sync::Arc,
 };
 
 use lsp_types::{Position, Range, Url};
 
 use rowan::{ast::AstNode, TextSize};
 use syntax::{
-    abstract_syntax_tree::{AstCircomProgram, AstTemplateDef},
-    syntax_node::SyntaxNode,
+    abstract_syntax_tree::{
+        AstCircomProgram, AstInputSignalDecl, AstOutputSignalDecl, AstSignalDecl, AstTemplateDef,
+        AstVarDecl,
+    },
+    syntax_node::{SyntaxNode, SyntaxToken},
 };
 
 /**
@@ -119,6 +123,14 @@ impl TokenId for SyntaxNode {
     }
 }
 
+impl TokenId for SyntaxToken {
+    fn token_id(&self) -> Id {
+        let mut hasher = DefaultHasher::new();
+        self.to_string().hash(&mut hasher);
+        Id(hasher.finish())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SemanticLocations(pub HashMap<Id, Vec<Range>>);
 
@@ -201,18 +213,13 @@ impl SemanticDB {
                     .template_data_semantic
                     .entry(template_id)
                     .or_insert(TemplateDataSemantic::new());
-                if let Some(template_semantic) =
-                    semantic.template_data_semantic.get_mut(&template_id)
-                {
-                    match template_data_info {
-                        TemplateDataInfo::Component((id, r)) => {
-                            template_semantic.component.insert(id, r)
-                        }
-                        TemplateDataInfo::Variable((id, r)) => {
-                            template_semantic.variable.insert(id, r)
-                        }
-                        TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
+
+                match template_data_info {
+                    TemplateDataInfo::Component((id, r)) => {
+                        template_semantic.component.insert(id, r)
                     }
+                    TemplateDataInfo::Variable((id, r)) => template_semantic.variable.insert(id, r),
+                    TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
                 }
             }
         }
@@ -239,8 +246,8 @@ impl SemanticDB {
         let template_id = ast_template.syntax().token_id();
 
         if let Some(statements) = ast_template.statements() {
-            for signal in statements.input_signals() {
-                if let Some(name) = signal.signal_name() {
+            for signal in statements.find_children::<AstInputSignalDecl>() {
+                if let Some(name) = signal.name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -253,23 +260,8 @@ impl SemanticDB {
                     );
                 }
             }
-            for signal in statements.output_signals() {
-                if let Some(name) = signal.signal_name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::TemplateData((
-                            template_id,
-                            TemplateDataInfo::Signal((
-                                name.syntax().token_id(),
-                                file_db.range(signal.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-
-            for signal in statements.internal_signals() {
-                if let Some(name) = signal.signal_name() {
+            for signal in statements.find_children::<AstOutputSignalDecl>() {
+                if let Some(name) = signal.name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -283,8 +275,23 @@ impl SemanticDB {
                 }
             }
 
-            for var in statements.variables() {
-                if let Some(name) = var.variable_name() {
+            for signal in statements.find_children::<AstSignalDecl>() {
+                if let Some(name) = signal.name() {
+                    self.insert(
+                        file_db.file_id,
+                        SemanticInfo::TemplateData((
+                            template_id,
+                            TemplateDataInfo::Signal((
+                                name.syntax().token_id(),
+                                file_db.range(signal.syntax()),
+                            )),
+                        )),
+                    );
+                }
+            }
+
+            for var in statements.find_children::<AstVarDecl>() {
+                if let Some(name) = var.name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -300,6 +307,17 @@ impl SemanticDB {
         }
     }
 }
+
+impl SemanticData {
+    pub fn lookup_signal(&self, template_id: Id, signal: &SyntaxToken) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.signal.0.get(&signal.token_id());
+        }
+        None
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
 

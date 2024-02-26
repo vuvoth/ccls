@@ -3,7 +3,7 @@ use lsp_types::{Position, Range};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::SyntaxText;
-use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl, AstVarDecl};
 use syntax::abstract_syntax_tree::AstComponentCall;
 use syntax::abstract_syntax_tree::AstTemplateDef;
 use syntax::abstract_syntax_tree::AstTemplateName;
@@ -42,7 +42,7 @@ pub fn lookup_token_at_postion(
 
 pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<AstTemplateName> {
     if let Some(statements) = template.statements() {
-        for component in statements.components() {
+        for component in statements.find_children::<AstComponentDecl>() {
             if let Some(iden) = component.component_identifier() {
                 if iden.name().unwrap().syntax().text() == text {
                     return component.template();
@@ -115,7 +115,9 @@ pub fn lookup_definition(
                 continue;
             }
 
-            res.extend(lookup_signal_in_template(file, &template, token).into_iter());
+            if let Some(data) = semantic_data.lookup_signal(template.syntax().token_id(), token) {
+                res.extend(data);
+            }
 
             if let Some(component_decl) = template.find_component(token.text()) {
                 res.push(file.range(component_decl.syntax()));
@@ -123,8 +125,8 @@ pub fn lookup_definition(
 
             if let Some(fn_body) = template.func_body() {
                 if let Some(statements) = fn_body.statement_list() {
-                    for var in statements.variables() {
-                        if let Some(name) = var.variable_name() {
+                    for var in statements.find_children::<AstVarDecl>() {
+                        if let Some(name) = var.name() {
                             if name.syntax().text() == token.text() {
                                 res.push(file.range(var.syntax()));
                             }
@@ -140,41 +142,15 @@ pub fn lookup_definition(
         .collect()
 }
 
-fn lookup_signal_in_template(
-    file: &FileDB,
-    ast_template: &AstTemplateDef,
-    signal_token: &SyntaxToken,
-) -> Vec<Range> {
-    let mut result = Vec::new();
-    if let Some(block) = ast_template.func_body() {
-        if let Some(statements) = block.statement_list() {
-            for signal in statements.input_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-
-            for signal in statements.output_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-
-            for signal in statements.internal_signals() {
-                if let Some(name) = signal.signal_name() {
-                    if name.syntax().text() == signal_token.text() {
-                        result.push(file.range(signal.syntax()));
-                    }
-                }
-            }
-        }
-    }
-    result
-}
+// fn lookup_signal_in_template(
+//     file: &FileDB,
+//     ast_template: &AstTemplateDef,
+//     signal_token: &SyntaxToken,
+// ) -> Vec<Range> {
+//     let mut result = Vec::new();
+    
+//     result
+// }
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -182,7 +158,7 @@ mod tests {
     use lsp_types::Url;
     use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
-    use syntax::{abstract_syntax_tree::AstCircomProgram, syntax::SyntaxTreeBuilder};
+    use syntax::{abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl}, syntax::SyntaxTreeBuilder};
 
     use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
 
@@ -244,8 +220,8 @@ template Y() {
                 .unwrap()
                 .statement_list()
                 .unwrap()
-                .input_signals();
-            let signal_name = inputs[0].signal_name().unwrap();
+                .find_children::<AstInputSignalDecl>();
+            let signal_name = inputs[0].name().unwrap();
 
             let tmp = signal_name.syntax().text_range().start();
 

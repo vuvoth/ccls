@@ -14,6 +14,7 @@ use super::ast::AstOutputSignalDecl;
 use super::ast::AstParameterList;
 use super::ast::AstSignalDecl;
 use super::ast::AstStatementList;
+use super::AstVarDecl;
 
 ast_node!(AstTemplateName, TemplateName);
 
@@ -47,8 +48,8 @@ impl AstTemplateDef {
 
     pub fn find_input_signal(&self, name: &SyntaxText) -> Option<AstInputSignalDecl> {
         if let Some(statements) = self.statements() {
-            for input_signal in statements.input_signals() {
-                if let Some(signal_name) = input_signal.signal_name() {
+            for input_signal in statements.find_children::<AstInputSignalDecl>() {
+                if let Some(signal_name) = input_signal.name() {
                     if signal_name.equal(name) {
                         return Some(input_signal);
                     }
@@ -60,8 +61,8 @@ impl AstTemplateDef {
 
     pub fn find_output_signal(&self, name: &SyntaxText) -> Option<AstOutputSignalDecl> {
         if let Some(statements) = self.statements() {
-            for input_signal in statements.output_signals() {
-                if let Some(signal_name) = input_signal.signal_name() {
+            for input_signal in statements.find_children::<AstOutputSignalDecl>() {
+                if let Some(signal_name) = input_signal.name() {
                     if signal_name.equal(name) {
                         return Some(input_signal);
                     }
@@ -73,8 +74,8 @@ impl AstTemplateDef {
 
     pub fn find_internal_signal(&self, name: &SyntaxText) -> Option<AstSignalDecl> {
         if let Some(statements) = self.statements() {
-            for signal in statements.internal_signals() {
-                if let Some(signal_name) = signal.signal_name() {
+            for signal in statements.find_children::<AstSignalDecl>() {
+                if let Some(signal_name) = signal.name() {
                     if signal_name.equal(name) {
                         return Some(signal);
                     }
@@ -86,7 +87,7 @@ impl AstTemplateDef {
 
     pub fn find_component(&self, name: &str) -> Option<AstComponentDecl> {
         if let Some(statements) = self.statements() {
-            for component in statements.components() {
+            for component in statements.find_children::<AstComponentDecl>() {
                 if let Some(signal_name) = component.component_identifier() {
                     if let Some(component_name) = signal_name.name() {
                         if component_name.syntax().text() == name {
