@@ -1,8 +1,7 @@
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
-    path::PathBuf,
-    sync::Arc,
+    path::{Component, PathBuf},
 };
 
 use lsp_types::{Position, Range, Url};
@@ -10,8 +9,8 @@ use lsp_types::{Position, Range, Url};
 use rowan::{ast::AstNode, TextSize};
 use syntax::{
     abstract_syntax_tree::{
-        AstCircomProgram, AstInputSignalDecl, AstOutputSignalDecl, AstSignalDecl, AstTemplateDef,
-        AstVarDecl,
+        AstCircomProgram, AstComponentDecl, AstInputSignalDecl, AstOutputSignalDecl, AstSignalDecl,
+        AstTemplateDef, AstVarDecl,
     },
     syntax_node::{SyntaxNode, SyntaxToken},
 };
@@ -133,6 +132,12 @@ impl TokenId for SyntaxToken {
 
 #[derive(Debug, Clone)]
 pub struct SemanticLocations(pub HashMap<Id, Vec<Range>>);
+
+impl Default for SemanticLocations {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SemanticLocations {
     pub fn insert(&mut self, token_id: Id, range: Range) {
@@ -304,6 +309,23 @@ impl SemanticDB {
                     );
                 }
             }
+
+            for component in statements.find_children::<AstComponentDecl>() {
+                if let Some(component_var) = component.component_identifier() {
+                    if let Some(name) = component_var.name() {
+                        self.insert(
+                            file_db.file_id,
+                            SemanticInfo::TemplateData((
+                                template_id,
+                                TemplateDataInfo::Component((
+                                    name.syntax().token_id(),
+                                    file_db.range(component.syntax()),
+                                )),
+                            )),
+                        );
+                    }
+                }
+            }
         }
     }
 }
@@ -315,8 +337,26 @@ impl SemanticData {
         }
         None
     }
-}
 
+    // TODO: remove duplicate code here.
+    pub fn lookup_variable(&self, template_id: Id, variable: &SyntaxToken) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.variable.0.get(&variable.token_id());
+        }
+        None
+    }
+
+    pub fn lookup_component(
+        &self,
+        template_id: Id,
+        component: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.component.0.get(&component.token_id());
+        }
+        None
+    }
+}
 
 #[cfg(test)]
 mod tests {

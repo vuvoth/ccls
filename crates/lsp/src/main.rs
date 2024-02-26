@@ -71,8 +71,7 @@ fn main_loop(
                 };
             }
 
-            Message::Response(resp) => {
-            }
+            Message::Response(_resp) => {}
             Message::Notification(not) => {
                 match cast_notification::<DidOpenTextDocument>(not.clone()) {
                     Ok(params) => {

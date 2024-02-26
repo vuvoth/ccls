@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use crate::database::{FileDB, SemanticDB, SemanticData, SemanticInfo, TokenId};
+use crate::database::{FileDB, SemanticDB};
 use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
@@ -9,9 +9,8 @@ use lsp_types::{
     GotoDefinitionResponse, Location, Url,
 };
 
-use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{self, AstCircomProgram};
+use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
@@ -82,7 +81,7 @@ impl GlobalState {
             let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
 
             let semantic_data_lib = self.db.semantic.get(&file_lib.file_id).unwrap();
- 
+
             let lib_result = lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
 
             result.extend(lib_result);
@@ -145,7 +144,7 @@ impl GlobalState {
                         self.db.circom_program_semantic(&lib_file, &lib_ast);
                         self.ast_map.insert(lib_url.to_string(), lib_ast);
                     }
-                    
+
                     self.file_map.insert(lib_url.to_string(), lib_file);
                 }
             }

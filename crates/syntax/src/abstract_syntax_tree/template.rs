@@ -14,7 +14,6 @@ use super::ast::AstOutputSignalDecl;
 use super::ast::AstParameterList;
 use super::ast::AstSignalDecl;
 use super::ast::AstStatementList;
-use super::AstVarDecl;
 
 ast_node!(AstTemplateName, TemplateName);
 

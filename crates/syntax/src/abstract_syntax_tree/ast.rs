@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use parser::token_kind::TokenKind::*;
 use rowan::ast::AstChildren;
 use rowan::SyntaxText;
