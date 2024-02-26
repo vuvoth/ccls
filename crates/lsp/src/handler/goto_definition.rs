@@ -1,12 +1,12 @@
 use lsp_types::Location;
-use lsp_types::{Position, Range};
+use lsp_types::Position;
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::SyntaxText;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl, AstVarDecl};
 use syntax::abstract_syntax_tree::AstComponentCall;
 use syntax::abstract_syntax_tree::AstTemplateDef;
 use syntax::abstract_syntax_tree::AstTemplateName;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
 use syntax::syntax_node::SyntaxNode;
 use syntax::syntax_node::SyntaxToken;
 
@@ -84,7 +84,11 @@ pub fn lookup_definition(
                                 if let Some(semantic) =
                                     semantic_data.template_data_semantic.get(&template_id)
                                 {
-                                    eprintln!("{} {:?}", signal.syntax().text(), signal.syntax().token_id());
+                                    eprintln!(
+                                        "{} {:?}",
+                                        signal.syntax().text(),
+                                        signal.syntax().token_id()
+                                    );
                                     if let Some(tmp) =
                                         semantic.signal.0.get(&signal.syntax().token_id())
                                     {
@@ -119,20 +123,12 @@ pub fn lookup_definition(
                 res.extend(data);
             }
 
-            if let Some(component_decl) = template.find_component(token.text()) {
-                res.push(file.range(component_decl.syntax()));
+            if let Some(data) = semantic_data.lookup_variable(template.syntax().token_id(), token) {
+                res.extend(data);
             }
 
-            if let Some(fn_body) = template.func_body() {
-                if let Some(statements) = fn_body.statement_list() {
-                    for var in statements.find_children::<AstVarDecl>() {
-                        if let Some(name) = var.name() {
-                            if name.syntax().text() == token.text() {
-                                res.push(file.range(var.syntax()));
-                            }
-                        }
-                    }
-                }
+            if let Some(component_decl) = template.find_component(token.text()) {
+                res.push(file.range(component_decl.syntax()));
             }
         }
     }
@@ -148,7 +144,7 @@ pub fn lookup_definition(
 //     signal_token: &SyntaxToken,
 // ) -> Vec<Range> {
 //     let mut result = Vec::new();
-    
+
 //     result
 // }
 #[cfg(test)]
@@ -158,7 +154,10 @@ mod tests {
     use lsp_types::Url;
     use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
-    use syntax::{abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl}, syntax::SyntaxTreeBuilder};
+    use syntax::{
+        abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl},
+        syntax::SyntaxTreeBuilder,
+    };
 
     use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
 

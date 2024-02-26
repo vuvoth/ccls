@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
-    sync::Arc,
 };
 
 use lsp_types::{Position, Range, Url};
@@ -133,6 +132,12 @@ impl TokenId for SyntaxToken {
 
 #[derive(Debug, Clone)]
 pub struct SemanticLocations(pub HashMap<Id, Vec<Range>>);
+
+impl Default for SemanticLocations {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SemanticLocations {
     pub fn insert(&mut self, token_id: Id, range: Range) {
@@ -315,8 +320,22 @@ impl SemanticData {
         }
         None
     }
-}
 
+    pub fn lookup_variable(&self, template_id: Id, variable: &SyntaxToken) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.variable.0.get(&variable.token_id());
+        }
+        None
+    }
+
+    pub fn lookup_component(
+        &self,
+        _template_id: Id,
+        _component: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        todo!();
+    }
+}
 
 #[cfg(test)]
 mod tests {

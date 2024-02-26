@@ -20,6 +20,9 @@ template A() {
 
     signal y; 
     y <== x + 100;
+
+    c = 100 + 10; 
+    
 }
 
 
