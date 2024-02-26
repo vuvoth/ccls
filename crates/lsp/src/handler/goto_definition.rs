@@ -3,6 +3,7 @@ use lsp_types::Position;
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::SyntaxText;
+use syntax::abstract_syntax_tree::template;
 use syntax::abstract_syntax_tree::AstComponentCall;
 use syntax::abstract_syntax_tree::AstTemplateDef;
 use syntax::abstract_syntax_tree::AstTemplateName;
@@ -119,16 +120,18 @@ pub fn lookup_definition(
                 continue;
             }
 
-            if let Some(data) = semantic_data.lookup_signal(template.syntax().token_id(), token) {
+            let template_id = template.syntax().token_id();
+
+            if let Some(data) = semantic_data.lookup_signal(template_id, token) {
                 res.extend(data);
             }
 
-            if let Some(data) = semantic_data.lookup_variable(template.syntax().token_id(), token) {
+            if let Some(data) = semantic_data.lookup_variable(template_id, token) {
                 res.extend(data);
             }
 
-            if let Some(component_decl) = template.find_component(token.text()) {
-                res.push(file.range(component_decl.syntax()));
+            if let Some(component_decl) = semantic_data.lookup_component(template_id, token) {
+                res.extend(component_decl);
             }
         }
     }
@@ -138,15 +141,6 @@ pub fn lookup_definition(
         .collect()
 }
 
-// fn lookup_signal_in_template(
-//     file: &FileDB,
-//     ast_template: &AstTemplateDef,
-//     signal_token: &SyntaxToken,
-// ) -> Vec<Range> {
-//     let mut result = Vec::new();
-
-//     result
-// }
 #[cfg(test)]
 mod tests {
     use std::path::Path;
