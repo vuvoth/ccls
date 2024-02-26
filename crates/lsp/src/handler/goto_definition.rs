@@ -5,7 +5,7 @@ use lsp_types::Url;
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::SyntaxText;
-use syntax::abstract_syntax_tree::template;
+
 use syntax::abstract_syntax_tree::AstComponentCall;
 use syntax::abstract_syntax_tree::AstInclude;
 use syntax::abstract_syntax_tree::AstTemplateDef;

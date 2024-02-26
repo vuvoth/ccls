@@ -98,7 +98,7 @@ impl GlobalState {
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
             eprintln!("lookup token at {}", token.text());
-            
+
             locations = self.lookup_definition(&file, &ast, &token);
         };
 

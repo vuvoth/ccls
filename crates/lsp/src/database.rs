@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
-    path::{Component, PathBuf},
+    path::PathBuf,
 };
 
 use lsp_types::{Position, Range, Url};
