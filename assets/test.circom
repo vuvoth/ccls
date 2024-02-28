@@ -1,4 +1,5 @@
 pragma circom 2.0.1;
+include "./new.circom";
 
 /* This is good teamplatehello
 */

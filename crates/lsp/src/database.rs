@@ -1,8 +1,10 @@
 use std::{
     collections::HashMap,
-    hash::{DefaultHasher, Hash, Hasher},
-    path::{Component, PathBuf},
+    hash::{Hash, Hasher},
+    path::PathBuf,
 };
+
+use std::collections::hash_map::DefaultHasher;
 
 use lsp_types::{Position, Range, Url};
 
