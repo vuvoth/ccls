@@ -9,8 +9,9 @@ use lsp_types::{
     GotoDefinitionResponse, Location, Url,
 };
 
+use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstCircomString};
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
@@ -69,6 +70,10 @@ impl GlobalState {
     ) -> Vec<Location> {
         let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
         let mut result = lookup_definition(root, ast, semantic_data, token);
+
+        if token.kind() == TokenKind::CircomString {
+            return result;
+        }
 
         let p = root.get_path();
 

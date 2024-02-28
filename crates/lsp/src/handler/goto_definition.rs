@@ -66,14 +66,12 @@ pub fn lookup_definition(
     semantic_data: &SemanticData,
     token: &SyntaxToken,
 ) -> Vec<Location> {
-    eprintln!("{}", token.text());
     let template_list = ast.template_list();
 
     let mut res = Vec::new();
     let mut signal_outside = false;
 
     if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
-        eprintln!("{}", include_lib.text());
         if let Some(ast_include) = AstInclude::cast(include_lib) {
             if let Some(abs_lib_ans) = ast_include.lib() {
                 let lib_path = file
