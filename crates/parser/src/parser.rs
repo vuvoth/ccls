@@ -111,10 +111,8 @@ impl<'a> Parser<'a> {
 
     pub fn current(&mut self) -> TokenKind {
         let mut kind: TokenKind;
-
         loop {
             kind = self.input.kind_of(self.pos);
-
             if !kind.is_travial() {
                 break;
             }
