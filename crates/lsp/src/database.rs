@@ -428,7 +428,7 @@ three
         let file_utils = FileDB::new(
             FileId(1),
             str,
-            Url::from_file_path(Path::new("tmp.txt")).unwrap(),
+            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
         );
         assert_eq!(Position::new(1, 1), file_utils.position(2.into()));
         assert_eq!(Position::new(0, 0), file_utils.position(0.into()));

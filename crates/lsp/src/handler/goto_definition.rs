@@ -217,7 +217,7 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileDB::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
+        let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
 
