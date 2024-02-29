@@ -11,7 +11,7 @@ use lsp_types::{
 
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstCircomString};
+use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
@@ -68,6 +68,8 @@ impl GlobalState {
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
+        eprintln!("token {}", token.text());
+
         let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
         let mut result = lookup_definition(root, ast, semantic_data, token);
 
@@ -99,11 +101,10 @@ impl GlobalState {
         let file = self.file_map.get(&uri.to_string()).unwrap();
 
         let mut locations = Vec::new();
+
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
-            eprintln!("lookup token at {}", token.text());
-
             locations = self.lookup_definition(&file, &ast, &token);
         };
 
@@ -119,6 +120,7 @@ impl GlobalState {
     }
 
     pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
+        eprintln!("{:?}", text_document.uri.to_string());
         let text = &text_document.text;
         let url = &text_document.uri.to_string();
 
@@ -127,12 +129,13 @@ impl GlobalState {
         let file_id = file_db.file_id;
 
         let p: PathBuf = file_db.get_path();
-
+        eprintln!("syntax...");
         if let Some(ast) = AstCircomProgram::cast(syntax) {
             self.db.semantic.remove(&file_id);
             self.db.circom_program_semantic(&file_db, &ast);
 
             for lib in ast.libs() {
+                eprintln!("{:?}", lib.syntax().text());
                 if let Some(lib_abs_path) = lib.lib() {
                     let lib_path = p.parent().unwrap().join(lib_abs_path.value()).clone();
                     let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
@@ -141,9 +144,9 @@ impl GlobalState {
                             text: src,
                             uri: lib_url.clone(),
                         };
-
                         let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
                         let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
+                        eprintln!("{}", syntax.text());
 
                         if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
                             self.db.semantic.remove(&lib_file.file_id);
@@ -160,6 +163,7 @@ impl GlobalState {
 
         self.file_map.insert(url.to_string(), file_db);
 
+        eprintln!("Finish {}", text_document.uri);
         Ok(())
     }
 }

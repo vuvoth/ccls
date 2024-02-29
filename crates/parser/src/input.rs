@@ -22,8 +22,27 @@ impl<'a> Input<'a> {
         let mut lex = Lexer::<TokenKind>::new(source);
 
         while let Some(tk) = lex.next() {
-            input.kind.push(tk);
-            input.position.push(lex.span());
+            if tk == TokenKind::CommentBlockOpen {
+                let mut closed = false;
+                let mut join_span = lex.span();
+                while let Some(t) = lex.next() {
+                    join_span.end = lex.span().end;
+                    if t == TokenKind::CommentBlockClose {
+                        closed = true;
+                        break;
+                    }
+                }
+
+                if closed {
+                    input.kind.push(TokenKind::BlockComment);
+                } else {
+                    input.kind.push(TokenKind::Error);
+                }
+                input.position.push(join_span);
+            } else {
+                input.kind.push(tk);
+                input.position.push(lex.span());
+            }
         }
 
         input
@@ -52,34 +71,21 @@ impl<'a> Input<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::min;
+
     use super::Input;
 
     #[test]
     fn test_input() {
-        let source: String = r#"
-        pragma circom 2.0.0;
-        template X() {
-           component x = Multiplier2()
-        }
-        
-        template Multiplier2 () {  
-        
-           // Declaration of signals.  
-           signal input a;  
-           signal input b;  
-           signal output c;  
-        
-        
-           signal output d;
-           // Constraints.  
-           c <== a * b;  
-        }
-                "#
+        let source = r#"
+        /*a + b == 10*/
+        a + 10
+    "#
         .to_string();
 
         let input = Input::new(&source);
 
-        for i in 0..10 {
+        for i in 0..min(input.size(), 10) {
             println!("kind = {:?}", input.kind[i]);
             println!("position {:?}", input.position[i]);
         }
