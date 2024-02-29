@@ -105,7 +105,6 @@ mod tests {
         // find token
     }
 
-
     #[test]
     fn parser_test() {
         let source = r#"/*
@@ -210,6 +209,6 @@ mod tests {
     }
     "#;
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(&source);
+        let _syntax = SyntaxTreeBuilder::syntax_tree(source);
     }
 }

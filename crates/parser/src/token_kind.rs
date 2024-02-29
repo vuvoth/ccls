@@ -9,7 +9,7 @@ pub enum TokenKind {
     #[regex(r"//[^\n]*")]
     CommentLine,
     #[token("/*")]
-    CommentBlockOpen, 
+    CommentBlockOpen,
     #[token("*/")]
     CommentBlockClose,
     #[regex("[ \t]+")]
@@ -249,6 +249,9 @@ impl TokenKind {
         matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
     }
     pub fn is_travial(self) -> bool {
-        matches!(self, Self::WhiteSpace | Self::EndLine | Self::CommentLine | Self::Error )
+        matches!(
+            self,
+            Self::WhiteSpace | Self::EndLine | Self::CommentLine | Self::Error
+        )
     }
 }

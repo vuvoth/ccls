@@ -71,7 +71,7 @@ impl<'a> Input<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::{max, min};
+    use std::cmp::min;
 
     use super::Input;
 

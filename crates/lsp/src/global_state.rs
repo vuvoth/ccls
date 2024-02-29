@@ -11,7 +11,7 @@ use lsp_types::{
 
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstCircomString};
+use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
@@ -102,7 +102,6 @@ impl GlobalState {
 
         let mut locations = Vec::new();
 
-        
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
@@ -148,7 +147,7 @@ impl GlobalState {
                         let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
                         let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
                         eprintln!("{}", syntax.text());
-                        
+
                         if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
                             self.db.semantic.remove(&lib_file.file_id);
                             self.db.circom_program_semantic(&lib_file, &lib_ast);
