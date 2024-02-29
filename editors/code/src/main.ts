@@ -38,7 +38,7 @@ export async function activate(context: ExtensionContext) {
     clientOptions
   );
 
-  client.start();
+  await client.start();
   const disposable = commands.registerCommand(
     "circom-plus.restart",
     async () => {
@@ -46,7 +46,7 @@ export async function activate(context: ExtensionContext) {
 
       window.showInformationMessage("Restart server");
       // Display a message box to the user
-      client.restart();
+      await client.restart();
     }
   );
 
@@ -57,5 +57,6 @@ export async function deactivate() {
   if (!client) {
     return undefined;
   }
-  client.stop();
+
+  await client.stop();
 }
