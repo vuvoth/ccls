@@ -1,4 +1,3 @@
-use core::hash;
 use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
@@ -54,7 +53,12 @@ use path_absolutize::*;
 impl FileDB {
     pub fn create(content: &str, file_path: Url) -> Self {
         let mut hasher = DefaultHasher::new();
-        file_path.to_file_path().unwrap().absolutize().unwrap().hash(&mut hasher);
+        file_path
+            .to_file_path()
+            .unwrap()
+            .absolutize()
+            .unwrap()
+            .hash(&mut hasher);
         Self::new(FileId(hasher.finish()), content, file_path)
     }
 
@@ -376,9 +380,7 @@ mod tests {
 
     use super::TokenId;
 
-    use path_absolutize::*;
-
-    #[test] 
+    #[test]
     fn file_id_test() {
         let file_1 = FileDB::create("a", Url::from_file_path(Path::new("/a/../a/c")).unwrap());
         let file_2 = FileDB::create("a", Url::from_file_path(Path::new("/a/c")).unwrap());

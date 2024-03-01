@@ -1,6 +1,9 @@
 use std::{fs, path::PathBuf};
 
-use crate::database::{FileDB, SemanticDB};
+use crate::{
+    database::{FileDB, SemanticDB},
+    handler::goto_definition::lookup_node_wrap_token,
+};
 use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
@@ -11,7 +14,7 @@ use lsp_types::{
 
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
@@ -77,17 +80,21 @@ impl GlobalState {
 
         let p = root.get_path();
 
-        for lib in ast.libs() {
-            let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
-            let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
-            let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
+        if lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
+            || lookup_node_wrap_token(TokenKind::ComponentCall, token).is_some()
+        {
+            for lib in ast.libs() {
+                let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
+                let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
+                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
 
-            if let Some(file_lib) = self.file_map.get(&lib_url.to_string()) {
-                let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
-                if let Some(semantic_data_lib) = self.db.semantic.get(&file_lib.file_id) {
-                    let lib_result =
-                        lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
-                    result.extend(lib_result);
+                if let Some(file_lib) = self.file_map.get(&lib_url.to_string()) {
+                    let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
+                    if let Some(semantic_data_lib) = self.db.semantic.get(&file_lib.file_id) {
+                        let lib_result =
+                            lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
+                        result.extend(lib_result);
+                    }
                 }
             }
         }
