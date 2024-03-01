@@ -23,6 +23,7 @@ syntax.workspace = true
 
 anyhow = "1.0.79"
 dashmap = "5.5.3"
+path-absolutize = "3.1.1"
 
 [profile]
 dev.debug = 2

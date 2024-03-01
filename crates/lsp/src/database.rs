@@ -48,11 +48,17 @@ pub struct FileDB {
     pub end_line_vec: Vec<u32>,
 }
 
+use path_absolutize::*;
+
 impl FileDB {
     pub fn create(content: &str, file_path: Url) -> Self {
         let mut hasher = DefaultHasher::new();
-        file_path.hash(&mut hasher);
-
+        file_path
+            .to_file_path()
+            .unwrap()
+            .absolutize()
+            .unwrap()
+            .hash(&mut hasher);
         Self::new(FileId(hasher.finish()), content, file_path)
     }
 
@@ -375,6 +381,13 @@ mod tests {
     use super::TokenId;
 
     #[test]
+    fn file_id_test() {
+        let file_1 = FileDB::create("a", Url::from_file_path(Path::new("/a/../a/c")).unwrap());
+        let file_2 = FileDB::create("a", Url::from_file_path(Path::new("/a/c")).unwrap());
+
+        assert_eq!(file_1.file_id, file_2.file_id);
+    }
+    #[test]
     fn token_id_hash_test() {
         let source: String = r#"pragma circom 2.0.0;
 
@@ -394,6 +407,7 @@ mod tests {
             assert_eq!(first_id, second_id);
         }
     }
+    #[test]
     fn off_set_test() {
         let str = r#"
 one
@@ -404,7 +418,7 @@ three
         let file_utils = FileDB::new(
             FileId(1),
             str,
-            Url::from_file_path(Path::new("tmp.txt")).unwrap(),
+            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
         );
 
         let position = Position::new(0, 1);
