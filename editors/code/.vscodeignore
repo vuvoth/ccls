@@ -7,3 +7,4 @@
 contributing.md
 .travis.yml
 src/**
+node_modules

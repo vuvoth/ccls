@@ -8,13 +8,28 @@ import {
   ServerOptions,
   Trace,
 } from "vscode-languageclient/node";
+import which = require("which");
 
 let client: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
-  const ccls_path = 'ccls';
+  const platform = process.platform;
+  let ccls_path = "ccls";
+
+  const exist_ccls = await which(ccls_path, { nothrow: true });
+
+  if (exist_ccls === null) {
+    if (platform === "linux") {
+      ccls_path = path.join(__dirname, "../bin/ccls_linux");
+    } else if (platform === "darwin") {
+      ccls_path = path.join(__dirname, "../bin/ccls_mac");
+    } else {
+      window.showErrorMessage(`We don't support ${platform}`);
+    }
+  }
+
   const run: Executable = {
     command: process.env.__CIRCOM_LSP_SERVER_DEBUG ?? ccls_path,
   };

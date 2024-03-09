@@ -70,7 +70,6 @@ pub fn lookup_definition(
 
     let mut res = Vec::new();
     let mut signal_outside = false;
-    eprintln!("{}", token.text());
     if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
         if let Some(ast_include) = AstInclude::cast(include_lib) {
             if let Some(abs_lib_ans) = ast_include.lib() {
@@ -86,7 +85,6 @@ pub fn lookup_definition(
         }
     }
 
-    eprintln!("{}", token.text());
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
         // find template called.
         if let Some(ast_component_call) = AstComponentCall::cast(component_call) {
@@ -217,7 +215,7 @@ template Y() {
         "#
         .to_string();
 
-        let file = FileDB::create(&source, Url::from_file_path(Path::new("tmp")).unwrap());
+        let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
 
