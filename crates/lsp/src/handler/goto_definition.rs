@@ -60,16 +60,7 @@ pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<A
     None
 }
 
-pub fn lookup_definition(
-    file: &FileDB,
-    ast: &AstCircomProgram,
-    semantic_data: &SemanticData,
-    token: &SyntaxToken,
-) -> Vec<Location> {
-    let template_list = ast.template_list();
-
-    let mut res = Vec::new();
-    let mut signal_outside = false;
+pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
     if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
         if let Some(ast_include) = AstInclude::cast(include_lib) {
             if let Some(abs_lib_ans) = ast_include.lib() {
@@ -84,6 +75,25 @@ pub fn lookup_definition(
             }
         }
     }
+
+    Vec::new()
+}
+
+pub fn lookup_definition(
+    file: &FileDB,
+    ast: &AstCircomProgram,
+    semantic_data: &SemanticData,
+    token: &SyntaxToken,
+) -> Vec<Location> {
+    let template_list = ast.template_list();
+
+    let mut res = Vec::new();
+
+    if token.kind() == TokenKind::CircomString {
+        return jump_to_lib(file, token);
+    }
+
+    let mut signal_outside = false;
 
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
         // find template called.

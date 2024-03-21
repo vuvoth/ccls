@@ -14,7 +14,7 @@ use lsp_types::{
 
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
+use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::syntax::SyntaxTreeBuilder;
 use syntax::syntax_node::SyntaxToken;
 
