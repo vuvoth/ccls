@@ -126,7 +126,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn next(&mut self) -> TokenKind {
-        if self.fuel.get() == 0 { 
+        if self.fuel.get() == 0 {
             panic!("parser is stuck");
         }
         self.fuel.set(self.fuel.get() - 1);
@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
             self.pos += 1;
             return self.input.kind_of(self.pos);
         }
-        
+
         TokenKind::EOF
     }
 
