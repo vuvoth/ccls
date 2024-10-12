@@ -126,6 +126,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn next(&mut self) -> TokenKind {
+        if self.fuel.get() == 0 {
+            panic!("parser is stuck");
+        }
+        self.fuel.set(self.fuel.get() - 1);
         if self.pos < self.input.size() {
             self.pos += 1;
             return self.input.kind_of(self.pos);
