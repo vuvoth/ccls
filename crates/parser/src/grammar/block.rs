@@ -36,4 +36,3 @@ pub fn block(p: &mut Parser) {
         p.dec_rcurly();
     }
 }
-

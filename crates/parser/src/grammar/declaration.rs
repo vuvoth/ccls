@@ -129,7 +129,5 @@ pub(super) fn declaration(p: &mut Parser) {
 #[cfg(test)]
 mod declar_tests {
     #[test]
-    fn signal_with_tag() {
-        
-    }
+    fn signal_with_tag() {}
 }
