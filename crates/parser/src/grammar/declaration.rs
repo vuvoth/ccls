@@ -14,6 +14,11 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
             res = Some(false);
         }
         p.advance();
+
+        if p.at(LCurly) {
+            p.expect(Identifier);
+            p.expect(RCurly);
+        }
     }
     p.close(m, SignalHeader);
     res
@@ -118,5 +123,13 @@ pub(super) fn declaration(p: &mut Parser) {
         VarKw => var_declaration(p),
         ComponentKw => component_declaration(p),
         _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+mod declar_tests {
+    #[test]
+    fn signal_with_tag() {
+        
     }
 }
