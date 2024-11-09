@@ -248,10 +248,10 @@ impl TokenKind {
     pub fn is_declaration_kw(self) -> bool {
         matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
     }
-    pub fn is_travial(self) -> bool {
+    pub fn is_trivial(self) -> bool {
         matches!(
             self,
-            Self::WhiteSpace | Self::EndLine | Self::CommentLine | Self::Error
+            Self::WhiteSpace | Self::EndLine | Self::CommentLine | Self::BlockComment | Self::Error
         )
     }
 }

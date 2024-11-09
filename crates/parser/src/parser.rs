@@ -113,7 +113,7 @@ impl<'a> Parser<'a> {
         let mut kind: TokenKind;
         loop {
             kind = self.input.kind_of(self.pos);
-            if !kind.is_travial() {
+            if !kind.is_trivial() {
                 break;
             }
 

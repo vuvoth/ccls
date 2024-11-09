@@ -4,7 +4,7 @@ use logos::Lexer;
 
 use crate::token_kind::TokenKind;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Input<'a> {
     kind: Vec<TokenKind>,
     source: &'a str,
@@ -71,7 +71,9 @@ impl<'a> Input<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::min;
+    // use std::cmp::min;
+
+    use crate::token_kind::TokenKind;
 
     use super::Input;
 
@@ -83,11 +85,45 @@ mod tests {
     "#
         .to_string();
 
+        let expected_input = Input {
+            kind: vec![
+                TokenKind::EndLine,
+                TokenKind::WhiteSpace,
+                TokenKind::BlockComment,
+                TokenKind::EndLine,
+                TokenKind::WhiteSpace,
+                TokenKind::Identifier,
+                TokenKind::WhiteSpace,
+                TokenKind::Add,
+                TokenKind::WhiteSpace,
+                TokenKind::Number,
+                TokenKind::EndLine,
+                TokenKind::WhiteSpace
+            ],
+            source: &source,
+            position: vec![
+                {0..1},
+                {1..9},
+                {9..24},
+                {24..25},
+                {25..33},
+                {33..34},
+                {34..35},
+                {35..36},
+                {36..37},
+                {37..39},
+                {39..40},
+                {40..44},
+            ]
+        };
+
         let input = Input::new(&source);
 
-        for i in 0..min(input.size(), 10) {
-            println!("kind = {:?}", input.kind[i]);
-            println!("position {:?}", input.position[i]);
-        }
+        assert_eq!(expected_input, input, "Tokens extract from source code are not correct");
+        
+        // for i in 0..min(input.size(), 10) {
+        //     println!("kind = {:?}", input.kind[i]);
+        //     println!("position {:?}", input.position[i]);
+        // }
     }
 }
