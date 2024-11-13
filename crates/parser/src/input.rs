@@ -120,10 +120,5 @@ mod tests {
         let input = Input::new(&source);
 
         assert_eq!(expected_input, input, "Tokens extract from source code are not correct");
-        
-        // for i in 0..min(input.size(), 10) {
-        //     println!("kind = {:?}", input.kind[i]);
-        //     println!("position {:?}", input.position[i]);
-        // }
     }
 }
