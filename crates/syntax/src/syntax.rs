@@ -45,8 +45,10 @@ impl<'a> SyntaxTreeBuilder<'a> {
 
     pub fn syntax_tree(source: &str) -> SyntaxNode {
         let input = Input::new(source);
-        let mut builder = SyntaxTreeBuilder::new(&input);
+
         let output = Parser::parsing(&input);
+
+        let mut builder = SyntaxTreeBuilder::new(&input);
         builder.build(output);
         let green = builder.finish();
         SyntaxNode::new_root(green)
@@ -55,35 +57,127 @@ impl<'a> SyntaxTreeBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-
+    use parser::token_kind::TokenKind::{self, *};
     use std::hash::{DefaultHasher, Hash, Hasher};
 
-    use rowan::ast::AstNode;
+    use rowan::{ast::AstNode, TextRange};
 
-    use crate::abstract_syntax_tree::AstCircomProgram;
+    use crate::{abstract_syntax_tree::AstCircomProgram, test_programs};
 
     use super::SyntaxTreeBuilder;
 
+    fn generate_expected_token_kind(ast: &AstCircomProgram) {
+        let children = ast
+            .syntax()
+            .first_child()
+            .unwrap()
+            .siblings(rowan::Direction::Next);
+
+        println!("vec![");
+        for child in children {
+            println!("{:?},", child.kind());
+        }
+        println!("];");
+    }
+
+    fn generate_expected_token_range(ast: &AstCircomProgram) {
+        let children = ast
+            .syntax()
+            .first_child()
+            .unwrap()
+            .siblings(rowan::Direction::Next);
+
+        println!("vec![");
+        for child in children {
+            println!(
+                "TextRange::new({:?}.into(), {:?}.into()), ",
+                child.text_range().start(),
+                child.text_range().end()
+            );
+        }
+        println!("];");
+    }
+
+    fn check_ast_children(
+        ast: &AstCircomProgram,
+        expected_kinds: &Vec<TokenKind>,
+        expected_ranges: &Vec<TextRange>,
+    ) {
+        let children = ast
+            .syntax()
+            .first_child()
+            .unwrap()
+            .siblings(rowan::Direction::Next);
+
+        let mut kind_iterator = expected_kinds.iter();
+        let mut range_iterator = expected_ranges.iter();
+
+        for child in children {
+            if let (Some(expected_kind), Some(expected_range)) =
+                (kind_iterator.next(), range_iterator.next())
+            {
+                assert_eq!(child.kind(), *expected_kind);
+                assert_eq!(child.text_range(), *expected_range);
+            } else {
+                panic!("Mismatched number of children and expected values");
+            }
+        }
+        println!();
+    }
+
     #[test]
-    fn other_parser_test() {
-        let source: String = r#"pragma circom 2.0.0;
+    fn parser_test_1() {
+        let source: &str = test_programs::PARSER_TEST_1;
+
+        let expected_pragma = "pragma circom 2.0.0;".to_string();
+        let expected_kinds = vec![
+            Pragma,
+            EndLine,
+            EndLine,
+            WhiteSpace,
+            EndLine,
+            WhiteSpace,
+            TemplateDef,
+            EndLine,
+            WhiteSpace,
+            TemplateDef,
+            WhiteSpace,
+            EndLine,
+            WhiteSpace,
+        ];
+        let expected_ranges = vec![
+            TextRange::new(0.into(), 20.into()),
+            TextRange::new(20.into(), 21.into()),
+            TextRange::new(21.into(), 22.into()),
+            TextRange::new(22.into(), 26.into()),
+            TextRange::new(26.into(), 27.into()),
+            TextRange::new(27.into(), 31.into()),
+            TextRange::new(31.into(), 57.into()),
+            TextRange::new(57.into(), 58.into()),
+            TextRange::new(58.into(), 62.into()),
+            TextRange::new(62.into(), 88.into()),
+            TextRange::new(88.into(), 89.into()),
+            TextRange::new(89.into(), 90.into()),
+            TextRange::new(90.into(), 94.into()),
+        ];
+
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         
-        template Multiplier2 () {}
-        template Multiplier2 () {} 
-        "#
-        .to_string();
+        if let Some(ast) = AstCircomProgram::cast(syntax) {            
+            check_ast_children(&ast, &expected_kinds, &expected_ranges);
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(&source);
+            // check pragma
+            let pragma = ast.pragma().unwrap().syntax().text().to_string();
+            assert_eq!(pragma, expected_pragma, "Pragma is not correct!");
 
-        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // check ast hash
             let mut hasher = DefaultHasher::default();
             ast.syntax().hash(&mut hasher);
-            // println!("{:#?}", syntax);
-            println!("{:?}", hasher.finish());
+            let _ast_hash = hasher.finish();
 
+            // check template hash
             let mut h1 = DefaultHasher::default();
-
             let mut h2 = DefaultHasher::default();
 
             let template = ast.template_list();
@@ -91,124 +185,116 @@ mod tests {
             template[0].syntax().hash(&mut h1);
             template[1].syntax().hash(&mut h2);
 
-            println!("{}", h1.finish());
-            println!("{}", h2.finish());
-            println!("{:?}", template[0].syntax().text());
-            println!("{:?}", template[1].syntax().text());
-            println!("{}", template[0].syntax() == template[0].syntax());
-            println!(
-                "{}",
-                template[0].syntax().green() == template[1].syntax().green()
+            assert_ne!(
+                h1.finish(),
+                h2.finish(),
+                "Templates with same syntax should have different hashes!"
+            );
+
+            // check template syntax (text & green node)
+            assert_eq!(
+                template[0].syntax().text(),
+                template[1].syntax().text(),
+                "The syntax (as text) of template 1 and 2 must be the same!"
+            );
+            assert_eq!(
+                template[0].syntax().green(),
+                template[1].syntax().green(),
+                "The syntax (as green node) of template 1 and 2 must be the same!!"
             );
         }
-
-        // find token
     }
 
     #[test]
-    fn parser_test() {
-        let source = r#"/*
-        Copyright 2018 0KIMS association.
-    
-        This file is part of circom (Zero Knowledge Circuit Compiler).
-    
-        circom is a free software: you can redistribute it and/or modify it
-        under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
-    
-        circom is distributed in the hope that it will be useful, but WITHOUT
-        ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-        or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
-        License for more details.
-    
-        You should have received a copy of the GNU General Public License
-        along with circom. If not, see <https://www.gnu.org/licenses/>.
-    */
-    /*
-    
-    Binary Sum
-    ==========
-    
-    This component creates a binary sum componet of ops operands and n bits each operand.
-    
-    e is Number of carries: Depends on the number of operands in the input.
-    
-    Main Constraint:
-       in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +
-     + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +
-     + ..
-     + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +
-     ===
-       out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)
-    
-    To waranty binary outputs:
-    
-        out[0]     * (out[0] - 1) === 0
-        out[1]     * (out[0] - 1) === 0
-        .
-        .
-        .
-        out[n+e-1] * (out[n+e-1] - 1) == 0
-    
-     */
-    
-    
-    /*
-        This function calculates the number of extra bits in the output to do the full sum.
-     */
-     pragma circom 2.0.0;
-    
-    function nbits(a) {
-        var n = 1;
-        var r = 0;
-        while (n-1<a) {
-            r++;
-            n *= 2;
-        }
-        return r;
-    }
-    
-    
-    template BinSum(n, ops) {
-        var nout = nbits((2**n -1)*ops);
-        signal input in[ops][n];
-        signal output out[nout];
-    
-        var lin = 0;
-        var lout = 0;
-    
-        var k;
-        var j;
-    
-        var e2;
-    
-        e2 = 1;
-        for (k=0; k<n; k++) {
-            for (j=0; j<ops; j++) {
-                lin += in[j][k] * e2;
-            }
-            e2 = e2 + e2;
-        }
-    
-        e2 = 1;
-        for (k=0; k<nout; k++) {
-            out[k] <-- (lin >> k) & 1;
-    
-            // Ensure out is binary
-            out[k] * (out[k] - 1) === 0;
-    
-            lout += out[k] * e2;
-    
-            e2 = e2+e2;
-        }
-    
-        // Ensure the sum;
-    
-        lin === lout;
-    }
-    "#;
+    fn parser_test_2() {
+        let source = test_programs::PARSER_TEST_2;
 
-        let _syntax = SyntaxTreeBuilder::syntax_tree(source);
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // print_ast_children(&ast);
+
+            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
+
+            print!("Templates: ");
+            let templates = ast.template_list();
+            for template in templates.iter() {
+                // print!("{:?} ", template.name().unwrap().name().unwrap().syntax().text());
+                print!("{:?} ", template.name().unwrap().syntax().text()); // leading whitespaces
+                                                                           // print!("{:?} ", template.syntax().text()); // leading whitespaces
+            }
+            println!();
+
+            print!("Functions: ");
+            let functions = ast.function_list();
+            for function in functions.iter() {
+                print!("{:?} ", function.function_name().unwrap().syntax().text());
+                // leading whitespaces
+                // print!("{:?} ", function.syntax().text()); // leading whitespaces
+            }
+            println!();
+        }
+    }
+
+    #[test]
+    fn parser_test_3() {
+        let source = test_programs::PARSER_TEST_3;
+
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // print_ast_children(&ast);
+
+            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
+            println!(
+                "Pragma version: {:?}",
+                ast.pragma().unwrap().version().unwrap().syntax().text()
+            );
+        }
+    }
+
+    #[test]
+    fn parser_test_4() {
+        let source = test_programs::PARSER_TEST_4;
+
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // print_ast_children(&ast);
+
+            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
+            println!(
+                "Pragma version: {:?}",
+                ast.pragma().unwrap().version().unwrap().syntax().text()
+            );
+        }
+    }
+
+    #[test]
+    fn parser_test_5() {
+        let source = test_programs::PARSER_TEST_5;
+
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // print_ast_children(&ast);
+
+            println!("{:?}", ast.pragma());
+            // assert!(ast.pragma().is_none(), "No pragma in source code");
+        }
+    }
+
+    #[test]
+    fn parser_test_6() {
+        let source = test_programs::PARSER_TEST_6;
+
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
+
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
+            // print_ast_children(&ast);
+
+            println!("{:?}", ast.pragma());
+            // assert!(ast.pragma().is_none(), "No pragma in source code");
+        }
     }
 }
