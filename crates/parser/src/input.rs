@@ -72,7 +72,6 @@ impl<'a> Input<'a> {
             // return error for out of bound index
             0..0
         }
-        
     }
 
     pub fn size(&self) -> usize {
@@ -87,7 +86,7 @@ mod tests {
     use super::Input;
 
     #[test]
-    fn test_input() {
+    fn test_input_1() {
         let source = r#"
         /*a + b == 10*/
         a + 10
@@ -107,26 +106,120 @@ mod tests {
                 TokenKind::WhiteSpace,
                 TokenKind::Number,
                 TokenKind::EndLine,
-                TokenKind::WhiteSpace
+                TokenKind::WhiteSpace,
             ],
             source: &source,
             position: vec![
-                {0..1},
-                {1..9},
-                {9..24},
-                {24..25},
-                {25..33},
-                {33..34},
-                {34..35},
-                {35..36},
-                {36..37},
-                {37..39},
-                {39..40},
-                {40..44},
-            ]
+                { 0..1 },
+                { 1..9 },
+                { 9..24 },
+                { 24..25 },
+                { 25..33 },
+                { 33..34 },
+                { 34..35 },
+                { 35..36 },
+                { 36..37 },
+                { 37..39 },
+                { 39..40 },
+                { 40..44 },
+            ],
         };
 
         let input = Input::new(&source);
+
+        assert_eq!(
+            expected_input, input,
+            "Tokens extract from source code are not correct"
+        );
+
+        // test size method
+        let expected_size = input.kind.len();
+        let size = input.size();
+        assert_eq!(expected_size, size, "size method failed");
+
+        // test methods with index out of bound
+        let index = input.kind.len();
+
+        let expected_token_value = "";
+        let token_value = input.token_value(index);
+        assert_eq!(
+            expected_token_value, token_value,
+            "token_value failed (case: index out of bound)"
+        );
+
+        let expected_kind = TokenKind::EOF;
+        let kind = input.kind_of(index);
+        assert_eq!(
+            expected_kind, kind,
+            "kind_of failed (case: index out of bound)"
+        );
+
+        let expected_position = 0..0;
+        let position = input.position_of(index);
+        assert_eq!(
+            expected_position, position,
+            "position_of failed (case: index out of bound)"
+        );
+
+        // test methods with index in bound
+        if input.size() == 0 {
+            return;
+        }
+
+        let index = input.size() / 2; // a valid index if input size > 0
+
+        let expected_token_value = &input.source[input.position[index].clone()];
+        let token_value = input.token_value(index);
+        assert_eq!(expected_token_value, token_value, "token_value failed");
+
+        let expected_kind = input.kind[index];
+        let kind = input.kind_of(index);
+        assert_eq!(expected_kind, kind, "kind_of failed");
+
+        let expected_position = input.position[index].clone();
+        let position = input.position_of(index);
+        assert_eq!(expected_position, position, "position_of failed");
+    }
+
+    #[test]
+    fn test_input_2() {
+        let source = r#"
+        pragma 2.1.1;
+        /*a + b == 10*
+        a + 10
+        template
+
+        /*
+    "#
+        .to_string();
+
+        let expected_input = Input {
+            kind: vec![
+                TokenKind::EndLine,
+                TokenKind::WhiteSpace,
+                TokenKind::Pragma,
+                TokenKind::WhiteSpace,
+                TokenKind::Version,
+                TokenKind::Semicolon,
+                TokenKind::EndLine,
+                TokenKind::WhiteSpace,
+                TokenKind::Error,
+            ],
+            source: &source,
+            position: vec![
+                0..1,
+                1..9,
+                9..15,
+                15..16,
+                16..21,
+                21..22,
+                22..23,
+                23..31,
+                31..94,
+            ],
+        };
+
+        let input = Input::new(&source);      
 
         assert_eq!(expected_input, input, "Tokens extract from source code are not correct");
 
@@ -140,15 +233,24 @@ mod tests {
 
         let expected_token_value = "";
         let token_value = input.token_value(index);
-        assert_eq!(expected_token_value, token_value, "token_value failed (case: index out of bound)");
+        assert_eq!(
+            expected_token_value, token_value,
+            "token_value failed (case: index out of bound)"
+        );
 
         let expected_kind = TokenKind::EOF;
         let kind = input.kind_of(index);
-        assert_eq!(expected_kind, kind, "kind_of failed (case: index out of bound)");
+        assert_eq!(
+            expected_kind, kind,
+            "kind_of failed (case: index out of bound)"
+        );
 
         let expected_position = 0..0;
         let position = input.position_of(index);
-        assert_eq!(expected_position, position, "position_of failed (case: index out of bound)");
+        assert_eq!(
+            expected_position, position,
+            "position_of failed (case: index out of bound)"
+        );
 
         // test methods with index in bound
         if input.size() == 0 {
@@ -156,7 +258,7 @@ mod tests {
         }
 
         let index = input.size() / 2; // a valid index if input size > 0
-        
+
         let expected_token_value = &input.source[input.position[index].clone()];
         let token_value = input.token_value(index);
         assert_eq!(expected_token_value, token_value, "token_value failed");
@@ -164,10 +266,9 @@ mod tests {
         let expected_kind = input.kind[index];
         let kind = input.kind_of(index);
         assert_eq!(expected_kind, kind, "kind_of failed");
-       
+
         let expected_position = input.position[index].clone();
         let position = input.position_of(index);
         assert_eq!(expected_position, position, "position_of failed");
-        
     }
 }
