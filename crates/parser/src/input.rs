@@ -49,7 +49,12 @@ impl<'a> Input<'a> {
     }
 
     pub fn token_value(&self, index: usize) -> &'a str {
-        &self.source[self.position[index].start..self.position[index].end]
+        if index < self.kind.len() {
+            &self.source[self.position[index].start..self.position[index].end]
+        } else {
+            // return error for out of bound index
+            ""
+        }
     }
 
     pub fn kind_of(&self, index: usize) -> TokenKind {
@@ -61,7 +66,13 @@ impl<'a> Input<'a> {
     }
 
     pub fn position_of(&self, index: usize) -> Range<usize> {
-        self.position[index].clone()
+        if index < self.kind.len() {
+            self.position[index].clone()
+        } else {
+            // return error for out of bound index
+            0..0
+        }
+        
     }
 
     pub fn size(&self) -> usize {
@@ -71,8 +82,6 @@ impl<'a> Input<'a> {
 
 #[cfg(test)]
 mod tests {
-    // use std::cmp::min;
-
     use crate::token_kind::TokenKind;
 
     use super::Input;
@@ -120,5 +129,45 @@ mod tests {
         let input = Input::new(&source);
 
         assert_eq!(expected_input, input, "Tokens extract from source code are not correct");
+
+        // test size method
+        let expected_size = input.kind.len();
+        let size = input.size();
+        assert_eq!(expected_size, size, "size method failed");
+
+        // test methods with index out of bound
+        let index = input.kind.len();
+
+        let expected_token_value = "";
+        let token_value = input.token_value(index);
+        assert_eq!(expected_token_value, token_value, "token_value failed (case: index out of bound)");
+
+        let expected_kind = TokenKind::EOF;
+        let kind = input.kind_of(index);
+        assert_eq!(expected_kind, kind, "kind_of failed (case: index out of bound)");
+
+        let expected_position = 0..0;
+        let position = input.position_of(index);
+        assert_eq!(expected_position, position, "position_of failed (case: index out of bound)");
+
+        // test methods with index in bound
+        if input.size() == 0 {
+            return;
+        }
+
+        let index = input.size() / 2; // a valid index if input size > 0
+        
+        let expected_token_value = &input.source[input.position[index].clone()];
+        let token_value = input.token_value(index);
+        assert_eq!(expected_token_value, token_value, "token_value failed");
+
+        let expected_kind = input.kind[index];
+        let kind = input.kind_of(index);
+        assert_eq!(expected_kind, kind, "kind_of failed");
+       
+        let expected_position = input.position[index].clone();
+        let position = input.position_of(index);
+        assert_eq!(expected_position, position, "position_of failed");
+        
     }
 }
