@@ -229,6 +229,7 @@ impl TokenKind {
             _ => None,
         }
     }
+    
     pub fn prefix(self) -> Option<u16> {
         match self {
             Self::Sub => Some(100),
@@ -245,9 +246,11 @@ impl TokenKind {
             _ => None,
         }
     }
+
     pub fn is_declaration_kw(self) -> bool {
         matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
     }
+
     pub fn is_trivial(self) -> bool {
         matches!(
             self,

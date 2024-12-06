@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_1() {
+    fn syntax_test_1() {
         let source: &str = test_programs::PARSER_TEST_1;
 
         let expected_pragma = "pragma circom 2.0.0;".to_string();
@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_2() {
+    fn syntax_test_2() {
         let source = test_programs::PARSER_TEST_2;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
@@ -237,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_3() {
+    fn syntax_test_3() {
         let source = test_programs::PARSER_TEST_3;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
@@ -254,7 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_4() {
+    fn syntax_test_4() {
         let source = test_programs::PARSER_TEST_4;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_5() {
+    fn syntax_test_5() {
         let source = test_programs::PARSER_TEST_5;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
@@ -285,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_6() {
+    fn syntax_test_6() {
         let source = test_programs::PARSER_TEST_6;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
