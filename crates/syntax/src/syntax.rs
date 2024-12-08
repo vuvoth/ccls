@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_1() {
+    fn syntax_test_1() {
         let source: &str = test_programs::PARSER_TEST_1;
 
         let expected_pragma = "pragma circom 2.0.0;".to_string();
@@ -206,20 +206,17 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_2() {
+    fn syntax_test_2() {
         let source = test_programs::PARSER_TEST_2;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
 
             print!("Templates: ");
             let templates = ast.template_list();
             for template in templates.iter() {
-                // print!("{:?} ", template.name().unwrap().name().unwrap().syntax().text());
                 print!("{:?} ", template.name().unwrap().syntax().text()); // leading whitespaces
                                                                            // print!("{:?} ", template.syntax().text()); // leading whitespaces
             }
@@ -237,14 +234,12 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_3() {
+    fn syntax_test_3() {
         let source = test_programs::PARSER_TEST_3;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
             println!(
                 "Pragma version: {:?}",
@@ -254,14 +249,12 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_4() {
+    fn syntax_test_4() {
         let source = test_programs::PARSER_TEST_4;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
             println!(
                 "Pragma version: {:?}",
@@ -271,29 +264,27 @@ mod tests {
     }
 
     #[test]
-    fn parser_test_5() {
+    fn syntax_test_5() {
         let source = test_programs::PARSER_TEST_5;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
-            println!("{:?}", ast.pragma());
+            println!("pragma: {:?}", ast.pragma());
+            println!("template list: {:?}", ast.template_list());
             // assert!(ast.pragma().is_none(), "No pragma in source code");
         }
     }
 
     #[test]
-    fn parser_test_6() {
+    fn syntax_test_6() {
         let source = test_programs::PARSER_TEST_6;
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("{:?}", ast.pragma());
+            println!("template list: {:?}", ast.template_list());
             // assert!(ast.pragma().is_none(), "No pragma in source code");
         }
     }
