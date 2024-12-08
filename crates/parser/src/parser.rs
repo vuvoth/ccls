@@ -52,8 +52,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn close(&mut self, marker_close: Marker, kind: TokenKind) -> Marker {
-        match marker_close {
+    pub fn close(&mut self, marker_open: Marker, kind: TokenKind) -> Marker {
+        match marker_open {
             Marker::Open(index) => {
                 self.events[index] = Event::Open { kind };
                 self.events.push(Event::Close);
@@ -159,8 +159,7 @@ impl<'a> Parser<'a> {
 
     pub fn eat(&mut self, kind: TokenKind) -> bool {
         if self.at(kind) {
-            self.events.push(Event::TokenPosition(self.pos));
-            self.skip();
+            self.advance();
             return true;
         }
         false
@@ -193,7 +192,7 @@ impl<'a> Parser<'a> {
 }
 
 impl Parser<'_> {
-    pub fn parsing_with_scrope(input: &Input, scope: Scope) -> Output {
+    pub fn parsing_with_scope(input: &Input, scope: Scope) -> Output {
         let mut p = Parser::new(input);
         scope.parse(&mut p);
         Output::from(p.events)
@@ -201,6 +200,6 @@ impl Parser<'_> {
 
     pub fn parsing(input: &Input) -> Output {
         let c = Scope::CircomProgram;
-        Parser::parsing_with_scrope(input, c)
+        Parser::parsing_with_scope(input, c)
     }
 }
