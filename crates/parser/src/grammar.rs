@@ -34,21 +34,14 @@ pub mod entry {
             p.skip();
         }
 
-        pragma::pragma(p);
-        
         while !p.eof() {
             match p.current() {
-                TemplateKw => {
-                    template::template(p);
-                },
-                IncludeKw => {
-                    include::include(p);
-                },
+                Pragma => pragma::pragma(p),
+                TemplateKw => template::template(p),
+                IncludeKw => include::include(p),
                 ComponentKw => main_component::main_component(p),
                 FunctionKw => function::function_parse(p),
-                _ => {
-                    p.advance_with_error("invalid token");
-                }
+                _ => p.advance_with_error("invalid token"),
             }
         }
         p.close(m, CircomProgram);
@@ -64,20 +57,10 @@ pub mod entry {
     impl Scope {
         pub fn parse(self, p: &mut Parser) {
             match self {
-                Self::Block => {
-                    let m = p.open();
-                    block::block(p);
-                    p.close(m, ROOT);
-                }
+                Self::Block => block::block(p),
                 Self::CircomProgram => circom_program(p),
-                Self::Pragma => {
-                    let m = p.open();
-                    pragma::pragma(p);
-                    p.close(m, ROOT);
-                }
-                Self::Template => {
-                    template::template(p);
-                }
+                Self::Pragma => pragma::pragma(p),
+                Self::Template => template::template(p),
             }
         }
     }
