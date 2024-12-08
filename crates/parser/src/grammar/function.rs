@@ -12,12 +12,7 @@ pub fn function_parse(p: &mut Parser) {
 
     p.expect(LParen);
     let arg_marker = p.open();
-    while !p.at(RParen) && !p.eof() {
-        p.expect(Identifier);
-        if p.at(Comma) {
-            p.expect(Comma);
-        }
-    }
+    list_identity::parse(p);
     p.close(arg_marker, ParameterList);
     p.expect(RParen);
 
