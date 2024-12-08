@@ -1,6 +1,7 @@
 use crate::parser::Marker;
 
 use super::*;
+
 pub(super) fn expression(p: &mut Parser) {
     let m = p.open();
     circom_expression(p);

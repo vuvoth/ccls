@@ -35,14 +35,15 @@ pub mod entry {
         }
 
         pragma::pragma(p);
+        
         while !p.eof() {
             match p.current() {
                 TemplateKw => {
                     template::template(p);
-                }
+                },
                 IncludeKw => {
                     include::include(p);
-                }
+                },
                 ComponentKw => main_component::main_component(p),
                 FunctionKw => function::function_parse(p),
                 _ => {

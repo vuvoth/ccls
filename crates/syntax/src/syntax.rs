@@ -212,14 +212,11 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
 
             print!("Templates: ");
             let templates = ast.template_list();
             for template in templates.iter() {
-                // print!("{:?} ", template.name().unwrap().name().unwrap().syntax().text());
                 print!("{:?} ", template.name().unwrap().syntax().text()); // leading whitespaces
                                                                            // print!("{:?} ", template.syntax().text()); // leading whitespaces
             }
@@ -243,8 +240,6 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
             println!(
                 "Pragma version: {:?}",
@@ -260,8 +255,6 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
             println!(
                 "Pragma version: {:?}",
@@ -290,10 +283,7 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            // print_ast_children(&ast);
-
             println!("{:?}", ast.pragma());
-            
             println!("template list: {:?}", ast.template_list());
             // assert!(ast.pragma().is_none(), "No pragma in source code");
         }

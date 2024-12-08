@@ -1,7 +1,7 @@
 use crate::grammar::*;
 /**
  * template Identifier() {content}
- *
+ * template Identifier( param_1, ... , param_n ) { content }
  */
 pub fn template(p: &mut Parser) {
     // assert!(p.at(TemplateKw));

@@ -3,6 +3,9 @@ use super::{
     *,
 };
 
+// "signal" --> None
+// "signal input" --> Some(true)
+// "signal output" --> Some(false)
 fn signal_header(p: &mut Parser) -> Option<bool> {
     let mut res = None;
     let m = p.open();
