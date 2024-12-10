@@ -23,7 +23,8 @@ impl<'a> SyntaxTreeBuilder<'a> {
             match child {
                 Child::Token(token_id) => {
                     let token_kind = self.input.kind_of(*token_id);
-                    let token_value = self.input.token_value(*token_id);
+                    // TODO: return Error to replace .unwrap()
+                    let token_value = self.input.token_value(*token_id).unwrap();
                     self.builder.start_node(token_kind.into());
                     self.builder.token(token_kind.into(), token_value);
                     self.builder.finish_node();

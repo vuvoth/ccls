@@ -48,12 +48,12 @@ impl<'a> Input<'a> {
         input
     }
 
-    pub fn token_value(&self, index: usize) -> &'a str {
+    pub fn token_value(&self, index: usize) -> Option<&'a str> {
         if index < self.kind.len() {
-            &self.source[self.position[index].start..self.position[index].end]
+            Some(&self.source[self.position[index].start..self.position[index].end])
         } else {
-            // return error for out of bound index
-            ""
+            // return None for out of bound index
+            None
         }
     }
 
@@ -65,12 +65,12 @@ impl<'a> Input<'a> {
         }
     }
 
-    pub fn position_of(&self, index: usize) -> Range<usize> {
+    pub fn position_of(&self, index: usize) -> Option<Range<usize>> {
         if index < self.kind.len() {
-            self.position[index].clone()
+            Some(self.position[index].clone())
         } else {
             // return error for out of bound index
-            0..0
+            None
         }
     }
 
@@ -101,7 +101,7 @@ mod tests {
         // test methods with index out of bound
         let index = input.kind.len();
 
-        let expected_token_value = "";
+        let expected_token_value = None;
         let token_value = input.token_value(index);
         assert_eq!(
             expected_token_value, token_value,
@@ -115,7 +115,7 @@ mod tests {
             "kind_of failed (case: index out of bound)"
         );
 
-        let expected_position = 0..0;
+        let expected_position = None;
         let position = input.position_of(index);
         assert_eq!(
             expected_position, position,
@@ -130,7 +130,7 @@ mod tests {
         let index = input.size() / 2; // a valid index if input size > 0
 
         let expected_token_value = &input.source[input.position[index].clone()];
-        let token_value = input.token_value(index);
+        let token_value = input.token_value(index).unwrap();
         assert_eq!(expected_token_value, token_value, "token_value failed");
 
         let expected_kind = input.kind[index];
@@ -138,7 +138,7 @@ mod tests {
         assert_eq!(expected_kind, kind, "kind_of failed");
 
         let expected_position = input.position[index].clone();
-        let position = input.position_of(index);
+        let position = input.position_of(index).unwrap();
         assert_eq!(expected_position, position, "position_of failed");
     }
 
