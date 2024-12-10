@@ -38,7 +38,7 @@ pub(super) fn var_declaration(p: &mut Parser) {
 
     if p.at(LParen) {
         tuple(p);
-        if p.at_any(&[Assign, RAssignSignal, RAssignConstraintSignal]) {
+        if p.at(Assign) {
             tuple_init(p);
         }
     } else {
