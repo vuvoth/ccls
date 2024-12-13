@@ -30,6 +30,7 @@ impl Output {
         &self.children
     }
 }
+
 impl From<Vec<Event>> for Output {
     fn from(events: Vec<Event>) -> Self {
         let mut stack = Vec::new();

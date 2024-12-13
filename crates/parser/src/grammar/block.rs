@@ -2,6 +2,7 @@ use super::*;
 
 pub fn block(p: &mut Parser) {
     p.inc_rcurly();
+
     if !p.at(LCurly) {
         p.advance_with_error("Miss {");
     } else {

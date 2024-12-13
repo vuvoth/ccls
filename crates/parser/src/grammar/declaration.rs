@@ -3,6 +3,9 @@ use super::{
     *,
 };
 
+// "signal" --> None
+// "signal input" --> Some(true)
+// "signal output" --> Some(false)
 fn signal_header(p: &mut Parser) -> Option<bool> {
     let mut res = None;
     let m = p.open();
@@ -35,7 +38,7 @@ pub(super) fn var_declaration(p: &mut Parser) {
 
     if p.at(LParen) {
         tuple(p);
-        if p.at_any(&[Assign, RAssignSignal, RAssignConstraintSignal]) {
+        if p.at(Assign) {
             tuple_init(p);
         }
     } else {

@@ -132,4 +132,3 @@ pub const PARSER_TEST_6: &str = r#"
 /* T _ T */
     template Multiplier2 () {} 
     "#;
-    
