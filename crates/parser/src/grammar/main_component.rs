@@ -8,7 +8,7 @@ component main {public [signal_list]} = tempid(v1,...,vn);
 pub fn main_component(p: &mut Parser) {
     p.expect(ComponentKw);
     p.expect(MainKw);
-    
+
     if p.at(LCurly) {
         p.expect(LCurly);
         p.expect(PublicKw);

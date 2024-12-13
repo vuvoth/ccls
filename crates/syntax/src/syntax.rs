@@ -164,8 +164,7 @@ mod tests {
 
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
-        
-        if let Some(ast) = AstCircomProgram::cast(syntax) {            
+        if let Some(ast) = AstCircomProgram::cast(syntax) {
             check_ast_children(&ast, &expected_kinds, &expected_ranges);
 
             // check pragma

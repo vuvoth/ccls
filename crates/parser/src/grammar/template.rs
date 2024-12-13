@@ -8,7 +8,7 @@ pub fn template(p: &mut Parser) {
     let m = p.open();
 
     p.expect(TemplateKw);
-    
+
     let name_marker = p.open();
     p.expect(Identifier);
     p.close(name_marker, TemplateName);
