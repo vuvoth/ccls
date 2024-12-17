@@ -1,5 +1,13 @@
 use super::*;
 
+/*
+{
+    <declaration>/<statement>
+    <declaration>/<statement>
+    ....
+    <declaration>/<statement>
+}
+*/
 pub fn block(p: &mut Parser) {
     p.inc_rcurly();
 
@@ -30,7 +38,7 @@ pub fn block(p: &mut Parser) {
 
         p.close(stmt_marker, StatementList);
 
-        p.expect(RCurly);
+        p.eat(RCurly);
 
         p.close(m, Block);
 
