@@ -289,3 +289,216 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod grammar_tests {
+    use parser::{grammar::entry::Scope, input::Input, parser::Parser, token_kind::TokenKind};
+    use rowan::ast::AstNode;
+
+    use crate::{
+        abstract_syntax_tree::{AstBlock, AstPragma, AstTemplateDef},
+        syntax::SyntaxTreeBuilder,
+        syntax_node::SyntaxNode,
+    };
+
+    #[test]
+    fn pragma_happy_test() {
+        // parse source (string) into output tree
+        let version = r#"2.0.1"#;
+        let source = format!(r#"pragma circom {};"#, version);
+        let input = Input::new(&source);
+        let output = Parser::parsing_with_scope(&input, Scope::Pragma);
+
+        // output is a tree whose node is index of token, no content of token
+        // convert output into green node
+        let mut builder = SyntaxTreeBuilder::new(&input);
+        builder.build(output);
+        let green = builder.finish();
+
+        // then cast green node into syntax node
+        let syntax = SyntaxNode::new_root(green);
+
+        // cast syntax node into ast node to retrieve more information
+        let pragma = AstPragma::cast(syntax).expect("Can not cast syntax node into ast pragma");
+
+        // finally, assert with expect value
+        assert!(pragma.version().unwrap().syntax().kind() == TokenKind::Version);
+        assert!(pragma.version().unwrap().syntax().text() == version);
+    }
+
+    #[test]
+    fn template_happy_test() {
+        // SOURCE & EXPECTED RESULT
+        const SOURCE: &str = r#"template MultiplierN (N, P, QQ) {
+            //Declaration of signals and components.
+            signal input in[N];
+            signal output out;
+            component comp[N-1];
+            
+            //Statements.
+            for(var i = 0; i < N-1; i++){
+                comp[i] = Multiplier2();
+                }
+                
+                // ... some more code (see below)
+                
+                }"#;
+        let expected_statements: Vec<&str> = vec![
+            "signal input in[N];",
+            "signal output out;",
+            "component comp[N-1];",
+            "for(var i = 0; i < N-1; i++){
+                        comp[i] = Multiplier2();
+                        }",
+        ];
+        let expected_name = "MultiplierN";
+        let expected_first_param = "N";
+        let expected_last_param = "QQ";
+
+        // parse source (string) into output tree
+        let input = Input::new(&SOURCE);
+        let output = Parser::parsing_with_scope(&input, Scope::Template);
+
+        // output is a tree whose node is index of token, no content of token
+        // convert output into green node
+        let mut builder = SyntaxTreeBuilder::new(&input);
+        builder.build(output);
+        let green = builder.finish();
+
+        // then cast green node into syntax node
+        let syntax = SyntaxNode::new_root(green);
+
+        // cast syntax node into ast node to retrieve more information
+        let template =
+            AstTemplateDef::cast(syntax).expect("Can not cast syntax node into ast template");
+
+        // finally, assert with expect value
+
+        // name
+        let name = template
+            .name()
+            .expect("Can not extract template name")
+            .syntax()
+            .text();
+        assert_eq!(expected_name, name);
+
+        // parameter list
+        let first_param = template
+            .parameter_list()
+            .expect("Can not detect parameter list")
+            .syntax()
+            .first_child()
+            .unwrap()
+            .text();
+        assert_eq!(expected_first_param, first_param);
+        let last_param = template
+            .parameter_list()
+            .expect("Can not detect parameter list")
+            .syntax()
+            .last_child()
+            .unwrap()
+            .text();
+        assert_eq!(expected_last_param, last_param);
+
+        // statements
+        let statements = template.statements().unwrap().statement_list();
+        let statements: Vec<String> = statements
+            .into_iter()
+            .map(|statement| statement.syntax().text().to_string())
+            .collect();
+        assert_eq!(
+            expected_statements.len(),
+            statements.len(),
+            "Number of statements is not match"
+        );
+
+        for id in 0..statements.len() {
+            assert_eq!(expected_statements[id].to_string(), statements[id]);
+        }
+
+        // // input signal
+        // println!("find_input_signal: {:?}", template.find_input_signal());
+
+        // // output signal
+        // println!("find_output_signal: {:?}", template.find_output_signal());
+
+        // // internal signal
+        // println!("find_internal_signal: {:?}", template.find_internal_signal());
+
+        // // component
+        // println!("find_component: {:?}", template.find_component());
+    }
+
+    #[test]
+    fn block_happy_test() {
+        // SOURCE & EXPECTED RESULT
+        let source = r#"{
+    //Declaration of signals.
+    signal input in[N];
+    signal output out;
+    component comp[N-1];
+
+    //Statements.
+    for(var i = 0; i < N-1; i++){
+        comp[i] = Multiplier2();
+    }
+    comp[0].in1 <== in[0];
+    comp[0].in2 <== in[1];
+    for(var i = 0; i < N-2; i++){
+        comp[i+1].in1 <== comp[i].out;
+        comp[i+1].in2 <== in[i+2];
+
+    }
+    out <== comp[N-2].out; 
+}"#;
+        let expected_statements = vec![
+            "signal input in[N];",
+            "signal output out;",
+            "component comp[N-1];",
+            "for(var i = 0; i < N-1; i++){
+        comp[i] = Multiplier2();
+    }",
+            "comp[0].in1 <== in[0];",
+            "comp[0].in2 <== in[1];",
+            "for(var i = 0; i < N-2; i++){
+        comp[i+1].in1 <== comp[i].out;
+        comp[i+1].in2 <== in[i+2];
+
+    }",
+            "out <== comp[N-2].out;",
+        ];
+
+        
+        // parse source (string) into output tree
+        let input = Input::new(&source);
+        let output = Parser::parsing_with_scope(&input, Scope::Block);
+
+        // output is a tree whose node is index of token, no content of token
+        // convert output into green node
+        let mut builder = SyntaxTreeBuilder::new(&input);
+        builder.build(output);
+        let green = builder.finish();
+
+        // then cast green node into syntax node
+        let syntax = SyntaxNode::new_root(green);
+
+        // cast syntax node into ast node to retrieve more information
+        let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
+
+        // finally, assert with expect statements
+        let statements = block.statement_list().unwrap().statement_list();
+        let statements: Vec<String> = statements
+            .into_iter()
+            .map(|statement| statement.syntax().text().to_string())
+            .collect();
+        assert_eq!(
+            expected_statements.len(),
+            statements.len(),
+            "Number of statements is not match"
+        );
+
+        for id in 0..statements.len() {
+            assert_eq!(expected_statements[id].to_string(), statements[id]);
+        }
+    }
+}
