@@ -348,8 +348,8 @@ mod grammar_tests {
             "signal output out;",
             "component comp[N-1];",
             "for(var i = 0; i < N-1; i++){
-                        comp[i] = Multiplier2();
-                        }",
+                comp[i] = Multiplier2();
+                }",
         ];
         let expected_name = "MultiplierN";
         let expected_first_param = "N";
@@ -433,42 +433,41 @@ mod grammar_tests {
     fn block_happy_test() {
         // SOURCE & EXPECTED RESULT
         let source = r#"{
-    //Declaration of signals.
-    signal input in[N];
-    signal output out;
-    component comp[N-1];
+            //Declaration of signals.
+            signal input in[N];
+            signal output out;
+            component comp[N-1];
 
-    //Statements.
-    for(var i = 0; i < N-1; i++){
-        comp[i] = Multiplier2();
-    }
-    comp[0].in1 <== in[0];
-    comp[0].in2 <== in[1];
-    for(var i = 0; i < N-2; i++){
-        comp[i+1].in1 <== comp[i].out;
-        comp[i+1].in2 <== in[i+2];
+            //Statements.
+            for(var i = 0; i < N-1; i++){
+                comp[i] = Multiplier2();
+            }
+            comp[0].in1 <== in[0];
+            comp[0].in2 <== in[1];
+            for(var i = 0; i < N-2; i++){
+                comp[i+1].in1 <== comp[i].out;
+                comp[i+1].in2 <== in[i+2];
 
-    }
-    out <== comp[N-2].out; 
-}"#;
+            }
+            out <== comp[N-2].out; 
+        }"#;
         let expected_statements = vec![
             "signal input in[N];",
             "signal output out;",
             "component comp[N-1];",
             "for(var i = 0; i < N-1; i++){
-        comp[i] = Multiplier2();
-    }",
+                comp[i] = Multiplier2();
+            }",
             "comp[0].in1 <== in[0];",
             "comp[0].in2 <== in[1];",
             "for(var i = 0; i < N-2; i++){
-        comp[i+1].in1 <== comp[i].out;
-        comp[i+1].in2 <== in[i+2];
+                comp[i+1].in1 <== comp[i].out;
+                comp[i+1].in2 <== in[i+2];
 
-    }",
+            }",
             "out <== comp[N-2].out;",
         ];
 
-        
         // parse source (string) into output tree
         let input = Input::new(&source);
         let output = Parser::parsing_with_scope(&input, Scope::Block);
