@@ -1,6 +1,7 @@
 use logos::Logos;
+use serde::Serialize;
 
-#[derive(Logos, Debug, PartialEq, Clone, Copy, Eq, PartialOrd, Ord, Hash)]
+#[derive(Logos, Debug, PartialEq, Clone, Copy, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 pub enum TokenKind {

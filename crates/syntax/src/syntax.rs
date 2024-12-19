@@ -58,118 +58,37 @@ impl<'a> SyntaxTreeBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use parser::token_kind::TokenKind::{self, *};
     use std::hash::{DefaultHasher, Hash, Hasher};
 
-    use rowan::{ast::AstNode, TextRange};
+    use rowan::ast::AstNode;
 
     use crate::{abstract_syntax_tree::AstCircomProgram, test_programs};
 
     use super::SyntaxTreeBuilder;
 
-    fn generate_expected_token_kind(ast: &AstCircomProgram) {
-        let children = ast
-            .syntax()
-            .first_child()
-            .unwrap()
-            .siblings(rowan::Direction::Next);
-
-        println!("vec![");
-        for child in children {
-            println!("{:?},", child.kind());
-        }
-        println!("];");
-    }
-
-    fn generate_expected_token_range(ast: &AstCircomProgram) {
-        let children = ast
-            .syntax()
-            .first_child()
-            .unwrap()
-            .siblings(rowan::Direction::Next);
-
-        println!("vec![");
-        for child in children {
-            println!(
-                "TextRange::new({:?}.into(), {:?}.into()), ",
-                child.text_range().start(),
-                child.text_range().end()
-            );
-        }
-        println!("];");
-    }
-
-    fn check_ast_children(
-        ast: &AstCircomProgram,
-        expected_kinds: &Vec<TokenKind>,
-        expected_ranges: &Vec<TextRange>,
-    ) {
-        let children = ast
-            .syntax()
-            .first_child()
-            .unwrap()
-            .siblings(rowan::Direction::Next);
-
-        let mut kind_iterator = expected_kinds.iter();
-        let mut range_iterator = expected_ranges.iter();
-
-        for child in children {
-            if let (Some(expected_kind), Some(expected_range)) =
-                (kind_iterator.next(), range_iterator.next())
-            {
-                assert_eq!(child.kind(), *expected_kind);
-                assert_eq!(child.text_range(), *expected_range);
-            } else {
-                panic!("Mismatched number of children and expected values");
-            }
-        }
-        println!();
-    }
-
     #[test]
     fn syntax_test_1() {
         let source: &str = test_programs::PARSER_TEST_1;
 
-        let expected_pragma = "pragma circom 2.0.0;".to_string();
-        let expected_kinds = vec![
-            Pragma,
-            EndLine,
-            EndLine,
-            WhiteSpace,
-            EndLine,
-            WhiteSpace,
-            TemplateDef,
-            EndLine,
-            WhiteSpace,
-            TemplateDef,
-            WhiteSpace,
-            EndLine,
-            WhiteSpace,
-        ];
-        let expected_ranges = vec![
-            TextRange::new(0.into(), 20.into()),
-            TextRange::new(20.into(), 21.into()),
-            TextRange::new(21.into(), 22.into()),
-            TextRange::new(22.into(), 26.into()),
-            TextRange::new(26.into(), 27.into()),
-            TextRange::new(27.into(), 31.into()),
-            TextRange::new(31.into(), 57.into()),
-            TextRange::new(57.into(), 58.into()),
-            TextRange::new(58.into(), 62.into()),
-            TextRange::new(62.into(), 88.into()),
-            TextRange::new(88.into(), 89.into()),
-            TextRange::new(89.into(), 90.into()),
-            TextRange::new(90.into(), 94.into()),
-        ];
-
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            check_ast_children(&ast, &expected_kinds, &expected_ranges);
+            // check_ast_children
+            let children = ast
+                .syntax()
+                .first_child()
+                .unwrap()
+                .siblings(rowan::Direction::Next);
+            let mut children_string = Vec::new();
+
+            for child in children.into_iter() {
+                children_string.push(child.text().to_string());
+            }
+            insta::assert_yaml_snapshot!("syntax_test_1_children", children_string);
 
             // check pragma
             let pragma = ast.pragma().unwrap().syntax().text().to_string();
-            assert_eq!(pragma, expected_pragma, "Pragma is not correct!");
+            insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
 
             // check ast hash
             let mut hasher = DefaultHasher::default();
@@ -212,24 +131,29 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
+            let pragma = ast.pragma().unwrap().syntax().text().to_string();
+            insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
 
-            print!("Templates: ");
             let templates = ast.template_list();
+            let mut template_names = Vec::new();
             for template in templates.iter() {
-                print!("{:?} ", template.name().unwrap().syntax().text()); // leading whitespaces
-                                                                           // print!("{:?} ", template.syntax().text()); // leading whitespaces
+                let template_name = template.name().unwrap().syntax().text().to_string();
+                template_names.push(template_name);
             }
-            println!();
+            insta::assert_yaml_snapshot!("syntax_test_2_templates", template_names);
 
-            print!("Functions: ");
             let functions = ast.function_list();
+            let mut function_names = Vec::new();
             for function in functions.iter() {
-                print!("{:?} ", function.function_name().unwrap().syntax().text());
-                // leading whitespaces
-                // print!("{:?} ", function.syntax().text()); // leading whitespaces
+                let function_name = function
+                    .function_name()
+                    .unwrap()
+                    .syntax()
+                    .text()
+                    .to_string();
+                function_names.push(function_name);
             }
-            println!();
+            insta::assert_yaml_snapshot!("syntax_test_2_functions", function_names);
         }
     }
 
@@ -240,11 +164,18 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
-            println!(
-                "Pragma version: {:?}",
-                ast.pragma().unwrap().version().unwrap().syntax().text()
-            );
+            let pragma = ast.pragma().unwrap().syntax().text().to_string();
+            insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
+
+            let pragma_version = ast
+                .pragma()
+                .unwrap()
+                .version()
+                .unwrap()
+                .syntax()
+                .text()
+                .to_string();
+            insta::assert_yaml_snapshot!(pragma_version, @"2.0.0");
         }
     }
 
@@ -255,11 +186,18 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            println!("Pragma: {:?}", ast.pragma().unwrap().syntax().text());
-            println!(
-                "Pragma version: {:?}",
-                ast.pragma().unwrap().version().unwrap().syntax().text()
-            );
+            let pragma = ast.pragma().unwrap().syntax().text().to_string();
+            insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
+
+            let pragma_version = ast
+                .pragma()
+                .unwrap()
+                .version()
+                .unwrap()
+                .syntax()
+                .text()
+                .to_string();
+            insta::assert_yaml_snapshot!(pragma_version, @"2.0.0");
         }
     }
 
@@ -270,9 +208,16 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            println!("pragma: {:?}", ast.pragma());
-            println!("template list: {:?}", ast.template_list());
-            // assert!(ast.pragma().is_none(), "No pragma in source code");
+            let pragma = ast.pragma().is_none();
+            insta::assert_yaml_snapshot!(pragma, @"true");
+
+            let templates = ast.template_list();
+            let mut template_names = Vec::new();
+            for template in templates.iter() {
+                let template_name = template.name().unwrap().syntax().text().to_string();
+                template_names.push(template_name);
+            }
+            insta::assert_yaml_snapshot!("syntax_test_5_templates", template_names);
         }
     }
 
@@ -283,16 +228,23 @@ mod tests {
         let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
-            println!("{:?}", ast.pragma());
-            println!("template list: {:?}", ast.template_list());
-            // assert!(ast.pragma().is_none(), "No pragma in source code");
+            let pragma = ast.pragma().is_none();
+            insta::assert_yaml_snapshot!(pragma, @"true");
+
+            let templates = ast.template_list();
+            let mut template_names = Vec::new();
+            for template in templates.iter() {
+                let template_name = template.name().unwrap().syntax().text().to_string();
+                template_names.push(template_name);
+            }
+            insta::assert_yaml_snapshot!("syntax_test_6_templates", template_names);
         }
     }
 }
 
 #[cfg(test)]
 mod grammar_tests {
-    use parser::{grammar::entry::Scope, input::Input, parser::Parser, token_kind::TokenKind};
+    use parser::{grammar::entry::Scope, input::Input, parser::Parser};
     use rowan::ast::AstNode;
 
     use crate::{
@@ -322,8 +274,11 @@ mod grammar_tests {
         let pragma = AstPragma::cast(syntax).expect("Can not cast syntax node into ast pragma");
 
         // finally, assert with expect value
-        assert!(pragma.version().unwrap().syntax().kind() == TokenKind::Version);
-        assert!(pragma.version().unwrap().syntax().text() == version);
+        let pragma_versison_kind = pragma.version().unwrap().syntax().kind();
+        insta::assert_yaml_snapshot!(pragma_versison_kind, @"Version");
+
+        let pragma_versison_text = pragma.version().unwrap().syntax().text().to_string();
+        insta::assert_yaml_snapshot!(pragma_versison_text, @"2.0.1");
     }
 
     #[test]
@@ -343,17 +298,6 @@ mod grammar_tests {
                 // ... some more code (see below)
                 
                 }"#;
-        let expected_statements: Vec<&str> = vec![
-            "signal input in[N];",
-            "signal output out;",
-            "component comp[N-1];",
-            "for(var i = 0; i < N-1; i++){
-                comp[i] = Multiplier2();
-                }",
-        ];
-        let expected_name = "MultiplierN";
-        let expected_first_param = "N";
-        let expected_last_param = "QQ";
 
         // parse source (string) into output tree
         let input = Input::new(&SOURCE);
@@ -379,8 +323,9 @@ mod grammar_tests {
             .name()
             .expect("Can not extract template name")
             .syntax()
-            .text();
-        assert_eq!(expected_name, name);
+            .text()
+            .to_string();
+        insta::assert_yaml_snapshot!(name, @"MultiplierN");
 
         // parameter list
         let first_param = template
@@ -389,16 +334,19 @@ mod grammar_tests {
             .syntax()
             .first_child()
             .unwrap()
-            .text();
-        assert_eq!(expected_first_param, first_param);
+            .text()
+            .to_string();
+        insta::assert_yaml_snapshot!(first_param, @"N");
+
         let last_param = template
             .parameter_list()
             .expect("Can not detect parameter list")
             .syntax()
             .last_child()
             .unwrap()
-            .text();
-        assert_eq!(expected_last_param, last_param);
+            .text()
+            .to_string();
+        insta::assert_yaml_snapshot!(last_param, @"QQ");
 
         // statements
         let statements = template.statements().unwrap().statement_list();
@@ -406,15 +354,7 @@ mod grammar_tests {
             .into_iter()
             .map(|statement| statement.syntax().text().to_string())
             .collect();
-        assert_eq!(
-            expected_statements.len(),
-            statements.len(),
-            "Number of statements is not match"
-        );
-
-        for id in 0..statements.len() {
-            assert_eq!(expected_statements[id].to_string(), statements[id]);
-        }
+        insta::assert_yaml_snapshot!("template_happy_test_statements", statements);
 
         // // input signal
         // println!("find_input_signal: {:?}", template.find_input_signal());
@@ -451,6 +391,7 @@ mod grammar_tests {
             }
             out <== comp[N-2].out; 
         }"#;
+        /*
         let expected_statements = vec![
             "signal input in[N];",
             "signal output out;",
@@ -467,6 +408,7 @@ mod grammar_tests {
             }",
             "out <== comp[N-2].out;",
         ];
+        */
 
         // parse source (string) into output tree
         let input = Input::new(&source);
@@ -490,14 +432,6 @@ mod grammar_tests {
             .into_iter()
             .map(|statement| statement.syntax().text().to_string())
             .collect();
-        assert_eq!(
-            expected_statements.len(),
-            statements.len(),
-            "Number of statements is not match"
-        );
-
-        for id in 0..statements.len() {
-            assert_eq!(expected_statements[id].to_string(), statements[id]);
-        }
+        insta::assert_yaml_snapshot!("block_happy_test_statements", statements);
     }
 }
