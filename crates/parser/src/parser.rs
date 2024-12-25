@@ -181,8 +181,8 @@ impl<'a> Parser<'a> {
         if self.at(kind) {
             self.advance();
         } else {
-            // error report
-            // println!("expect {:?} but got {:?}", kind, current);
+            // TODO
+            // advance_with_error: ("expect {:?} but got {:?}", kind, current);
         }
     }
 

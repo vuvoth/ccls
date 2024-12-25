@@ -230,16 +230,15 @@ mod grammar_tests {
 
     use parser::{grammar::entry::Scope, input::Input, parser::Parser};
     use rowan::{ast::AstNode, SyntaxNode};
-
     use crate::{
-        abstract_syntax_tree::{AstBlock, AstPragma, AstTemplateDef},
+        abstract_syntax_tree::{AstBlock, AstOutputSignalDecl, AstPragma, AstTemplateDef},
         syntax::SyntaxTreeBuilder,
         syntax_node::CircomLanguage,
     };
 
-    fn syntax_node_from_source(source: &str) -> SyntaxNode<CircomLanguage> {
+    fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode<CircomLanguage> {
         let input = Input::new(&source);
-        let output = Parser::parsing_with_scope(&input, Scope::Pragma);
+        let output = Parser::parsing_with_scope(&input, scope);
 
         // output is a tree whose node is index of token, no content of token
         // convert output into green node
@@ -259,7 +258,7 @@ mod grammar_tests {
         let version = r#"2.0.1"#;
         let source = format!(r#"pragma circom {};"#, version);
 
-        let syntax = syntax_node_from_source(&source);
+        let syntax = syntax_node_from_source(&source, Scope::Pragma);
 
         // cast syntax node into ast node to retrieve more information
         let pragma = AstPragma::cast(syntax).expect("Can not cast syntax node into ast pragma");
@@ -290,7 +289,7 @@ mod grammar_tests {
                 
                 }"#;
 
-        let syntax = syntax_node_from_source(&SOURCE);
+        let syntax = syntax_node_from_source(&SOURCE, Scope::Template);
 
         // cast syntax node into ast node to retrieve more information
         let template =
@@ -329,8 +328,12 @@ mod grammar_tests {
         insta::assert_yaml_snapshot!(last_param, @"QQ");
 
         // statements
-        let statements = template.statements().unwrap().statement_list();
+        let statements = template.statements().unwrap();
+        let output_signal = statements.find_children::<AstOutputSignalDecl>();
+        println!("{:?}", output_signal);
+        
         let statements: Vec<String> = statements
+            .statement_list()
             .into_iter()
             .map(|statement| statement.syntax().text().to_string())
             .collect();
@@ -372,7 +375,7 @@ mod grammar_tests {
             out <== comp[N-2].out; 
         }"#;
 
-        let syntax = syntax_node_from_source(&source);
+        let syntax = syntax_node_from_source(&source, Scope::Block);
 
         // cast syntax node into ast node to retrieve more information
         let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
