@@ -67,6 +67,26 @@ pub enum TokenKind {
     Semicolon,
     #[token(",")]
     Comma,
+    // TODO: review
+    #[token("++")]
+    UnitInc,
+    #[token("--")]
+    UnitDec,
+    #[token("+=")]
+    AddAssign,
+    #[token("-=")]
+    SubAssign,
+    #[token("/=")]
+    DivAssign,
+    #[token(r"\=")]
+    IntDivAssign,
+    #[token("%=")]
+    ModAssign,
+    #[token("*=")]
+    MulAssign,
+    #[token("**=")]
+    PowerAssign,
+    // end review
     #[token("=")]
     Assign,
     #[token("===")]
@@ -227,12 +247,18 @@ impl TokenKind {
             Self::Add | Self::Sub => Some((92, 93)),
             Self::Mul | Self::Div | Self::IntDiv | Self::Mod => Some((94, 95)),
             Self::Power => Some((96, 97)),
+            // TODO: review
+            Self::AddAssign | Self::SubAssign => Some((98,99)),
+            Self::MulAssign | Self::DivAssign | Self::IntDivAssign | Self::ModAssign => Some((100,101)),
+            Self::PowerAssign => Some((102,103)),
             _ => None,
         }
     }
 
     pub fn prefix(self) -> Option<u16> {
         match self {
+            // TODO: review UnitDec, UnitInc
+            Self::UnitDec | Self::UnitInc => Some(101),
             Self::Sub => Some(100),
             Self::Not => Some(99),
             Self::BitNot => Some(98),
@@ -242,6 +268,8 @@ impl TokenKind {
 
     pub fn postfix(self) -> Option<u16> {
         match self {
+            // TODO: review UnitDec, UnitInc
+            Self::UnitDec | Self::UnitInc => Some(202),
             Self::Dot => Some(200),
             Self::LBracket => Some(201),
             _ => None,
