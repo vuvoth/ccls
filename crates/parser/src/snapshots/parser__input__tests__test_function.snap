@@ -49,15 +49,13 @@ kind:
   - EndLine
   - WhiteSpace
   - Identifier
-  - Add
-  - Add
+  - UnitInc
   - Semicolon
   - EndLine
   - WhiteSpace
   - Identifier
   - WhiteSpace
-  - Mul
-  - Assign
+  - MulAssign
   - WhiteSpace
   - Number
   - Semicolon
@@ -168,8 +166,6 @@ position:
   - start: 99
     end: 100
   - start: 100
-    end: 101
-  - start: 101
     end: 102
   - start: 102
     end: 103
@@ -182,8 +178,6 @@ position:
   - start: 117
     end: 118
   - start: 118
-    end: 119
-  - start: 119
     end: 120
   - start: 120
     end: 121
