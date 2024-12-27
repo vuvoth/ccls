@@ -304,7 +304,7 @@ mod grammar_tests {
             .syntax()
             .text()
             .to_string();
-        insta::assert_yaml_snapshot!(name, @"MultiplierN");
+        insta::assert_yaml_snapshot!(name, @r###"" MultiplierN""###);
 
         // parameter list
         let first_param = template
