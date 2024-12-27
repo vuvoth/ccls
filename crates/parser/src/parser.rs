@@ -88,6 +88,15 @@ impl<'a> Parser<'a> {
         }
         self.close(m, TokenKind::Error);
     }
+
+    pub fn error_report(&mut self, error: String) {
+        let m = self.open();
+
+        let token = Event::ErrorReport(error);
+        self.events.push(token);
+
+        self.close(m, TokenKind::Error);
+    }
 }
 
 impl<'a> Parser<'a> {
@@ -170,19 +179,17 @@ impl<'a> Parser<'a> {
         if kinds.contains(&kind) {
             self.advance();
         } else {
-            // error report
-            // println!("expect {:?} but got {:?}", kinds, kind);
+            let error = format!("expect {:?} but got {:?}", kinds, kind);
+            self.error_report(error);
         }
     }
 
     pub fn expect(&mut self, kind: TokenKind) {
-        let _current = self.current();
-
         if self.at(kind) {
             self.advance();
         } else {
-            // TODO
-            // advance_with_error: ("expect {:?} but got {:?}", kind, current);
+            let error = format!("expect {:?} but got {:?}", kind, self.current());
+            self.error_report(error);
         }
     }
 

@@ -1,6 +1,7 @@
 use parser::input::Input;
 use parser::output::{Child, Output};
 use parser::parser::Parser;
+use parser::token_kind::TokenKind;
 use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::syntax_node::SyntaxNode;
@@ -30,6 +31,14 @@ impl<'a> SyntaxTreeBuilder<'a> {
                     self.builder.finish_node();
                 }
                 Child::Tree(child_tree) => self.build_rec(child_tree),
+                Child::Error(error) => {
+                    let token_kind = TokenKind::Error;
+                    let token_value = error.as_str();
+
+                    self.builder.start_node(token_kind.into());
+                    self.builder.token(token_kind.into(), token_value);
+                    self.builder.finish_node();
+                }
             }
         }
 
@@ -113,6 +122,10 @@ mod tests {
             .function_list()
             .iter()
             .map(|function| {
+                println!(
+                    "function body:\n{:?}",
+                    function.body().unwrap().syntax().text().to_string()
+                );
                 function
                     .function_name()
                     .unwrap()
@@ -177,11 +190,11 @@ mod tests {
         let pragma = pragma_string_from_ast(&ast);
         insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
 
-        let template_names = template_names_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_2_templates", template_names);
-
         let function_names = function_names_from_ast(&ast);
         insta::assert_yaml_snapshot!("syntax_test_2_functions", function_names);
+
+        let template_names = template_names_from_ast(&ast);
+        insta::assert_yaml_snapshot!("syntax_test_2_templates", template_names);
     }
 
     #[test]
@@ -228,13 +241,13 @@ mod tests {
 #[cfg(test)]
 mod grammar_tests {
 
-    use parser::{grammar::entry::Scope, input::Input, parser::Parser};
-    use rowan::{ast::AstNode, SyntaxNode};
     use crate::{
         abstract_syntax_tree::{AstBlock, AstOutputSignalDecl, AstPragma, AstTemplateDef},
         syntax::SyntaxTreeBuilder,
         syntax_node::CircomLanguage,
     };
+    use parser::{grammar::entry::Scope, input::Input, parser::Parser};
+    use rowan::{ast::AstNode, SyntaxNode};
 
     fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode<CircomLanguage> {
         let input = Input::new(&source);
@@ -304,7 +317,7 @@ mod grammar_tests {
             .syntax()
             .text()
             .to_string();
-        insta::assert_yaml_snapshot!(name, @r###"" MultiplierN""###);
+        insta::assert_yaml_snapshot!(name, @"MultiplierN");
 
         // parameter list
         let first_param = template
@@ -331,7 +344,7 @@ mod grammar_tests {
         let statements = template.statements().unwrap();
         let output_signal = statements.find_children::<AstOutputSignalDecl>();
         println!("{:?}", output_signal);
-        
+
         let statements: Vec<String> = statements
             .statement_list()
             .into_iter()
