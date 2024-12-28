@@ -28,7 +28,29 @@ pub enum ParserError {
 }
 
 impl<'a> Parser<'a> {
+    pub fn wrap_trivial_tokens(&mut self) -> TokenKind {
+        loop {
+            let kind = self.input.kind_of(self.pos);
+
+            if kind.is_trivial() == false {
+                return kind;
+            }
+
+            self.events.push(Event::Open { kind });
+
+            self.fuel.set(256);
+            self.events.push(Event::TokenPosition(self.pos));
+            self.skip();
+
+            self.events.push(Event::Close);
+        }
+    }
+
     pub fn open(&mut self) -> Marker {
+        if self.events.len() > 0 {
+            self.wrap_trivial_tokens();
+        }
+
         let marker = Marker::Open(self.events.len());
         self.events.push(Event::Open {
             kind: TokenKind::Error,
@@ -119,19 +141,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current(&mut self) -> TokenKind {
-        let mut kind: TokenKind;
-        loop {
-            kind = self.input.kind_of(self.pos);
-            if !kind.is_trivial() {
-                break;
-            }
-
-            let m = self.open();
-            self.advance();
-            self.close(m, kind);
-        }
-
-        kind
+        self.wrap_trivial_tokens()
     }
 
     pub fn next(&mut self) -> TokenKind {
@@ -171,6 +181,7 @@ impl<'a> Parser<'a> {
             self.advance();
             return true;
         }
+
         false
     }
 

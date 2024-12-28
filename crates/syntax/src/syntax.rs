@@ -122,10 +122,6 @@ mod tests {
             .function_list()
             .iter()
             .map(|function| {
-                println!(
-                    "function body:\n{:?}",
-                    function.body().unwrap().syntax().text().to_string()
-                );
                 function
                     .function_name()
                     .unwrap()
