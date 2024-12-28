@@ -348,17 +348,21 @@ mod grammar_tests {
             .collect();
         insta::assert_yaml_snapshot!("template_happy_test_statements", statements);
 
-        // // input signal
-        // println!("find_input_signal: {:?}", template.find_input_signal());
+        // input signal
+        let input_signal = template.find_input_signal("in").unwrap().syntax().text().to_string();
+        insta::assert_yaml_snapshot!(input_signal, @"signal input in[N];");
 
-        // // output signal
-        // println!("find_output_signal: {:?}", template.find_output_signal());
+        // output signal
+        let output_signal = template.find_output_signal("out").unwrap().syntax().text().to_string();
+        insta::assert_yaml_snapshot!(output_signal, @"signal output out;");
 
-        // // internal signal
-        // println!("find_internal_signal: {:?}", template.find_internal_signal());
+        // internal signal
+        let internal_signal = template.find_internal_signal("in").is_none();
+        insta::assert_yaml_snapshot!(internal_signal, @"true");
 
-        // // component
-        // println!("find_component: {:?}", template.find_component());
+        // component
+        let component = template.find_component("comp").unwrap().syntax().text().to_string();
+        insta::assert_yaml_snapshot!(component, @"component comp[N-1];");
     }
 
     #[test]
