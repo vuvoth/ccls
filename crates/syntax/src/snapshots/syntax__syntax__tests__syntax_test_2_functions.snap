@@ -2,4 +2,4 @@
 source: crates/syntax/src/syntax.rs
 expression: function_names
 ---
-- "nbits"
+- nbits
