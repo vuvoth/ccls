@@ -5,24 +5,29 @@ use serde::Serialize;
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 pub enum TokenKind {
+    // Error
     #[error]
     Error = 0,
+    // Comments
     #[regex(r"//[^\n]*")]
     CommentLine,
     #[token("/*")]
     CommentBlockOpen,
     #[token("*/")]
     CommentBlockClose,
+    // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
     #[regex("[\n]")]
     EndLine,
+    // Circom
     #[token("pragma")]
     Pragma,
     #[token("circom")]
     Circom,
     #[regex("2.[0-9].[0-9]")]
     Version,
+    // Literals
     #[regex("[0-9]+")]
     Number,
     #[regex("[$_]*[a-zA-Z][a-zA-Z0-9_$]*")]
@@ -31,6 +36,125 @@ pub enum TokenKind {
     CircomString,
     #[token("template")]
     TemplateKw,
+    // Brackets
+    #[token("(")]
+    LParen,
+    #[token(")")]
+    RParen,
+    #[token("{")]
+    LCurly,
+    #[token("}")]
+    RCurly,
+    #[token("[")]
+    LBracket,
+    #[token("]")]
+    RBracket,
+    // Punctuation 
+    #[token(";")]
+    Semicolon,
+    #[token(",")]
+    Comma,
+    #[token(".")]
+    Dot,
+    // Boolean operators
+    #[token("&&")]
+    BoolAnd,
+    #[token("||")]
+    BoolOr,
+    #[token("!")]
+    Not,
+    // Relational operators
+    #[token("==")]
+    Equal,
+    #[token("!=")]
+    NotEqual,
+    #[token("<")]
+    LessThan,
+    #[token(">")]
+    GreaterThan,
+    #[token("<=")]
+    LessThanAndEqual,
+    #[token(">=")]
+    GreaterThanAndEqual,
+    // Arithmetic operators
+    #[token("+")]
+    Add,
+    #[token("-")]
+    Sub,
+    #[token("*")]
+    Mul,
+    #[token("**")]
+    Power,
+    #[token("/")]
+    Div,
+    #[token("\\")]
+    IntDiv,
+    #[token("%")]
+    Mod,
+    // Combined arithmetic assignment
+    #[token("+=")]
+    AddAssign,
+    #[token("-=")]
+    SubAssign,
+    #[token("*=")]
+    MulAssign,
+    #[token("**=")]
+    PowerAssign,
+    #[token("/=")]
+    DivAssign,
+    #[token(r"\=")]
+    IntDivAssign,
+    #[token("%=")]
+    ModAssign,
+    #[token("++")]
+    UnitInc,
+    #[token("--")]
+    UnitDec,
+    // Bitwise operators
+    #[token("&")]
+    BitAnd,
+    #[token("|")]
+    BitOr,
+    #[token("~")]
+    BitNot,
+    #[token("^")]
+    BitXor,
+    #[token(">>")]
+    ShiftR,
+    #[token("<<")]
+    ShiftL,
+    // Combined bitwise assignments 
+    #[token("&=")]
+    BitAndAssign,
+    #[token("|=")]
+    BitOrAssign,
+    #[token("~=")]
+    BitNotAssign,
+    #[token("^=")]
+    BitXorAssign,
+    #[token(">>=")]
+    ShiftRAssign,
+    #[token("<<=")]
+    ShiftLAssign,
+    // Assign
+    #[token("=")]
+    Assign,
+    #[token("===")]
+    EqualSignal,
+    #[token("-->")]
+    LAssignSignal,
+    #[token("==>")]
+    LAssignContraintSignal,
+    #[token("<--")]
+    RAssignSignal,
+    #[token("<==")]
+    RAssignConstraintSignal,
+    // Conditional expressions
+    #[token("?")]
+    MarkQuestion,
+    #[token(":")]
+    Colon,
+    // Keywords
     #[token("function")]
     FunctionKw,
     #[token("component")]
@@ -51,104 +175,7 @@ pub enum TokenKind {
     OutputKw,
     #[token("log")]
     LogKw,
-    #[token("(")]
-    LParen,
-    #[token(")")]
-    RParen,
-    #[token("{")]
-    LCurly,
-    #[token("}")]
-    RCurly,
-    #[token("[")]
-    LBracket,
-    #[token("]")]
-    RBracket,
-    #[token(";")]
-    Semicolon,
-    #[token(",")]
-    Comma,
-    // TODO: review
-    #[token("++")]
-    UnitInc,
-    #[token("--")]
-    UnitDec,
-    #[token("+=")]
-    AddAssign,
-    #[token("-=")]
-    SubAssign,
-    #[token("/=")]
-    DivAssign,
-    #[token(r"\=")]
-    IntDivAssign,
-    #[token("%=")]
-    ModAssign,
-    #[token("*=")]
-    MulAssign,
-    #[token("**=")]
-    PowerAssign,
-    // end review
-    #[token("=")]
-    Assign,
-    #[token("===")]
-    EqualSignal,
-    #[token("-->")]
-    LAssignSignal,
-    #[token("==>")]
-    LAssignContraintSignal,
-    #[token("<--")]
-    RAssignSignal,
-    #[token("<==")]
-    RAssignConstraintSignal,
-    #[token("+")]
-    Add,
-    #[token("-")]
-    Sub,
-    #[token("/")]
-    Div,
-    #[token("*")]
-    Mul,
-    #[token("!")]
-    Not,
-    #[token("~")]
-    BitNot,
-    #[token("**")]
-    Power,
-    #[token("\\")]
-    IntDiv,
-    #[token("%")]
-    Mod,
-    #[token("<<")]
-    ShiftL,
-    #[token(">>")]
-    ShiftR,
-    #[token("&")]
-    BitAnd,
-    #[token("|")]
-    BitOr,
-    #[token("^")]
-    BitXor,
-    #[token("==")]
-    Equal,
-    #[token("!=")]
-    NotEqual,
-    #[token("<")]
-    LessThan,
-    #[token(">")]
-    GreaterThan,
-    #[token("<=")]
-    LessThanAndEqual,
-    #[token(">=")]
-    GreaterThanAndEqual,
-    #[token("&&")]
-    BoolAnd,
-    #[token("||")]
-    BoolOr,
-    #[token("?")]
-    MarkQuestion,
-    #[token(":")]
-    Colon,
-    #[token(".")]
-    Dot,
+    // Statement keywords
     #[token("if")]
     IfKw,
     #[token("else")]
@@ -161,6 +188,7 @@ pub enum TokenKind {
     ReturnKw,
     #[token("assert")]
     AssertKw,
+    // Complex token kind
     ForLoop,
     AssignStatement,
     CircomProgram,
