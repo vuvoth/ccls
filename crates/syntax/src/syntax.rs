@@ -418,7 +418,7 @@ mod grammar_tests {
     }
 
     #[test]
-    fn for_happy_test() {
+    fn statement_happy_test() {
         let source = r#"{
             //Statements.
             for(var i = 0; i < N-1; i++){
@@ -432,6 +432,23 @@ mod grammar_tests {
 
             }
             out <== comp[N-2].out; 
+
+            // just for testing statement
+            while (out) {
+                for(var i = 0; i < N-1; i++){
+                    comp[i] = Multiplier2();
+                }
+            }
+            assert(comp);
+            log("Print something...", out);
+     
+            if (1 < 2) {
+                log("Match...", 1 < 2);
+            } else {
+                log("Does not match...", 1 < 2);
+            }
+            
+            return out + comp;
         }"#;
 
         let syntax = syntax_node_from_source(&source, Scope::Block);
@@ -444,6 +461,6 @@ mod grammar_tests {
             .into_iter()
             .map(|statement| statement.syntax().text().to_string())
             .collect();
-        insta::assert_yaml_snapshot!("for_happy_test_statements", statements);
+        insta::assert_yaml_snapshot!("statement_happy_test_statements", statements);
     }
 }

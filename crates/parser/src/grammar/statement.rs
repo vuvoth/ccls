@@ -15,7 +15,6 @@ pub(super) fn statement(p: &mut Parser) {
 if (expr)
     <statement>
 else
-else
     <statement>
 */
 fn if_statement(p: &mut Parser) {
