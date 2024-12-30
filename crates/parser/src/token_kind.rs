@@ -34,8 +34,6 @@ pub enum TokenKind {
     Identifier,
     #[regex(r#""[^"]*""#)]
     CircomString,
-    #[token("template")]
-    TemplateKw,
     // Brackets
     #[token("(")]
     LParen,
@@ -155,6 +153,8 @@ pub enum TokenKind {
     #[token(":")]
     Colon,
     // Keywords
+    #[token("template")]
+    TemplateKw,
     #[token("function")]
     FunctionKw,
     #[token("component")]

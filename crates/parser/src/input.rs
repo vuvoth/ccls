@@ -138,4 +138,34 @@ mod tests {
     }"#;
          test(source, "test_function");
     }
+
+    #[test]
+    fn test_operators() {
+        let source = r#"
+        ({[]})
+        ;.,:
+        && &
+        || |
+        != !
+        === == =
+        --> ==>
+        <-- <==
+        <= <
+        >= >
+        ++ += +
+        -- -= -
+        **= **
+        * *=
+        / /=
+        \ \=
+        % %=
+        ^ ^=
+        ~ ~=
+        >> >>=
+        << <<=
+        & &=
+        | |=
+    }"#;
+         test(source, "test_operators");
+    }
 }
