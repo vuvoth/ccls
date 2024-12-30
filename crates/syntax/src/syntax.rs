@@ -355,7 +355,7 @@ mod grammar_tests {
             .syntax()
             .text()
             .to_string();
-        insta::assert_yaml_snapshot!(input_signal, @"signal input in[N];");
+        insta::assert_yaml_snapshot!(input_signal, @r###""signal input in[N]""###);
 
         // output signal
         let output_signal = template
@@ -364,7 +364,7 @@ mod grammar_tests {
             .syntax()
             .text()
             .to_string();
-        insta::assert_yaml_snapshot!(output_signal, @"signal output out;");
+        insta::assert_yaml_snapshot!(output_signal, @"signal output out");
 
         // internal signal
         let internal_signal = template.find_internal_signal("in").is_none();
@@ -377,7 +377,7 @@ mod grammar_tests {
             .syntax()
             .text()
             .to_string();
-        insta::assert_yaml_snapshot!(component, @"component comp[N-1];");
+        insta::assert_yaml_snapshot!(component, @r###""component comp[N-1]""###);
     }
 
     #[test]
@@ -408,6 +408,8 @@ mod grammar_tests {
         // cast syntax node into ast node to retrieve more information
         let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
 
+        println!("block: {}", block.syntax().text().to_string());
+        
         // finally, assert with expect statements
         let statements = block.statement_list().unwrap().statement_list();
         let statements: Vec<String> = statements

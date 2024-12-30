@@ -189,7 +189,7 @@ mod tests {
         pragma circom 2.0.0;
 
         template X() {
-            signal x = 10;
+            signal x[100];
             signal input x = 10;
            component x = Multiplier2();
            component y = X();
@@ -230,9 +230,7 @@ template Y() {
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
 
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
-            for template in program_ast.template_list() {
-                println!("{template:?}");
-            }
+            println!("program: {}", program_ast.syntax().text().to_string());
 
             let inputs = program_ast.template_list()[0]
                 .func_body()

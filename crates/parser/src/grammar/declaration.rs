@@ -1,5 +1,5 @@
 use super::{
-    expression::{tuple, tuple_init},
+    expression::{expression, tuple, tuple_init},
     *,
 };
 
@@ -45,7 +45,7 @@ pub(super) fn var_declaration(p: &mut Parser) {
         p.expect(Identifier);
         if p.at(Assign) {
             p.expect(Assign);
-            expression::expression(p);
+            expression(p);
         }
         // list of var
         while p.at(Comma) && !p.eof() {
@@ -53,11 +53,28 @@ pub(super) fn var_declaration(p: &mut Parser) {
             p.expect(Identifier);
             if p.at(Assign) {
                 p.expect(Assign);
-                expression::expression(p);
+                expression(p);
             }
         }
     }
     p.close(m, VarDecl);
+}
+
+pub(crate) fn signal_init(p: &mut Parser) {
+    // let m_c = p.open();
+    p.expect(Identifier);
+    // p.close(m_c, SignalIdentifier);
+
+    while p.at(LBracket) {
+        p.expect(LBracket);
+        expression(p);
+        p.expect(RBracket);
+    }
+
+    if p.at_any(&[Assign, RAssignSignal, RAssignConstraintSignal]) {
+        p.advance();
+        expression(p);
+    }
 }
 
 pub(super) fn signal_declaration(p: &mut Parser) {
@@ -69,17 +86,18 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     let m = p.open();
     let io_signal = signal_header(p);
 
+    // tuple of signal
     if p.at(LParen) {
         tuple(p);
         if p.at_any(&[Assign, RAssignSignal, RAssignConstraintSignal]) {
             tuple_init(p);
         }
     } else {
-        p.expect(Identifier);
-        // list of var
+        // list of signal
+        signal_init(p);
         while p.at(Comma) && !p.eof() {
             p.skip();
-            p.expect(Identifier);
+            signal_init(p);
         }
     }
 
@@ -100,22 +118,19 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m_c = p.open();
     p.expect(Identifier);
     p.close(m_c, ComponentIdentifier);
-
-    p.expect(Assign);
-    let m_c = p.open();
-    p.expect(Identifier);
-    p.close(m_c, TemplateName);
-    p.expect(LParen);
-
-    if p.at(Identifier) {
-        expression::expression(p);
-        while !p.at(RParen) && !p.eof() {
-            p.expect(Comma);
-            expression::expression(p);
-        }
+    while p.at(LBracket) {
+        p.expect(LBracket);
+        expression(p);
+        p.expect(RBracket);
     }
 
-    p.expect(RParen);
+    if p.at(Assign) {
+        p.expect(Assign);
+        let m_c = p.open();
+        p.expect(Identifier);
+        p.close(m_c, TemplateName);
+        tuple(p);
+    }
 
     p.close(m, ComponentDecl);
 }

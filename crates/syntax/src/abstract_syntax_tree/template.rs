@@ -86,8 +86,8 @@ impl AstTemplateDef {
     pub fn find_component(&self, name: &str) -> Option<AstComponentDecl> {
         if let Some(statements) = self.statements() {
             for component in statements.find_children::<AstComponentDecl>() {
-                if let Some(signal_name) = component.component_identifier() {
-                    if let Some(component_name) = signal_name.name() {
+                if let Some(component_identifier) = component.component_identifier() {
+                    if let Some(component_name) = component_identifier.name() {
                         if component_name.syntax().text() == name {
                             return Some(component);
                         }
