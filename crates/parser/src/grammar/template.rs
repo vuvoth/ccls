@@ -23,3 +23,4 @@ pub fn template(p: &mut Parser) {
 
     p.close(m, TemplateDef);
 }
+

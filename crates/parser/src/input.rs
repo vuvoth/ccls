@@ -137,6 +137,7 @@ mod tests {
         return r;
     }"#;
         test(source, "test_function");
+        test(source, "test_function");
     }
 
     #[test]

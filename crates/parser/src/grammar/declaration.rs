@@ -128,3 +128,4 @@ pub(super) fn declaration(p: &mut Parser) {
         _ => unreachable!(),
     }
 }
+

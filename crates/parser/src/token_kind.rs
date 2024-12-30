@@ -48,6 +48,7 @@ pub enum TokenKind {
     #[token("]")]
     RBracket,
     // Punctuation
+    // Punctuation
     #[token(";")]
     Semicolon,
     #[token(",")]
@@ -121,6 +122,7 @@ pub enum TokenKind {
     ShiftR,
     #[token("<<")]
     ShiftL,
+    // Combined bitwise assignments
     // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
