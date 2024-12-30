@@ -299,7 +299,7 @@ mod grammar_tests {
                 }"#;
 
         let syntax = syntax_node_from_source(&SOURCE, Scope::Template);
-
+      
         // cast syntax node into ast node to retrieve more information
         let template =
             AstTemplateDef::cast(syntax).expect("Can not cast syntax node into ast template");

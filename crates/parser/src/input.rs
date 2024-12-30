@@ -1,6 +1,7 @@
 use std::ops::Range;
 
 use logos::Lexer;
+
 use serde::Serialize;
 
 use crate::token_kind::TokenKind;
@@ -135,6 +136,6 @@ mod tests {
         }
         return r;
     }"#;
-        test(source, "test_function");
+         test(source, "test_function");
     }
 }
