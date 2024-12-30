@@ -228,7 +228,7 @@ template Y() {
         let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
-        
+
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
             for template in program_ast.template_list() {
                 println!("{template:?}");

@@ -299,7 +299,7 @@ mod grammar_tests {
                 }"#;
 
         let syntax = syntax_node_from_source(&SOURCE, Scope::Template);
-      
+
         // cast syntax node into ast node to retrieve more information
         let template =
             AstTemplateDef::cast(syntax).expect("Can not cast syntax node into ast template");
@@ -349,11 +349,21 @@ mod grammar_tests {
         insta::assert_yaml_snapshot!("template_happy_test_statements", statements);
 
         // input signal
-        let input_signal = template.find_input_signal("in").unwrap().syntax().text().to_string();
+        let input_signal = template
+            .find_input_signal("in")
+            .unwrap()
+            .syntax()
+            .text()
+            .to_string();
         insta::assert_yaml_snapshot!(input_signal, @"signal input in[N];");
 
         // output signal
-        let output_signal = template.find_output_signal("out").unwrap().syntax().text().to_string();
+        let output_signal = template
+            .find_output_signal("out")
+            .unwrap()
+            .syntax()
+            .text()
+            .to_string();
         insta::assert_yaml_snapshot!(output_signal, @"signal output out;");
 
         // internal signal
@@ -361,7 +371,12 @@ mod grammar_tests {
         insta::assert_yaml_snapshot!(internal_signal, @"true");
 
         // component
-        let component = template.find_component("comp").unwrap().syntax().text().to_string();
+        let component = template
+            .find_component("comp")
+            .unwrap()
+            .syntax()
+            .text()
+            .to_string();
         insta::assert_yaml_snapshot!(component, @"component comp[N-1];");
     }
 
