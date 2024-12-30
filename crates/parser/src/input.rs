@@ -166,6 +166,6 @@ mod tests {
         & &=
         | |=
     }"#;
-         test(source, "test_operators");
+        test(source, "test_operators");
     }
 }

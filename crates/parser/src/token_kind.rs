@@ -268,10 +268,8 @@ impl TokenKind {
             Self::Power => Some((99, 100)),
             Self::Mul | Self::Div | Self::IntDiv | Self::Mod => Some((94, 95)),
             Self::Add | Self::Sub => Some((89, 90)),
-            
             // shift bitwise operators
             Self::ShiftL | Self::ShiftR => Some((84, 85)),
-            
             // relational operators
             Self::LessThan
             | Self::GreaterThan
@@ -279,19 +277,17 @@ impl TokenKind {
             | Self::GreaterThanAndEqual => Some((79, 80)),
             Self::Equal
             | Self::NotEqual => Some((74, 75)),
-            
             // other bitwise operators
             Self::BitAnd => Some((69, 70)),
             Self::BitXor => Some((64, 65)), // exclusive or
             Self::BitOr => Some((59, 60)),
-            
             // boolean operators
             Self::BoolAnd => Some((54, 55)),
             Self::BoolOr => Some((49, 50)),
-            
+            // ----------
             // TODO: how about conditional operation ( ? : )
             // associativity: right to left [ a ? b : c --> ??? ] 
-
+            // ----------
             // associativity: right to left [ a = b = c --> a = (b = c) ] 
             // assignment operators
             Self::Assign
@@ -307,26 +303,24 @@ impl TokenKind {
             | Self::MulAssign
             | Self::DivAssign
             | Self::IntDivAssign
-            | Self::ModAssign 
+            | Self::ModAssign
             | Self::PowerAssign => Some((44, 45)),
-
             // TODO: how about comma (expression separator)
             Self::Comma => Some((39, 40)),
-
             // not an infix operator
             _ => None,
         }
     }
 
     // priority: post > pre > in
-    // associativity: right to left [ --!a --> --(!a) ] 
+    // associativity: right to left [ --!a --> --(!a) ]
     // prefix_operator <literal>
     // eg: -10, !a, ++a, --a
     pub fn prefix(self) -> Option<u16> {
         match self {
-            Self::UnitDec | Self::UnitInc
-            | Self::Sub | Self::Add
-            | Self::Not | Self::BitNot => Some(200),
+            Self::UnitDec | Self::UnitInc | Self::Sub | Self::Add | Self::Not | Self::BitNot => {
+                Some(200)
+            }
 
             _ => None,
         }
@@ -340,7 +334,7 @@ impl TokenKind {
             Self::LParen // function call
             | Self::LBracket // array subscript
             | Self::Dot // attribute access
-            | Self::UnitDec | Self::UnitInc => Some(300), 
+            | Self::UnitDec | Self::UnitInc => Some(300),
 
             _ => None,
         }
