@@ -12,7 +12,7 @@ pub(super) fn statement(p: &mut Parser) {
 /*
 if (expr)
     <statement>
-else 
+else
     <statement>
 */
 fn if_statement(p: &mut Parser) {
@@ -81,7 +81,7 @@ fn for_statement(p: &mut Parser) {
     p.close(m, ForLoop);
 }
 
-/* 
+/*
 while (<expression>)
     <statement>
 */
@@ -93,7 +93,7 @@ fn while_statement(p: &mut Parser) {
     statement(p);
 }
 
-/* 
+/*
 assert(<expression>)
 */
 fn assert_statement(p: &mut Parser) {

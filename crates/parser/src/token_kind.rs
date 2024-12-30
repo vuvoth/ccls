@@ -49,7 +49,7 @@ pub enum TokenKind {
     LBracket,
     #[token("]")]
     RBracket,
-    // Punctuation 
+    // Punctuation
     #[token(";")]
     Semicolon,
     #[token(",")]
@@ -123,7 +123,7 @@ pub enum TokenKind {
     ShiftR,
     #[token("<<")]
     ShiftL,
-    // Combined bitwise assignments 
+    // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
     #[token("|=")]
@@ -276,9 +276,11 @@ impl TokenKind {
             Self::Mul | Self::Div | Self::IntDiv | Self::Mod => Some((94, 95)),
             Self::Power => Some((96, 97)),
             // TODO: review
-            Self::AddAssign | Self::SubAssign => Some((98,99)),
-            Self::MulAssign | Self::DivAssign | Self::IntDivAssign | Self::ModAssign => Some((100,101)),
-            Self::PowerAssign => Some((102,103)),
+            Self::AddAssign | Self::SubAssign => Some((98, 99)),
+            Self::MulAssign | Self::DivAssign | Self::IntDivAssign | Self::ModAssign => {
+                Some((100, 101))
+            }
+            Self::PowerAssign => Some((102, 103)),
             _ => None,
         }
     }
