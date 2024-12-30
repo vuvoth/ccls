@@ -128,9 +128,3 @@ pub(super) fn declaration(p: &mut Parser) {
         _ => unreachable!(),
     }
 }
-
-#[cfg(test)]
-mod declar_tests {
-    #[test]
-    fn signal_with_tag() {}
-}

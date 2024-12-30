@@ -11,7 +11,16 @@ lsp-types = {version = "0.94.1", features = ["proposed"]}
 rowan = "0.15.15"
 num-traits = "0.2"
 num-derive = "0.2"
-
+serde = "1.0.216"
 
 [profile.dev]
 debug = 2
+
+[dev-dependencies]
+# for snapshot testing, yaml format
+insta = { version = "1.41.1", features = ["yaml"] }
+
+[profile.dev.package]
+# compile slightly slower once, but use less memory, have faster diffs
+insta.opt-level = 3
+similar.opt-level = 3

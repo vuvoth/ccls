@@ -4,3 +4,5 @@ node_modules
 /target
 Cargo.lock
 assets
+*.new
+*.pending-snap

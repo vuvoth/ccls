@@ -3,6 +3,7 @@ use crate::{event::Event, token_kind::TokenKind};
 #[derive(Debug)]
 pub enum Child {
     Token(usize), // position of token,
+    Error(String),
     Tree(Tree),
 }
 
@@ -57,6 +58,13 @@ impl From<Vec<Event>> for Output {
                             .unwrap()
                             .children
                             .push(Child::Token(*token));
+                    }
+                    Event::ErrorReport(error) => {
+                        stack
+                            .last_mut()
+                            .unwrap()
+                            .children
+                            .push(Child::Error(error.clone()));
                     }
                 }
             }
