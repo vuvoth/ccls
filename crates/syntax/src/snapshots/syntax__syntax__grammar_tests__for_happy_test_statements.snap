@@ -1,0 +1,9 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: statements
+---
+- "for(var i = 0; i < N-1; i++){\n                comp[i] = Multiplier2();\n            }"
+- "comp[0].in1 <== in[0];"
+- "comp[0].in2 <== in[1];"
+- "for(var i = 0; i < N-2; i++){\n                comp[i+1].in1 <== comp[i].out;\n                comp[i+1].in2 <== in[i+2];\n\n            }"
+- "out <== comp[N-2].out;"

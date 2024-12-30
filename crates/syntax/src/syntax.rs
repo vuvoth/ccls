@@ -416,4 +416,34 @@ mod grammar_tests {
             .collect();
         insta::assert_yaml_snapshot!("block_happy_test_statements", statements);
     }
+
+    #[test]
+    fn for_happy_test() {
+        let source = r#"{
+            //Statements.
+            for(var i = 0; i < N-1; i++){
+                comp[i] = Multiplier2();
+            }
+            comp[0].in1 <== in[0];
+            comp[0].in2 <== in[1];
+            for(var i = 0; i < N-2; i++){
+                comp[i+1].in1 <== comp[i].out;
+                comp[i+1].in2 <== in[i+2];
+
+            }
+            out <== comp[N-2].out; 
+        }"#;
+
+        let syntax = syntax_node_from_source(&source, Scope::Block);
+
+        // cast syntax node into ast node to retrieve more information
+        let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
+
+        let statements = block.statement_list().unwrap().statement_list();
+        let statements: Vec<String> = statements
+            .into_iter()
+            .map(|statement| statement.syntax().text().to_string())
+            .collect();
+        insta::assert_yaml_snapshot!("for_happy_test_statements", statements);
+    }
 }

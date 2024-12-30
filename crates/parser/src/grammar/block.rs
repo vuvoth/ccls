@@ -11,6 +11,7 @@ use super::*;
 pub fn block(p: &mut Parser) {
     p.inc_rcurly();
 
+    // TODO: why do not use expect for { and }
     if !p.at(LCurly) {
         p.advance_with_error("Miss {");
     } else {

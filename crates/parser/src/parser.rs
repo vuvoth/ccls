@@ -166,6 +166,11 @@ impl<'a> Parser<'a> {
         kinds.contains(&current_kind)
     }
 
+    pub fn at_assign_token(&mut self) -> bool {
+        let current_kind = self.current();
+        current_kind.is_assign_token()
+    }
+
     pub fn skip(&mut self) {
         self.next();
     }

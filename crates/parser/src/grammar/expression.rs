@@ -10,15 +10,21 @@ pub(super) fn expression(p: &mut Parser) {
 
 /**
  * grammar: "(Symbol_1, Symbol_2,..., Symbol_n)"
+ * can be an empty tuple (for function cal: Mul())
  */
 pub(super) fn tuple(p: &mut Parser) {
     let m = p.open();
     p.expect(LParen);
-    p.expect(Identifier);
-    while p.at(Comma) && !p.eof() {
-        p.expect(Comma);
+
+    if p.at(Identifier) {
         p.expect(Identifier);
+        
+        while p.at(Comma) && !p.eof() {
+            p.expect(Comma);
+            p.expect(Identifier);
+        }
     }
+    
     p.expect(RParen);
     p.close(m, Tuple);
 }
