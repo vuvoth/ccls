@@ -409,7 +409,7 @@ mod grammar_tests {
         let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
 
         println!("block: {}", block.syntax().text().to_string());
-        
+
         // finally, assert with expect statements
         let statements = block.statement_list().unwrap().statement_list();
         let statements: Vec<String> = statements

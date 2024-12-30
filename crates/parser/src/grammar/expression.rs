@@ -18,13 +18,13 @@ pub(super) fn tuple(p: &mut Parser) {
 
     if p.at(Identifier) {
         p.expect(Identifier);
-        
+
         while p.at(Comma) && !p.eof() {
             p.expect(Comma);
             p.expect(Identifier);
         }
     }
-    
+
     p.expect(RParen);
     p.close(m, Tuple);
 }

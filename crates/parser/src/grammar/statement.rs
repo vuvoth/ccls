@@ -164,7 +164,7 @@ fn assignment_statement(p: &mut Parser) {
         let m_name = p.open();
         p.expect(Identifier);
         p.close(m_name, ComponentIdentifier);
-        
+
         // abc[N - 1]
         if p.at(LBracket) {
             p.expect(LBracket);
