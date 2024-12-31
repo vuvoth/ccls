@@ -465,4 +465,55 @@ mod grammar_tests {
             .collect();
         insta::assert_yaml_snapshot!("statement_happy_test_statements", statements);
     }
+
+    #[test]
+    fn declaration_happy_test() {
+        // [scope: block] source must start with {
+        let source = r#"{
+            var nout = nbits((2**n -1)*ops);
+            signal input in[ops][n];
+            signal output out[nout];
+        
+            var lin = 0;
+            var lout = 0;
+        
+            var k;
+            var j;
+        
+            var e2;
+        
+            e2 = 1;
+            for (k=0; k<n; k++) {
+                for (j=0; j<ops; j++) {
+                    lin += in[j][k] * e2;
+                }
+                e2 = e2 + e2;
+            
+                e2 = 1;
+                for (k=0; k<nout; k++) {
+                    out[k] <-- (lin >> k) & 1;
+            
+                    // Ensure out is binary
+                    out[k] * (out[k] - 1) === 0;
+            
+                    lout += out[k] * e2;
+            
+                    e2 = e2+e2;
+                }
+            
+                // Ensure the sum;
+            
+                lin === lout;
+            }
+    }"#;
+        
+        
+        let syntax = syntax_node_from_source(&source, Scope::Block);
+
+        // cast syntax node into ast node to retrieve more information
+        let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
+ 
+        let string_syntax = block.syntax().text().to_string();
+        insta::assert_yaml_snapshot!("declaration_happy_test_source", string_syntax);
+    }
 }
