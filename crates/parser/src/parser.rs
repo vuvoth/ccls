@@ -137,7 +137,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn dec_rcurly(&mut self) {
-        self.context.r_curly_count += 1;
+        self.context.r_curly_count -= 1;
     }
 
     pub fn current(&mut self) -> TokenKind {
