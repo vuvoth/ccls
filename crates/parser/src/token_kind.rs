@@ -382,6 +382,17 @@ impl TokenKind {
         )
     }
 
+    pub fn is_inline_assign_signal(self) -> bool {
+        matches!(
+            self,
+            Self::Assign | Self::RAssignSignal | Self::RAssignConstraintSignal
+        )
+    }
+
+    pub fn is_var_assign(self) -> bool {
+        matches!(self, Self::Assign)
+    }
+
     pub fn is_trivial(self) -> bool {
         matches!(
             self,

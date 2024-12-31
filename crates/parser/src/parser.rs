@@ -171,6 +171,16 @@ impl<'a> Parser<'a> {
         current_kind.is_assign_token()
     }
 
+    pub fn at_inline_assign_signal(&mut self) -> bool {
+        let current_kind = self.current();
+        current_kind.is_inline_assign_signal()
+    }
+
+    pub fn at_var_assign(&mut self) -> bool {
+        let current_kind = self.current();
+        current_kind.is_var_assign()
+    }
+
     pub fn skip(&mut self) {
         self.next();
     }
