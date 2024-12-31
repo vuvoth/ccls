@@ -16,14 +16,8 @@ pub(super) fn tuple(p: &mut Parser) {
     let m = p.open();
     p.expect(LParen);
 
-    if p.at(Identifier) {
-        p.expect(Identifier);
-
-        while p.at(Comma) && !p.eof() {
-            p.expect(Comma);
-            p.expect(Identifier);
-        }
-    }
+    // iden1, iden2, iden3
+    list_identity::parse(p);
 
     p.expect(RParen);
     p.close(m, Tuple);
