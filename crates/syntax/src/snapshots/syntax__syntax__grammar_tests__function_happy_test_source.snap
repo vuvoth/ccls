@@ -1,0 +1,5 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: string_function
+---
+"function nbits(a) {\n            var n = 1;\n            var r = 0;\n            while (n-1<a) {\n                r++;\n                n *= 2;\n            }\n            return r;\n        }"

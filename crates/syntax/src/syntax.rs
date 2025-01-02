@@ -238,7 +238,7 @@ mod tests {
 mod grammar_tests {
 
     use crate::{
-        abstract_syntax_tree::{AstBlock, AstOutputSignalDecl, AstPragma, AstTemplateDef},
+        abstract_syntax_tree::{AstBlock, AstCircomProgram, AstOutputSignalDecl, AstPragma, AstTemplateDef},
         syntax::SyntaxTreeBuilder,
         syntax_node::CircomLanguage,
     };
@@ -514,5 +514,28 @@ mod grammar_tests {
 
         let string_syntax = block.syntax().text().to_string();
         insta::assert_yaml_snapshot!("declaration_happy_test_source", string_syntax);
+    }
+
+    #[test]
+    fn function_happy_test() {
+        let source = r#"
+        function nbits(a) {
+            var n = 1;
+            var r = 0;
+            while (n-1<a) {
+                r++;
+                n *= 2;
+            }
+            return r;
+        }"#;
+
+        let syntax = syntax_node_from_source(&source, Scope::CircomProgram);
+
+        // cast syntax node into ast node to retrieve more information
+        let ast_circom = AstCircomProgram::cast(syntax).expect("Can not cast syntax node into ast circom");
+        let function = &ast_circom.function_list()[0];
+
+        let string_function = function.syntax().text().to_string();
+        insta::assert_yaml_snapshot!("function_happy_test_source", string_function);
     }
 }
