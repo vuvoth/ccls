@@ -506,13 +506,12 @@ mod grammar_tests {
                 lin === lout;
             }
     }"#;
-        
-        
+
         let syntax = syntax_node_from_source(&source, Scope::Block);
 
         // cast syntax node into ast node to retrieve more information
         let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
- 
+
         let string_syntax = block.syntax().text().to_string();
         insta::assert_yaml_snapshot!("declaration_happy_test_source", string_syntax);
     }
