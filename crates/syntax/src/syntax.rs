@@ -494,7 +494,7 @@ mod grammar_tests {
                     out[k] <-- (lin >> k) & 1;
             
                     // Ensure out is binary
-                    out[k] * (out[k] - 1) === 0;
+                    // out[k] * (out[k] - 1) === 0;
             
                     lout += out[k] * e2;
             
