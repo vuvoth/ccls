@@ -92,7 +92,7 @@ fn for_statement(p: &mut Parser) {
 
     // for (i = 1; i < N; i++) { <statements> }
     statement(p);
-    
+
     p.close(open_marker, ForLoop);
 }
 

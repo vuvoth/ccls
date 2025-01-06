@@ -1,7 +1,4 @@
-use crate::grammar::{
-    *,
-    expression::expression
-};
+use crate::grammar::{expression::expression, *};
 
 /**
  * grammar: "(expression-1, expression-2,..., expression-n)"
@@ -22,7 +19,7 @@ pub(super) fn tuple_expression(p: &mut Parser) {
     }
 
     p.expect(RParen);
-    
+
     // p.close(m, ExpressionList);
 }
 
@@ -37,7 +34,7 @@ pub(super) fn tuple_identifier(p: &mut Parser) {
     // iden1, iden2, iden3
     while p.at(Identifier) && !p.eof() {
         p.expect(Identifier);
-        
+
         if p.eat(Comma) == false {
             break;
         }
@@ -58,7 +55,7 @@ pub(super) fn list_identifier(p: &mut Parser) {
     // iden1, iden2, iden3
     while p.at(Identifier) && !p.eof() {
         p.expect(Identifier);
-        
+
         if p.eat(Comma) == false {
             break;
         }

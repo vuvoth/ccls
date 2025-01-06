@@ -85,7 +85,6 @@ impl GlobalState {
             return result;
         }
 
-        
         // if can not find that token in current file,
         // and if token in a component call / declaration
         // continue looking up in libs
@@ -118,7 +117,7 @@ impl GlobalState {
         // path to the element we want to get definition
         // TODO eg: file/line/start column..end column
         let uri = params.text_document_position_params.text_document.uri;
-        
+
         // abtract syntax tree for the element from that uri
         // TODO eg:
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
@@ -129,7 +128,7 @@ impl GlobalState {
         let mut locations = Vec::new();
 
         // extract token from ast at position (file, params position)
-        // TODO eg: 
+        // TODO eg:
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {

@@ -15,7 +15,7 @@ pub fn function_parse(p: &mut Parser) {
     let parameter_marker = p.open();
     tuple_identifier(p);
     p.close(parameter_marker, ParameterList);
-    
+
     block::block(p);
 
     p.close(m, FunctionDef);

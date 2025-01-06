@@ -99,7 +99,7 @@ pub fn lookup_definition(
         return jump_to_lib(file, token);
     }
 
-    // signal from other template 
+    // signal from other template
     // eg: in1, in2 from component call mul(in1, in2)
     let mut signal_outside = false;
 
@@ -141,7 +141,7 @@ pub fn lookup_definition(
     }
 
     if !signal_outside {
-        // look up token in template information 
+        // look up token in template information
         // (template name, signal/variable/component in template)
         for template in template_list {
             let template_name = template.name().unwrap();
@@ -173,7 +173,7 @@ pub fn lookup_definition(
             }
         }
 
-        // TODO: look up token in function information 
+        // TODO: look up token in function information
         // (function name, signal/variable/component in function)
     }
 

@@ -28,7 +28,7 @@ fn circom_expression(p: &mut Parser) {
 
 /**
  * grammar: <condition> ? <expression-1> : <expression-2>
-* <condition> is also an expression, 
+* <condition> is also an expression,
 * whose open and close events are already in the Parser event list
 * lhs is that open event
 */
@@ -36,18 +36,18 @@ pub fn tenary_conditional_statement(p: &mut Parser, lhs: Marker) {
     // <condition>
     let open_marker = p.open_before(lhs);
     p.close(open_marker, Condition);
-    
+
     // <condition> ?
     p.expect(MarkQuestion);
-    
+
     // <condition> ? <expression-1>
     let first_expression = p.open();
     expression_rec(p, 0);
     p.close(first_expression, Expression);
-    
+
     // <condition> ? <expression-1> :
     p.expect(Colon);
-    
+
     // <condition> ? <expression-1> : <expression-2>
     let last_expression = p.open();
     expression_rec(p, 0);
@@ -102,7 +102,6 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
             expression_rec(p, lp);
 
             lhs = p.close(open_marker, kind);
-
         } else if let Some(pp) = kind.postfix() {
             if pp <= pb {
                 return None;
@@ -143,8 +142,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
                     break;
                 }
             };
-        }
-        else {
+        } else {
             break;
         }
     }
@@ -159,14 +157,14 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
  */
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let kind = p.current();
-    
+
     match kind {
         Number | Identifier => {
             let open_marker = p.open();
             p.advance();
             let m_close = p.close(open_marker, kind);
             Some(m_close)
-        },
+        }
         LParen => {
             // (<expression>)
             let open_marker = p.open();
@@ -175,11 +173,10 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
             p.expect(RParen);
             let m_close = p.close(open_marker, Expression);
             Some(m_close)
-        },
+        }
         _ => {
             p.advance_with_error("Invalid Token");
             None
         }
     }
 }
-

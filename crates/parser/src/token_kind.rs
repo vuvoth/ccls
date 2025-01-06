@@ -287,8 +287,7 @@ impl TokenKind {
             | Self::GreaterThan
             | Self::LessThanAndEqual
             | Self::GreaterThanAndEqual => Some((79, 80)),
-            Self::Equal
-            | Self::NotEqual => Some((74, 75)),
+            Self::Equal | Self::NotEqual => Some((74, 75)),
             // other bitwise operators
             Self::BitAnd => Some((69, 70)),
             Self::BitXor => Some((64, 65)), // exclusive or
@@ -298,10 +297,10 @@ impl TokenKind {
             Self::BoolOr => Some((49, 50)),
             // ----------
             // TODO: how about conditional operation ( ? : )
-            // associativity: right to left [ a ? b : c --> ??? ] 
-            
+            // associativity: right to left [ a ? b : c --> ??? ]
+
             // ----------
-            // associativity: right to left [ a = b = c --> a = (b = c) ] 
+            // associativity: right to left [ a = b = c --> a = (b = c) ]
             // DO NOT CONSIDER ASSIGMENT OPERATORS AS INFIX TOKENS
             /*
             // assignment operators
@@ -389,10 +388,9 @@ impl TokenKind {
             | Self::DivAssign
             | Self::IntDivAssign
             | Self::ModAssign
-            | Self::PowerAssign
-            // unit inc/dec
-            // | Self::UnitInc
-            // | Self::UnitDec
+            | Self::PowerAssign // unit inc/dec
+                                // | Self::UnitInc
+                                // | Self::UnitDec
         )
     }
 

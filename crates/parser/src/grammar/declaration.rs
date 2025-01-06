@@ -1,4 +1,7 @@
-use super::{expression::expression, list::{tuple_expression, tuple_identifier}};
+use super::{
+    expression::expression,
+    list::{tuple_expression, tuple_identifier},
+};
 use crate::{parser::Parser, token_kind::TokenKind::*};
 
 // [N][M-1]
