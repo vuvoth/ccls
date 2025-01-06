@@ -289,8 +289,11 @@ impl TokenKind {
             // ----------
             // TODO: how about conditional operation ( ? : )
             // associativity: right to left [ a ? b : c --> ??? ] 
+            
             // ----------
             // associativity: right to left [ a = b = c --> a = (b = c) ] 
+            // DO NOT CONSIDER ASSIGMENT OPERATORS AS INFIX TOKENS
+            /*
             // assignment operators
             Self::Assign
             // signal assigment operators
@@ -313,6 +316,7 @@ impl TokenKind {
             | Self::IntDivAssign
             | Self::ModAssign
             | Self::PowerAssign => Some((44, 45)),
+            */
             // TODO: how about comma (expression separator)
             Self::Comma => Some((39, 40)),
             // not an infix operator
@@ -377,8 +381,8 @@ impl TokenKind {
             | Self::ModAssign
             | Self::PowerAssign
             // unit inc/dec
-            | Self::UnitInc
-            | Self::UnitDec
+            // | Self::UnitInc
+            // | Self::UnitDec
         )
     }
 

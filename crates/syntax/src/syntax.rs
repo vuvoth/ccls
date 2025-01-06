@@ -483,18 +483,18 @@ mod grammar_tests {
             var e2;
         
             e2 = 1;
-            for (k=0; k<n; k++) {
+            for (k=0; k<n; k+=1) {
                 for (j=0; j<ops; j++) {
                     lin += in[j][k] * e2;
                 }
                 e2 = e2 + e2;
             
                 e2 = 1;
-                for (k=0; k<nout; k++) {
+                for (k=0; k<nout; ++k) {
                     out[k] <-- (lin >> k) & 1;
             
                     // Ensure out is binary
-                    // out[k] * (out[k] - 1) === 0;
+                    out[k] * (out[k] - 1) === 0;
             
                     lout += out[k] * e2;
             

@@ -158,43 +158,16 @@ fn return_statement(p: &mut Parser) {
 fn assignment_statement(p: &mut Parser) {
     let m = p.open();
 
-    if p.at(Identifier) {
-        let m_id = p.open();
-        // abc
-        let m_name = p.open();
-        p.expect(Identifier);
-        p.close(m_name, ComponentIdentifier);
-
-        // abc[N - 1]
-        if p.at(LBracket) {
-            p.expect(LBracket);
-            expression(p);
-            p.expect(RBracket);
-        }
-
-        if p.at(Dot) {
-            // abc[N - 1].def OR abc.def --> component call
-            p.expect(Dot);
-            p.expect(Identifier);
-            p.close(m_id, ComponentCall);
-        } else {
-            // abc[N - 1] OR abc --> expression
-            p.close(m_id, Expression);
-        }
-    } else {
-        // assignment without identifier
-        expression(p);
-    }
+    // left expression
+    expression(p);
 
     // assign part
     if p.at_assign_token() {
-        let is_self_assign = p.at_any(&[TokenKind::UnitDec, TokenKind::UnitInc]);
         p.advance();
-        if is_self_assign == false {
-            expression(p);
-        }
-        p.close(m, AssignStatement);
-    } else {
-        p.close(m, Error);
+
+        // right expression
+        expression(p);
     }
+    
+    p.close(m, AssignStatement);
 }

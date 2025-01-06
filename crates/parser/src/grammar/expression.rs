@@ -32,7 +32,6 @@ pub(super) fn function_params(p: &mut Parser) {
 
 /**
  * grammar: "(Symbol_1, Symbol_2,..., Symbol_n)"
- * can be an empty tuple (for function cal: Mul())
  */
 pub(super) fn tuple(p: &mut Parser) {
     let m = p.open();
@@ -70,6 +69,7 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
             p.advance();
             m_close = p.close(m, Identifier);
             Some(m_close)
+            // identifier(p)
         }
         LParen => {
             let m = p.open();
@@ -90,64 +90,91 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
  * return marker which bound the expression
  */
 pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
-    let parse_able: Option<Marker> = if let Some(pp) = p.current().prefix() {
-        let kind = p.current();
-        let m = p.open();
-        p.advance();
-        expression_rec(p, pp);
-        Some(p.close(m, kind))
-    } else {
-        expression_atom(p)
+    // consume all first prefix tokens (++a, --a, -a, +a, !a)
+    // next, consume first atom (identifier/number/tuple)
+    let parse_able: Option<Marker> = {
+        if let Some(pp) = p.current().prefix() {
+            println!("Prefix...");
+            let kind = p.current();
+            let m = p.open();
+            // consume prefix token (++, --, -, +, !)
+            p.advance();
+            // continue with the next tokens
+            expression_rec(p, pp);
+            Some(p.close(m, kind))
+        } else {
+            expression_atom(p)
+        }
     };
 
     parse_able?;
 
     let mut lhs = parse_able.unwrap();
 
-    // TODO: function call
-    if p.at(LParen) {
-        let m = p.open_before(lhs);
-        // tuple(p);
-        function_params(p);
-        lhs = p.close(m, Call);
-    }
-
     while !p.eof() {
         let current_kind = p.current();
+
         if let Some((lp, rp)) = current_kind.infix() {
+            // TODO: what does it mean???
             if rp <= pb {
                 return None;
             }
 
             let m = p.open_before(lhs);
+            // consume the infix token
             p.advance();
+
+            // extract the second parameter
+            // eg: <a> + <b> --> extract <b>
             expression_rec(p, lp);
             lhs = p.close(m, current_kind);
 
-            continue;
-        }
-        if let Some(pp) = current_kind.postfix() {
+        } else if let Some(pp) = current_kind.postfix() {
+            println!("Postfix...");
             if pp <= pb {
                 return None;
             }
-            let m = p.open_before(lhs);
-            p.advance();
-            if matches!(current_kind, LBracket) {
-                expression_rec(p, 0);
-                p.expect(RBracket);
-            } else {
-                p.expect(Identifier);
-            }
-            lhs = if matches!(current_kind, Dot) {
-                p.close(m, ComponentCall)
-            } else {
-                p.close(m, ArrayQuery)
-            };
 
-            continue;
+            match current_kind {
+                LParen => {
+                    // function call
+                    let m = p.open_before(lhs);
+                    function_params(p);
+                    lhs = p.close(m, Call);
+                }
+                LBracket => {
+                    // array subscript: abc[N - 1]
+                    let m = p.open_before(lhs);
+                    p.expect(LBracket);
+                    expression(p);
+                    p.expect(RBracket);
+                    p.close(m, ArrayQuery);
+                }
+                Dot => {
+                    // attribute access
+                    // abc[N - 1].def OR abc.def --> component call
+                    let m = p.open_before(lhs);
+                    p.expect(Dot);
+                    p.expect(Identifier);
+                    p.close(m, ComponentCall);
+                }
+                UnitDec | UnitInc => {
+                    let m = p.open_before(lhs);
+                    // consume token and do nothing
+                    p.advance();
+                    p.close(m, Expression);
+                }
+                _ => {
+                    // not a postfix token
+                    p.advance_with_error(&format!("Expect a postfix token, but found {:?}", current_kind));
+                }
+            };
         }
-        break;
+        else {
+            break;
+        }
     }
+    
     Some(lhs)
 }
 
