@@ -1,7 +1,5 @@
-use super::{
-    expression::{expression, tuple, tuple_init},
-    *,
-};
+use super::expression::{expression, identifier_list, parameter_list};
+use crate::{parser::Parser, token_kind::TokenKind::*};
 
 // [N][M-1]
 fn array(p: &mut Parser) -> bool {
@@ -91,9 +89,10 @@ pub(super) fn var_declaration(p: &mut Parser) {
     // tuple of variables
     // eg: var (in1, in2, in3) = (1, 2, 3);
     if p.at(LParen) {
-        tuple(p);
+        identifier_list(p);
         if p.at_var_assign() {
-            tuple_init(p);
+            p.advance();
+            expression(p);
         }
     } else {
         // list of variables
@@ -128,10 +127,11 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     // tuple of signal
     // eg: signal (in1, in2, in3) <== tuple_value;
     if p.at(LParen) {
-        tuple(p);
+        identifier_list(p);
         // can not assign for input signal
         if assign_able && p.at_inline_assign_signal() {
-            tuple_init(p);
+            p.advance();
+            expression(p);
         }
     } else {
         // list of signals
@@ -181,7 +181,7 @@ pub(super) fn component_declaration(p: &mut Parser) {
         p.close(m_c, TemplateName);
 
         // template params
-        tuple(p);
+        parameter_list(p);
     }
 
     p.close(m, ComponentDecl);

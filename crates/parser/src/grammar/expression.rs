@@ -12,28 +12,30 @@ pub(super) fn expression(p: &mut Parser) {
  * grammar: "(param1, param2,..., paramn)"
  * can be an empty ()
  */
-pub(super) fn function_params(p: &mut Parser) {
+pub(super) fn parameter_list(p: &mut Parser) {
     let m = p.open();
     p.expect(LParen);
 
     while !p.at(RParen) && !p.eof() {
+        // each parameter can be an expression
         expression(p);
-        if p.at(Comma) {
-            p.expect(Comma)
-        } else {
+
+        // there are no parameters remaining
+        if p.eat(Comma) == false {
             break;
         }
     }
 
     p.expect(RParen);
-    // TODO: what kind of it?
-    p.close(m, Tuple);
+    
+    p.close(m, ParameterList);
 }
 
 /**
- * grammar: "(Symbol_1, Symbol_2,..., Symbol_n)"
+ * grammar: "(iden1, iden2,..., idenn)"
+ * can be an empty ()
  */
-pub(super) fn tuple(p: &mut Parser) {
+pub(super) fn identifier_list(p: &mut Parser) {
     let m = p.open();
     p.expect(LParen);
 
@@ -41,19 +43,19 @@ pub(super) fn tuple(p: &mut Parser) {
     list_identity::parse(p);
 
     p.expect(RParen);
-    p.close(m, Tuple);
+    p.close(m, IdentifierList);
 }
 
 /**
  * grammar:
  *      "= | <== | <--" expression
  */
-pub(super) fn tuple_init(p: &mut Parser) {
-    let m = p.open();
-    p.expect_any(&[Assign, RAssignSignal, RAssignConstraintSignal]);
-    expression(p);
-    p.close(m, TupleInit);
-}
+// pub(super) fn tuple_init(p: &mut Parser) {
+//     let m = p.open();
+//     p.expect_any(&[Assign, RAssignSignal, RAssignConstraintSignal]);
+//     expression(p);
+//     p.close(m, TupleInit);
+// }
 
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let m_close: Marker;
@@ -69,7 +71,6 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
             p.advance();
             m_close = p.close(m, Identifier);
             Some(m_close)
-            // identifier(p)
         }
         LParen => {
             let m = p.open();
@@ -139,7 +140,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
                 LParen => {
                     // function call
                     let m = p.open_before(lhs);
-                    function_params(p);
+                    parameter_list(p);
                     lhs = p.close(m, Call);
                 }
                 LBracket => {
@@ -174,7 +175,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
             break;
         }
     }
-    
+
     Some(lhs)
 }
 

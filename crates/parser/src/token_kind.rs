@@ -211,6 +211,7 @@ pub enum TokenKind {
     TemplateName,
     FunctionName,
     ParameterList,
+    IdentifierList,
     SignalDecl,
     VarDecl,
     InputSignalDecl,
