@@ -48,6 +48,9 @@ impl AstVarDecl {
 
 ast_node!(AstComponentDecl, ComponentDecl);
 
+// component hash = Poseidon(2);
+// template --> Poseidon
+// component_identifier --> hash
 impl AstComponentDecl {
     pub fn template(&self) -> Option<AstTemplateName> {
         support::child(self.syntax())
