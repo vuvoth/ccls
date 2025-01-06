@@ -1,3 +1,5 @@
+use list::identifier_list;
+
 use super::*;
 
 /*
@@ -13,7 +15,7 @@ pub fn main_component(p: &mut Parser) {
         p.expect(LCurly);
         p.expect(PublicKw);
         p.expect(LBracket);
-        list_identity::parse(p);
+        identifier_list(p);
         p.expect(RBracket);
     }
 

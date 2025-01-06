@@ -91,6 +91,15 @@ impl AstPragma {
 }
 ast_node!(AstParameterList, TokenKind::ParameterList);
 
+impl AstParameterList {
+    pub fn parameters(&self) -> Vec<AstIdentifier> {
+        self.syntax()
+            .children()
+            .filter_map(AstIdentifier::cast)
+            .collect()
+    }
+}
+
 ast_node!(AstIdentifier, Identifier);
 
 impl AstIdentifier {

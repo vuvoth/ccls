@@ -316,22 +316,23 @@ mod grammar_tests {
         insta::assert_yaml_snapshot!(name, @"MultiplierN");
 
         // parameter list
-        let first_param = template
+        let paramater_list = template
             .parameter_list()
             .expect("Can not detect parameter list")
+            .parameters();
+
+        let first_param = paramater_list
+            .get(0)
+            .expect("Can not detect first parameter")
             .syntax()
-            .first_child()
-            .unwrap()
             .text()
             .to_string();
         insta::assert_yaml_snapshot!(first_param, @"N");
 
-        let last_param = template
-            .parameter_list()
-            .expect("Can not detect parameter list")
+        let last_param = paramater_list
+            .last()
+            .expect("Can not detect last parameter")
             .syntax()
-            .last_child()
-            .unwrap()
             .text()
             .to_string();
         insta::assert_yaml_snapshot!(last_param, @"QQ");

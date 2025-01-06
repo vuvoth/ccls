@@ -1,3 +1,5 @@
+use list::identifier_tuple;
+
 use crate::grammar::*;
 /**
  * template Identifier() {content}
@@ -13,11 +15,9 @@ pub fn template(p: &mut Parser) {
     p.expect(Identifier);
     p.close(name_marker, TemplateName);
 
-    p.expect(LParen);
-    let arg_marker = p.open();
-    list_identity::parse(p);
-    p.close(arg_marker, ParameterList);
-    p.expect(RParen);
+    let parameter_marker = p.open();
+    identifier_tuple(p);
+    p.close(parameter_marker, ParameterList);
 
     block::block(p);
 
