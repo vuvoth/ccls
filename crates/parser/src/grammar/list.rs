@@ -7,7 +7,7 @@ use crate::grammar::{
  * grammar: "(expression-1, expression-2,..., expression-n)"
  * can be an empty ()
  */
-pub(super) fn expression_tuple(p: &mut Parser) {
+pub(super) fn tuple_expression(p: &mut Parser) {
     // let m = p.open();
     p.expect(LParen);
 
@@ -30,7 +30,7 @@ pub(super) fn expression_tuple(p: &mut Parser) {
  * grammar: "(iden1, iden2,..., idenn)"
  * can be an empty ()
  */
-pub(super) fn identifier_tuple(p: &mut Parser) {
+pub(super) fn tuple_identifier(p: &mut Parser) {
     // let m = p.open();
     p.expect(LParen);
 
@@ -51,7 +51,7 @@ pub(super) fn identifier_tuple(p: &mut Parser) {
  * grammar: "[iden1, iden2,..., idenn]"
  * can be an empty ()
  */
-pub(super) fn identifier_list(p: &mut Parser) {
+pub(super) fn list_identifier(p: &mut Parser) {
     // let m = p.open();
     p.expect(LBracket);
 

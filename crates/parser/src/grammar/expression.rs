@@ -1,4 +1,4 @@
-use list::expression_tuple;
+use list::tuple_expression;
 
 use crate::parser::Marker;
 
@@ -112,7 +112,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
                 LParen => {
                     // function call
                     let open_marker = p.open_before(lhs);
-                    expression_tuple(p);
+                    tuple_expression(p);
                     lhs = p.close(open_marker, Call);
                 }
                 LBracket => {

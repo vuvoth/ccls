@@ -1,4 +1,4 @@
-use list::identifier_tuple;
+use list::tuple_identifier;
 
 use crate::grammar::*;
 
@@ -13,7 +13,7 @@ pub fn function_parse(p: &mut Parser) {
     p.close(fn_name_marker, FunctionName);
 
     let parameter_marker = p.open();
-    identifier_tuple(p);
+    tuple_identifier(p);
     p.close(parameter_marker, ParameterList);
     
     block::block(p);
