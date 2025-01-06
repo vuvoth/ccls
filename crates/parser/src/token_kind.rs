@@ -190,9 +190,15 @@ pub enum TokenKind {
     ReturnKw,
     #[token("assert")]
     AssertKw,
-    // Complex token kind
-    ForLoop,
+    // Statements
+    IfStatement,
+    AssertStatement,
+    LogStatement,
+    ReturnStatement,
     AssignStatement,
+    ForLoop,
+    WhileLoop,
+    // Complex token kind
     CircomProgram,
     SignalOfComponent,
     SignalHeader,
