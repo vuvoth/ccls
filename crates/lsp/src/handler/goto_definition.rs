@@ -209,10 +209,6 @@ pub fn lookup_definition(
                 res.extend(data);
             }
 
-            if let Some(data) = semantic_data.lookup_function_signal(function_id, token) {
-                res.extend(data);
-            }
-
             if let Some(data) = semantic_data.lookup_function_variable(function_id, token) {
                 res.extend(data);
             }

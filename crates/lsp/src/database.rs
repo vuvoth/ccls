@@ -185,7 +185,6 @@ impl TemplateDataSemantic {
 pub struct FunctionDataSemantic {
     pub param: SemanticLocations,
     // TODO: Functions cannot declare signals or generate constraints
-    pub signal: SemanticLocations,
     pub variable: SemanticLocations,
     pub component: SemanticLocations,
 }
@@ -194,7 +193,6 @@ impl FunctionDataSemantic {
     fn new() -> Self {
         Self {
             param: SemanticLocations::new(),
-            signal: SemanticLocations::new(),
             variable: SemanticLocations::new(),
             component: SemanticLocations::new(),
         }
@@ -219,7 +217,6 @@ pub enum TemplateDataInfo {
 
 pub enum FunctionDataInfo {
     Param((Id, Range)),
-    Signal((Id, Range)),
     Variable((Id, Range)),
     Component((Id, Range)),
 }
@@ -291,7 +288,6 @@ impl SemanticDB {
                         function_semantic.component.insert(id, r)
                     }
                     FunctionDataInfo::Variable((id, r)) => function_semantic.variable.insert(id, r),
-                    FunctionDataInfo::Signal((id, r)) => function_semantic.signal.insert(id, r),
                     FunctionDataInfo::Param((id, r)) => function_semantic.param.insert(id, r),
                 }
             }
@@ -533,17 +529,6 @@ impl SemanticData {
     ) -> Option<&Vec<Range>> {
         if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
             return semantic_function.param.0.get(&signal.token_id());
-        }
-        None
-    }
-
-    pub fn lookup_function_signal(
-        &self,
-        function_id: Id,
-        signal: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
-            return semantic_function.signal.0.get(&signal.token_id());
         }
         None
     }
