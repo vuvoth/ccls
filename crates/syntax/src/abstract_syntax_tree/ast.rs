@@ -115,6 +115,13 @@ impl AstFunctionDef {
     pub fn argument_list(&self) -> Option<AstParameterList> {
         self.syntax().children().find_map(AstParameterList::cast)
     }
+
+    pub fn statements(&self) -> Option<AstStatementList> {
+        if let Some(body) = self.body() {
+            return body.statement_list();
+        }
+        None
+    }
 }
 
 ast_node!(AstCircomProgram, CircomProgram);

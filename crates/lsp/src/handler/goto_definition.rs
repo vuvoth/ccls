@@ -45,6 +45,7 @@ pub fn lookup_token_at_postion(
         if kind == TokenKind::CircomString {
             return Some(token);
         }
+
         None
     })
 }
@@ -91,7 +92,7 @@ pub fn lookup_definition(
     token: &SyntaxToken,
 ) -> Vec<Location> {
     let template_list = ast.template_list();
-    // TODO: extract function list
+    let function_list = ast.function_list();
 
     let mut res = Vec::new();
 
@@ -99,8 +100,8 @@ pub fn lookup_definition(
         return jump_to_lib(file, token);
     }
 
-    // signal from other template 
-    // eg: in1, in2 from component call mul(in1, in2)
+    // signal from other template
+    // eg: in1, in2 from component call `mul(in1, in2)`
     let mut signal_outside = false;
 
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
@@ -141,8 +142,12 @@ pub fn lookup_definition(
     }
 
     if !signal_outside {
-        // look up token in template information 
+        // TODO: look up token in param list of node wrap token
+
+        // look up token in template information
         // (template name, signal/variable/component in template)
+
+        eprintln!("look up in templates...");
         for template in template_list {
             let template_name = template.name().unwrap();
             if template_name.name().unwrap().syntax().text() == token.text() {
@@ -160,21 +165,56 @@ pub fn lookup_definition(
 
             let template_id = template.syntax().token_id();
 
-            if let Some(data) = semantic_data.lookup_signal(template_id, token) {
+            if let Some(data) = semantic_data.lookup_template_signal(template_id, token) {
                 res.extend(data);
             }
 
-            if let Some(data) = semantic_data.lookup_variable(template_id, token) {
+            if let Some(data) = semantic_data.lookup_template_variable(template_id, token) {
                 res.extend(data);
             }
 
-            if let Some(component_decl) = semantic_data.lookup_component(template_id, token) {
+            if let Some(component_decl) =
+                semantic_data.lookup_template_component(template_id, token)
+            {
                 res.extend(component_decl);
             }
         }
 
-        // TODO: look up token in function information 
+        // TODO: look up token in function information
         // (function name, signal/variable/component in function)
+
+        eprintln!("look up in functions...");
+        for function in function_list {
+            let function_name = function.function_name().unwrap();
+            if function_name.syntax().text() == token.text() {
+                let range = file.range(function.syntax());
+                res.push(range);
+            }
+
+            if !function
+                .syntax()
+                .text_range()
+                .contains_range(token.text_range())
+            {
+                continue;
+            }
+
+            let function_id = function.syntax().token_id();
+
+            if let Some(data) = semantic_data.lookup_function_signal(function_id, token) {
+                res.extend(data);
+            }
+
+            if let Some(data) = semantic_data.lookup_function_variable(function_id, token) {
+                res.extend(data);
+            }
+
+            if let Some(component_decl) =
+                semantic_data.lookup_function_component(function_id, token)
+            {
+                res.extend(component_decl);
+            }
+        }
     }
 
     res.into_iter()

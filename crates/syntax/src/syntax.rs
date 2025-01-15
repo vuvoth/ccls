@@ -238,7 +238,9 @@ mod tests {
 mod grammar_tests {
 
     use crate::{
-        abstract_syntax_tree::{AstBlock, AstCircomProgram, AstOutputSignalDecl, AstPragma, AstTemplateDef},
+        abstract_syntax_tree::{
+            AstBlock, AstCircomProgram, AstOutputSignalDecl, AstPragma, AstTemplateDef,
+        },
         syntax::SyntaxTreeBuilder,
         syntax_node::CircomLanguage,
     };
@@ -532,7 +534,8 @@ mod grammar_tests {
         let syntax = syntax_node_from_source(&source, Scope::CircomProgram);
 
         // cast syntax node into ast node to retrieve more information
-        let ast_circom = AstCircomProgram::cast(syntax).expect("Can not cast syntax node into ast circom");
+        let ast_circom =
+            AstCircomProgram::cast(syntax).expect("Can not cast syntax node into ast circom");
         let function = &ast_circom.function_list()[0];
 
         let string_function = function.syntax().text().to_string();
