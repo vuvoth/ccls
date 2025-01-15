@@ -163,6 +163,7 @@ impl SemanticLocations {
 // template
 #[derive(Debug, Clone)]
 pub struct TemplateDataSemantic {
+    pub param: SemanticLocations,
     pub signal: SemanticLocations,
     pub variable: SemanticLocations,
     pub component: SemanticLocations,
@@ -171,6 +172,7 @@ pub struct TemplateDataSemantic {
 impl TemplateDataSemantic {
     fn new() -> Self {
         Self {
+            param: SemanticLocations::new(),
             signal: SemanticLocations::new(),
             variable: SemanticLocations::new(),
             component: SemanticLocations::new(),
@@ -181,6 +183,7 @@ impl TemplateDataSemantic {
 // function
 #[derive(Debug, Clone)]
 pub struct FunctionDataSemantic {
+    pub param: SemanticLocations,
     // TODO: Functions cannot declare signals or generate constraints
     pub signal: SemanticLocations,
     pub variable: SemanticLocations,
@@ -190,6 +193,7 @@ pub struct FunctionDataSemantic {
 impl FunctionDataSemantic {
     fn new() -> Self {
         Self {
+            param: SemanticLocations::new(),
             signal: SemanticLocations::new(),
             variable: SemanticLocations::new(),
             component: SemanticLocations::new(),
@@ -207,12 +211,14 @@ pub struct SemanticData {
 }
 
 pub enum TemplateDataInfo {
+    Param((Id, Range)),
     Signal((Id, Range)),
     Variable((Id, Range)),
     Component((Id, Range)),
 }
 
 pub enum FunctionDataInfo {
+    Param((Id, Range)),
     Signal((Id, Range)),
     Variable((Id, Range)),
     Component((Id, Range)),
@@ -268,6 +274,7 @@ impl SemanticDB {
                     }
                     TemplateDataInfo::Variable((id, r)) => template_semantic.variable.insert(id, r),
                     TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
+                    TemplateDataInfo::Param((id, r)) => template_semantic.param.insert(id, r),
                 }
             }
             SemanticInfo::Function((id, range)) => {
@@ -285,6 +292,7 @@ impl SemanticDB {
                     }
                     FunctionDataInfo::Variable((id, r)) => function_semantic.variable.insert(id, r),
                     FunctionDataInfo::Signal((id, r)) => function_semantic.signal.insert(id, r),
+                    FunctionDataInfo::Param((id, r)) => function_semantic.param.insert(id, r),
                 }
             }
         }
@@ -320,6 +328,21 @@ impl SemanticDB {
 
     pub fn template_semantic(&mut self, file_db: &FileDB, ast_template: &AstTemplateDef) {
         let template_id = ast_template.syntax().token_id();
+
+        if let Some(params) = ast_template.parameter_list() {
+            for param_name in params.parameters() {
+                self.insert(
+                    file_db.file_id,
+                    SemanticInfo::TemplateData((
+                        template_id,
+                        TemplateDataInfo::Param((
+                            param_name.syntax().token_id(),
+                            file_db.range(param_name.syntax()),
+                        )),
+                    )),
+                );
+            }
+        };
 
         if let Some(statements) = ast_template.statements() {
             for signal in statements.find_children::<AstInputSignalDecl>() {
@@ -403,6 +426,21 @@ impl SemanticDB {
     pub fn function_semantic(&mut self, file_db: &FileDB, ast_function: &AstFunctionDef) {
         let function_id = ast_function.syntax().token_id();
 
+        if let Some(params) = ast_function.parameter_list() {
+            for param_name in params.parameters() {
+                self.insert(
+                    file_db.file_id,
+                    SemanticInfo::FunctionData((
+                        function_id,
+                        FunctionDataInfo::Param((
+                            param_name.syntax().token_id(),
+                            file_db.range(param_name.syntax()),
+                        )),
+                    )),
+                );
+            }
+        };
+
         if let Some(statements) = ast_function.statements() {
             // function does not contains signal decalrations --> skip signals
 
@@ -442,6 +480,17 @@ impl SemanticDB {
 }
 
 impl SemanticData {
+    pub fn lookup_template_param(
+        &self,
+        template_id: Id,
+        signal: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.param.0.get(&signal.token_id());
+        }
+        None
+    }
+
     pub fn lookup_template_signal(
         &self,
         template_id: Id,
@@ -477,6 +526,17 @@ impl SemanticData {
     }
 
     // ------------- function
+    pub fn lookup_function_param(
+        &self,
+        function_id: Id,
+        signal: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
+            return semantic_function.param.0.get(&signal.token_id());
+        }
+        None
+    }
+
     pub fn lookup_function_signal(
         &self,
         function_id: Id,

@@ -165,6 +165,10 @@ pub fn lookup_definition(
 
             let template_id = template.syntax().token_id();
 
+            if let Some(data) = semantic_data.lookup_template_param(template_id, token) {
+                res.extend(data);
+            }
+
             if let Some(data) = semantic_data.lookup_template_signal(template_id, token) {
                 res.extend(data);
             }
@@ -200,6 +204,10 @@ pub fn lookup_definition(
             }
 
             let function_id = function.syntax().token_id();
+
+            if let Some(data) = semantic_data.lookup_function_param(function_id, token) {
+                res.extend(data);
+            }
 
             if let Some(data) = semantic_data.lookup_function_signal(function_id, token) {
                 res.extend(data);

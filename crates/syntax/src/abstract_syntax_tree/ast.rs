@@ -91,6 +91,15 @@ impl AstPragma {
 }
 ast_node!(AstParameterList, TokenKind::ParameterList);
 
+impl AstParameterList {
+    pub fn parameters(&self) -> Vec<AstIdentifier> {
+        self.syntax()
+            .children()
+            .filter_map(AstIdentifier::cast)
+            .collect()
+    }
+}
+
 ast_node!(AstIdentifier, Identifier);
 
 impl AstIdentifier {
@@ -121,6 +130,10 @@ impl AstFunctionDef {
             return body.statement_list();
         }
         None
+    }
+
+    pub fn parameter_list(&self) -> Option<AstParameterList> {
+        self.syntax().children().find_map(AstParameterList::cast)
     }
 }
 
