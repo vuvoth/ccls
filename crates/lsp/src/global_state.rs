@@ -113,7 +113,6 @@ impl GlobalState {
     }
 
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
-        eprint!("-------------------");
         // path to the element we want to get definition
         // TODO eg: file/line/start column..end column
         let uri = params.text_document_position_params.text_document.uri;
