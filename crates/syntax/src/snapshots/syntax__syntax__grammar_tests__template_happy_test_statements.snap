@@ -1,0 +1,8 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: statements
+---
+- "signal input in[N];"
+- "signal output out;"
+- "component comp[N-1];"
+- "for(var i = 0; i < N-1; i++){\n                comp[i] = Multiplier2();\n            }"

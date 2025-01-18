@@ -1,5 +1,4 @@
 use parser::token_kind::TokenKind::*;
-use rowan::SyntaxText;
 
 use crate::syntax_node::CircomLanguage;
 use crate::syntax_node::SyntaxNode;
@@ -45,11 +44,11 @@ impl AstTemplateDef {
         None
     }
 
-    pub fn find_input_signal(&self, name: &SyntaxText) -> Option<AstInputSignalDecl> {
+    pub fn find_input_signal(&self, name: &str) -> Option<AstInputSignalDecl> {
         if let Some(statements) = self.statements() {
             for input_signal in statements.find_children::<AstInputSignalDecl>() {
                 if let Some(signal_name) = input_signal.name() {
-                    if signal_name.equal(name) {
+                    if signal_name.syntax().text() == name {
                         return Some(input_signal);
                     }
                 }
@@ -58,11 +57,11 @@ impl AstTemplateDef {
         None
     }
 
-    pub fn find_output_signal(&self, name: &SyntaxText) -> Option<AstOutputSignalDecl> {
+    pub fn find_output_signal(&self, name: &str) -> Option<AstOutputSignalDecl> {
         if let Some(statements) = self.statements() {
             for input_signal in statements.find_children::<AstOutputSignalDecl>() {
                 if let Some(signal_name) = input_signal.name() {
-                    if signal_name.equal(name) {
+                    if signal_name.syntax().text() == name {
                         return Some(input_signal);
                     }
                 }
@@ -71,11 +70,11 @@ impl AstTemplateDef {
         None
     }
 
-    pub fn find_internal_signal(&self, name: &SyntaxText) -> Option<AstSignalDecl> {
+    pub fn find_internal_signal(&self, name: &str) -> Option<AstSignalDecl> {
         if let Some(statements) = self.statements() {
             for signal in statements.find_children::<AstSignalDecl>() {
                 if let Some(signal_name) = signal.name() {
-                    if signal_name.equal(name) {
+                    if signal_name.syntax().text() == name {
                         return Some(signal);
                     }
                 }

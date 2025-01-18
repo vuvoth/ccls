@@ -1,0 +1,43 @@
+---
+source: crates/parser/src/input.rs
+expression: input
+---
+kind:
+  - EndLine
+  - WhiteSpace
+  - BlockComment
+  - EndLine
+  - WhiteSpace
+  - Identifier
+  - WhiteSpace
+  - Add
+  - WhiteSpace
+  - Number
+  - EndLine
+  - WhiteSpace
+source: "\n        /*a + b == 10*/\n        a + 10\n    "
+position:
+  - start: 0
+    end: 1
+  - start: 1
+    end: 9
+  - start: 9
+    end: 24
+  - start: 24
+    end: 25
+  - start: 25
+    end: 33
+  - start: 33
+    end: 34
+  - start: 34
+    end: 35
+  - start: 35
+    end: 36
+  - start: 36
+    end: 37
+  - start: 37
+    end: 39
+  - start: 39
+    end: 40
+  - start: 40
+    end: 44

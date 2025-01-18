@@ -1,0 +1,17 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: children_string
+---
+- pragma circom 2.0.0;
+- "\n"
+- "\n"
+- "    "
+- "\n"
+- "    "
+- "template Multiplier2 () {}"
+- "\n"
+- "    "
+- "template Multiplier2 () {}"
+- " "
+- "\n"
+- "    "

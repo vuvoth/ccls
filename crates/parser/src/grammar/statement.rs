@@ -9,6 +9,12 @@ pub(super) fn statement(p: &mut Parser) {
     p.close(m, Statement);
 }
 
+/*
+if (expr)
+    <statement>
+else
+    <statement>
+*/
 fn if_statement(p: &mut Parser) {
     let m = p.open();
     p.expect(IfKw);
@@ -25,6 +31,7 @@ fn if_statement(p: &mut Parser) {
 
 /**
  * no if condition here.
+ * for/while/return/assert...
  */
 fn statement_no_condition(p: &mut Parser) {
     match p.current() {
@@ -50,6 +57,10 @@ fn statement_no_condition(p: &mut Parser) {
     }
 }
 
+/*
+for (<declaration>/<assignment>; <expression>; <assignment>)
+    <statement>
+*/
 fn for_statement(p: &mut Parser) {
     let m = p.open();
     p.expect(ForKw);
@@ -70,6 +81,10 @@ fn for_statement(p: &mut Parser) {
     p.close(m, ForLoop);
 }
 
+/*
+while (<expression>)
+    <statement>
+*/
 fn while_statement(p: &mut Parser) {
     p.expect(WhileKw);
     p.expect(LParen);
@@ -78,6 +93,9 @@ fn while_statement(p: &mut Parser) {
     statement(p);
 }
 
+/*
+assert(<expression>)
+*/
 fn assert_statement(p: &mut Parser) {
     let m = p.open();
     p.expect(AssertKw);
@@ -87,6 +105,9 @@ fn assert_statement(p: &mut Parser) {
     p.close(m, AssertKw);
 }
 
+/*
+log()
+*/
 fn log_statement(p: &mut Parser) {
     let m = p.open();
     p.expect(LogKw);
@@ -109,6 +130,9 @@ fn log_statement(p: &mut Parser) {
     p.close(m, LogKw);
 }
 
+/*
+return <expression>
+*/
 fn return_statement(p: &mut Parser) {
     let m = p.open();
     p.expect(ReturnKw);
@@ -116,6 +140,9 @@ fn return_statement(p: &mut Parser) {
     p.close(m, ReturnKw);
 }
 
+/*
+
+*/
 fn assignment_statement(p: &mut Parser) {
     let m = p.open();
 
@@ -153,22 +180,5 @@ fn assignment_statement(p: &mut Parser) {
         p.close(m, AssignStatement);
     } else {
         p.close(m, Error);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn if_statement_test() {
-        let _source = r#"
-            assert(1 == 2);
-        "#;
-        // let mut parser = Parser::new(source);
-
-        // statement(&mut parser);
-        // let cst = parser.build_tree().ok().unwrap();
-
-        // println!("{:?}", cst);
     }
 }

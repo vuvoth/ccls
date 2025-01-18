@@ -1,0 +1,391 @@
+---
+source: crates/parser/src/input.rs
+expression: input
+---
+kind:
+  - EndLine
+  - WhiteSpace
+  - LParen
+  - LCurly
+  - LBracket
+  - RBracket
+  - RCurly
+  - RParen
+  - EndLine
+  - WhiteSpace
+  - Semicolon
+  - Dot
+  - Comma
+  - Colon
+  - EndLine
+  - WhiteSpace
+  - BoolAnd
+  - WhiteSpace
+  - BitAnd
+  - EndLine
+  - WhiteSpace
+  - BoolOr
+  - WhiteSpace
+  - BitOr
+  - EndLine
+  - WhiteSpace
+  - NotEqual
+  - WhiteSpace
+  - Not
+  - EndLine
+  - WhiteSpace
+  - EqualSignal
+  - WhiteSpace
+  - Equal
+  - WhiteSpace
+  - Assign
+  - EndLine
+  - WhiteSpace
+  - LAssignSignal
+  - WhiteSpace
+  - LAssignContraintSignal
+  - EndLine
+  - WhiteSpace
+  - RAssignSignal
+  - WhiteSpace
+  - RAssignConstraintSignal
+  - EndLine
+  - WhiteSpace
+  - LessThanAndEqual
+  - WhiteSpace
+  - LessThan
+  - EndLine
+  - WhiteSpace
+  - GreaterThanAndEqual
+  - WhiteSpace
+  - GreaterThan
+  - EndLine
+  - WhiteSpace
+  - UnitInc
+  - WhiteSpace
+  - AddAssign
+  - WhiteSpace
+  - Add
+  - EndLine
+  - WhiteSpace
+  - UnitDec
+  - WhiteSpace
+  - SubAssign
+  - WhiteSpace
+  - Sub
+  - EndLine
+  - WhiteSpace
+  - PowerAssign
+  - WhiteSpace
+  - Power
+  - EndLine
+  - WhiteSpace
+  - Mul
+  - WhiteSpace
+  - MulAssign
+  - EndLine
+  - WhiteSpace
+  - Div
+  - WhiteSpace
+  - DivAssign
+  - EndLine
+  - WhiteSpace
+  - IntDiv
+  - WhiteSpace
+  - IntDivAssign
+  - EndLine
+  - WhiteSpace
+  - Mod
+  - WhiteSpace
+  - ModAssign
+  - EndLine
+  - WhiteSpace
+  - BitXor
+  - WhiteSpace
+  - BitXorAssign
+  - EndLine
+  - WhiteSpace
+  - BitNot
+  - WhiteSpace
+  - BitNotAssign
+  - EndLine
+  - WhiteSpace
+  - ShiftR
+  - WhiteSpace
+  - ShiftRAssign
+  - EndLine
+  - WhiteSpace
+  - ShiftL
+  - WhiteSpace
+  - ShiftLAssign
+  - EndLine
+  - WhiteSpace
+  - BitAnd
+  - WhiteSpace
+  - BitAndAssign
+  - EndLine
+  - WhiteSpace
+  - BitOr
+  - WhiteSpace
+  - BitOrAssign
+  - EndLine
+  - WhiteSpace
+  - RCurly
+source: "\n        ({[]})\n        ;.,:\n        && &\n        || |\n        != !\n        === == =\n        --> ==>\n        <-- <==\n        <= <\n        >= >\n        ++ += +\n        -- -= -\n        **= **\n        * *=\n        / /=\n        \\ \\=\n        % %=\n        ^ ^=\n        ~ ~=\n        >> >>=\n        << <<=\n        & &=\n        | |=\n    }"
+position:
+  - start: 0
+    end: 1
+  - start: 1
+    end: 9
+  - start: 9
+    end: 10
+  - start: 10
+    end: 11
+  - start: 11
+    end: 12
+  - start: 12
+    end: 13
+  - start: 13
+    end: 14
+  - start: 14
+    end: 15
+  - start: 15
+    end: 16
+  - start: 16
+    end: 24
+  - start: 24
+    end: 25
+  - start: 25
+    end: 26
+  - start: 26
+    end: 27
+  - start: 27
+    end: 28
+  - start: 28
+    end: 29
+  - start: 29
+    end: 37
+  - start: 37
+    end: 39
+  - start: 39
+    end: 40
+  - start: 40
+    end: 41
+  - start: 41
+    end: 42
+  - start: 42
+    end: 50
+  - start: 50
+    end: 52
+  - start: 52
+    end: 53
+  - start: 53
+    end: 54
+  - start: 54
+    end: 55
+  - start: 55
+    end: 63
+  - start: 63
+    end: 65
+  - start: 65
+    end: 66
+  - start: 66
+    end: 67
+  - start: 67
+    end: 68
+  - start: 68
+    end: 76
+  - start: 76
+    end: 79
+  - start: 79
+    end: 80
+  - start: 80
+    end: 82
+  - start: 82
+    end: 83
+  - start: 83
+    end: 84
+  - start: 84
+    end: 85
+  - start: 85
+    end: 93
+  - start: 93
+    end: 96
+  - start: 96
+    end: 97
+  - start: 97
+    end: 100
+  - start: 100
+    end: 101
+  - start: 101
+    end: 109
+  - start: 109
+    end: 112
+  - start: 112
+    end: 113
+  - start: 113
+    end: 116
+  - start: 116
+    end: 117
+  - start: 117
+    end: 125
+  - start: 125
+    end: 127
+  - start: 127
+    end: 128
+  - start: 128
+    end: 129
+  - start: 129
+    end: 130
+  - start: 130
+    end: 138
+  - start: 138
+    end: 140
+  - start: 140
+    end: 141
+  - start: 141
+    end: 142
+  - start: 142
+    end: 143
+  - start: 143
+    end: 151
+  - start: 151
+    end: 153
+  - start: 153
+    end: 154
+  - start: 154
+    end: 156
+  - start: 156
+    end: 157
+  - start: 157
+    end: 158
+  - start: 158
+    end: 159
+  - start: 159
+    end: 167
+  - start: 167
+    end: 169
+  - start: 169
+    end: 170
+  - start: 170
+    end: 172
+  - start: 172
+    end: 173
+  - start: 173
+    end: 174
+  - start: 174
+    end: 175
+  - start: 175
+    end: 183
+  - start: 183
+    end: 186
+  - start: 186
+    end: 187
+  - start: 187
+    end: 189
+  - start: 189
+    end: 190
+  - start: 190
+    end: 198
+  - start: 198
+    end: 199
+  - start: 199
+    end: 200
+  - start: 200
+    end: 202
+  - start: 202
+    end: 203
+  - start: 203
+    end: 211
+  - start: 211
+    end: 212
+  - start: 212
+    end: 213
+  - start: 213
+    end: 215
+  - start: 215
+    end: 216
+  - start: 216
+    end: 224
+  - start: 224
+    end: 225
+  - start: 225
+    end: 226
+  - start: 226
+    end: 228
+  - start: 228
+    end: 229
+  - start: 229
+    end: 237
+  - start: 237
+    end: 238
+  - start: 238
+    end: 239
+  - start: 239
+    end: 241
+  - start: 241
+    end: 242
+  - start: 242
+    end: 250
+  - start: 250
+    end: 251
+  - start: 251
+    end: 252
+  - start: 252
+    end: 254
+  - start: 254
+    end: 255
+  - start: 255
+    end: 263
+  - start: 263
+    end: 264
+  - start: 264
+    end: 265
+  - start: 265
+    end: 267
+  - start: 267
+    end: 268
+  - start: 268
+    end: 276
+  - start: 276
+    end: 278
+  - start: 278
+    end: 279
+  - start: 279
+    end: 282
+  - start: 282
+    end: 283
+  - start: 283
+    end: 291
+  - start: 291
+    end: 293
+  - start: 293
+    end: 294
+  - start: 294
+    end: 297
+  - start: 297
+    end: 298
+  - start: 298
+    end: 306
+  - start: 306
+    end: 307
+  - start: 307
+    end: 308
+  - start: 308
+    end: 310
+  - start: 310
+    end: 311
+  - start: 311
+    end: 319
+  - start: 319
+    end: 320
+  - start: 320
+    end: 321
+  - start: 321
+    end: 323
+  - start: 323
+    end: 324
+  - start: 324
+    end: 328
+  - start: 328
+    end: 329

@@ -1,5 +1,13 @@
 use super::*;
 
+/*
+{
+    <declaration>/<statement>
+    <declaration>/<statement>
+    ....
+    <declaration>/<statement>
+}
+*/
 pub fn block(p: &mut Parser) {
     p.inc_rcurly();
 
@@ -7,7 +15,7 @@ pub fn block(p: &mut Parser) {
         p.advance_with_error("Miss {");
     } else {
         let m = p.open();
-        p.eat(LCurly);
+        p.expect(LCurly);
         let stmt_marker = p.open();
         while !p.at(RCurly) && !p.eof() {
             let kind = p.current();
