@@ -50,6 +50,10 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     result
 }
 
+/*
+var_init does not include `var` keyword
+eg: tmp = 10;
+*/
 pub(crate) fn var_init(p: &mut Parser) {
     // name of variable
     p.expect(Identifier);
