@@ -1,8 +1,14 @@
+use parser::grammar::entry::Scope;
 use parser::input::Input;
 use parser::output::{Child, Output};
 use parser::parser::Parser;
 use parser::token_kind::TokenKind;
 use rowan::{GreenNode, GreenNodeBuilder};
+
+pub use rowan::{
+    api::Preorder, Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
+    TokenAtOffset, WalkEvent
+};
 
 use crate::syntax_node::SyntaxNode;
 
@@ -62,6 +68,47 @@ impl<'a> SyntaxTreeBuilder<'a> {
         builder.build(output);
         let green = builder.finish();
         SyntaxNode::new_root(green)
+    }
+}
+
+
+#[macro_export]
+macro_rules! format_to {
+    ($buf:expr) => ();
+    ($buf:expr, $lit:literal $($arg:tt)*) => {
+        { use ::std::fmt::Write as _; let _ = ::std::write!($buf, $lit $($arg)*); }
+    };
+}
+
+
+impl  {
+    pub fn print(&self, buf: &mut String, level: usize) {
+        let indent = "  ".repeat(level);
+        format_to!(buf, "{indent}{:?}\n", self.kind);
+        for child in &self.children {
+            match child {
+                Child::Token(token) => {
+                    if token.kind.is_travial() {
+                        match token.kind {
+                            TokenKind::WhiteSpace => {
+                                format_to!(
+                                    buf,
+                                    "{indent} WhileSpace'{}'\n",
+                                    token.text.replace("\n", "\\n"),
+                                )
+                            }
+                            _ => {
+                                unreachable!()
+                            }
+                        }
+                    } else {
+                        format_to!(buf, "{indent}  '{}'@{:?}\n", token.text, token.range)
+                    }
+                }
+                Child::Tree(tree) => tree.print(buf, level + 1),
+            }
+        }
+        // assert!(buf.ends_with('\n'));
     }
 }
 
