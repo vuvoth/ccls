@@ -31,9 +31,9 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     let result = match p.current() {
         InputKw => Some(true),
         OutputKw => Some(false),
-        _ => None
+        _ => None,
     };
-    
+
     if result.is_some() {
         p.advance();
     }
