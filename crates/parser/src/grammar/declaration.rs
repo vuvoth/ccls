@@ -28,15 +28,13 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     let m = p.open();
     p.expect(SignalKw);
 
-    let res = if p.at(InputKw) {
-        Some(true)
-    } else if p.at(OutputKw) {
-        Some(false)
-    } else {
-        None
+    let result = match p.current() {
+        InputKw => Some(true),
+        OutputKw => Some(false),
+        _ => None
     };
-
-    if res.is_some() {
+    
+    if result.is_some() {
         p.advance();
     }
 
@@ -49,7 +47,7 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     }
 
     p.close(m, SignalHeader);
-    res
+    result
 }
 
 pub(crate) fn var_init(p: &mut Parser) {
