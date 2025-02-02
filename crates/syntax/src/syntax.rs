@@ -6,7 +6,7 @@ use parser::token_kind::TokenKind;
 use rowan::{GreenNode, GreenNodeBuilder};
 
 pub use rowan::{
-    api::Preorder, Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
+    api::Preorder, Direction, NodeOrToken, SyntaxText, TextRange, TextSize,
     TokenAtOffset, WalkEvent
 };
 
@@ -81,36 +81,6 @@ macro_rules! format_to {
 }
 
 
-impl  {
-    pub fn print(&self, buf: &mut String, level: usize) {
-        let indent = "  ".repeat(level);
-        format_to!(buf, "{indent}{:?}\n", self.kind);
-        for child in &self.children {
-            match child {
-                Child::Token(token) => {
-                    if token.kind.is_travial() {
-                        match token.kind {
-                            TokenKind::WhiteSpace => {
-                                format_to!(
-                                    buf,
-                                    "{indent} WhileSpace'{}'\n",
-                                    token.text.replace("\n", "\\n"),
-                                )
-                            }
-                            _ => {
-                                unreachable!()
-                            }
-                        }
-                    } else {
-                        format_to!(buf, "{indent}  '{}'@{:?}\n", token.text, token.range)
-                    }
-                }
-                Child::Tree(tree) => tree.print(buf, level + 1),
-            }
-        }
-        // assert!(buf.ends_with('\n'));
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -118,7 +88,7 @@ mod tests {
 
     use rowan::ast::AstNode;
 
-    use crate::{abstract_syntax_tree::AstCircomProgram, test_programs};
+    use crate::{abstract_syntax_tree::AstCircomProgram, test_programs, view_syntax::view_ast};
 
     use super::SyntaxTreeBuilder;
 
