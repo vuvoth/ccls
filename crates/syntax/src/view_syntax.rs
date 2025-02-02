@@ -1,7 +1,4 @@
-use crate::{
-    format_to,
-    syntax_node::{SyntaxNode, SyntaxToken},
-};
+use crate::syntax_node::{SyntaxNode, SyntaxToken};
 
 pub use rowan::{
     api::Preorder, Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
