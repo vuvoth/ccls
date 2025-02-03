@@ -6,8 +6,8 @@ use parser::token_kind::TokenKind;
 use rowan::{GreenNode, GreenNodeBuilder};
 
 pub use rowan::{
-    api::Preorder, Direction, NodeOrToken, SyntaxText, TextRange, TextSize,
-    TokenAtOffset, WalkEvent
+    api::Preorder, Direction, NodeOrToken, SyntaxText, TextRange, TextSize, TokenAtOffset,
+    WalkEvent,
 };
 
 use crate::syntax_node::SyntaxNode;
@@ -71,7 +71,6 @@ impl<'a> SyntaxTreeBuilder<'a> {
     }
 }
 
-
 pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     let input = Input::new(&source);
     let output = Parser::parsing_with_scope(&input, scope);
@@ -88,12 +87,10 @@ pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     syntax
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use parser::grammar::entry::Scope;
     use crate::test_syntax;
+    use parser::grammar::entry::Scope;
 
     #[test]
     fn pragma_happy_test() {
@@ -113,12 +110,21 @@ mod tests {
 
     #[test]
     fn comment_happy_test() {
-        test_syntax!("/src/test_files/happy/block_comment.circom", Scope::CircomProgram);
-        test_syntax!("/src/test_files/happy/line_comment.circom", Scope::CircomProgram);
+        test_syntax!(
+            "/src/test_files/happy/block_comment.circom",
+            Scope::CircomProgram
+        );
+        test_syntax!(
+            "/src/test_files/happy/line_comment.circom",
+            Scope::CircomProgram
+        );
     }
 
     #[test]
     fn full_circom_program() {
-        test_syntax!("/src/test_files/happy/full_circom_program.circom", Scope::CircomProgram);
+        test_syntax!(
+            "/src/test_files/happy/full_circom_program.circom",
+            Scope::CircomProgram
+        );
     }
 }

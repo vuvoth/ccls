@@ -22,16 +22,27 @@ pub(crate) fn view_ast(node: &SyntaxNode) -> String {
             WalkEvent::Enter(it) => {
                 match it {
                     NodeOrToken::Node(node) => {
-                        result.push_str(&format!("{} {:?} {:?}",level_str(level), node.kind(), node.text_range()));
-                    },
+                        result.push_str(&format!(
+                            "{} {:?} {:?}",
+                            level_str(level),
+                            node.kind(),
+                            node.text_range()
+                        ));
+                    }
                     NodeOrToken::Token(token) => {
-                        result.push_str(&format!("{} {:?} {:?} {:?}",level_str(level), token.kind(), token.text_range(), token.text()));
+                        result.push_str(&format!(
+                            "{} {:?} {:?} {:?}",
+                            level_str(level),
+                            token.kind(),
+                            token.text_range(),
+                            token.text()
+                        ));
                     }
                 }
                 result.push('\n');
                 level = level + 1;
-            },
-            
+            }
+
             WalkEvent::Leave(_it) => {
                 level = level - 1;
             }

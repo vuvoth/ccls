@@ -14,4 +14,3 @@ pub fn pragma(p: &mut Parser) {
     p.expect(Semicolon);
     p.close(m, Pragma);
 }
-

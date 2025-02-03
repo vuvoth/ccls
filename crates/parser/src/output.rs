@@ -73,5 +73,3 @@ impl From<Vec<Event>> for Output {
         stack.pop().unwrap()
     }
 }
-
-
