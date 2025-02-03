@@ -1,8 +1,14 @@
+use parser::grammar::entry::Scope;
 use parser::input::Input;
 use parser::output::{Child, Output};
 use parser::parser::Parser;
 use parser::token_kind::TokenKind;
 use rowan::{GreenNode, GreenNodeBuilder};
+
+pub use rowan::{
+    api::Preorder, Direction, NodeOrToken, SyntaxText, TextRange, TextSize, TokenAtOffset,
+    WalkEvent,
+};
 
 use crate::syntax_node::SyntaxNode;
 
@@ -65,355 +71,60 @@ impl<'a> SyntaxTreeBuilder<'a> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::hash::{DefaultHasher, Hash, Hasher};
+pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
+    let input = Input::new(&source);
+    let output = Parser::parsing_with_scope(&input, scope);
 
-    use rowan::ast::AstNode;
+    // output is a tree whose node is index of token, no content of token
+    // convert output into green node
+    let mut builder = SyntaxTreeBuilder::new(&input);
+    builder.build(output);
+    let green = builder.finish();
 
-    use crate::{abstract_syntax_tree::AstCircomProgram, test_programs};
+    // then cast green node into syntax node
+    let syntax = SyntaxNode::new_root(green);
 
-    use super::SyntaxTreeBuilder;
-
-    fn ast_from_source(source: &str) -> AstCircomProgram {
-        let syntax = SyntaxTreeBuilder::syntax_tree(source);
-        AstCircomProgram::cast(syntax).unwrap()
-    }
-
-    fn children_from_ast(ast: &AstCircomProgram) -> Vec<String> {
-        let children = ast
-            .syntax()
-            .first_child()
-            .unwrap()
-            .siblings(rowan::Direction::Next)
-            .into_iter()
-            .map(|child| child.text().to_string())
-            .collect();
-
-        children
-    }
-
-    fn pragma_string_from_ast(ast: &AstCircomProgram) -> String {
-        ast.pragma().unwrap().syntax().text().to_string()
-    }
-
-    fn pragma_version_from_ast(ast: &AstCircomProgram) -> String {
-        ast.pragma()
-            .unwrap()
-            .version()
-            .unwrap()
-            .syntax()
-            .text()
-            .to_string()
-    }
-
-    fn template_names_from_ast(ast: &AstCircomProgram) -> Vec<String> {
-        let templates = ast
-            .template_list()
-            .iter()
-            .map(|template| template.name().unwrap().syntax().text().to_string())
-            .collect();
-
-        templates
-    }
-
-    fn function_names_from_ast(ast: &AstCircomProgram) -> Vec<String> {
-        let functions = ast
-            .function_list()
-            .iter()
-            .map(|function| {
-                function
-                    .function_name()
-                    .unwrap()
-                    .syntax()
-                    .text()
-                    .to_string()
-            })
-            .collect();
-
-        functions
-    }
-
-    #[test]
-    fn syntax_test_1() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_1);
-
-        // check_ast_children
-        let children = children_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_1_children", children);
-
-        // check pragma
-        let pragma = pragma_string_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
-
-        // check ast hash
-        let mut hasher = DefaultHasher::default();
-        ast.syntax().hash(&mut hasher);
-        let _ast_hash = hasher.finish();
-
-        // check template hash
-        let mut h1 = DefaultHasher::default();
-        let mut h2 = DefaultHasher::default();
-
-        let template = ast.template_list();
-
-        template[0].syntax().hash(&mut h1);
-        template[1].syntax().hash(&mut h2);
-
-        assert_ne!(
-            h1.finish(),
-            h2.finish(),
-            "Templates with same syntax should have different hashes!"
-        );
-
-        // check template syntax (text & green node)
-        assert_eq!(
-            template[0].syntax().text(),
-            template[1].syntax().text(),
-            "The syntax (as text) of template 1 and 2 must be the same!"
-        );
-        assert_eq!(
-            template[0].syntax().green(),
-            template[1].syntax().green(),
-            "The syntax (as green node) of template 1 and 2 must be the same!!"
-        );
-    }
-
-    #[test]
-    fn syntax_test_2() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_2);
-
-        let pragma = pragma_string_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
-
-        let function_names = function_names_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_2_functions", function_names);
-
-        let template_names = template_names_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_2_templates", template_names);
-    }
-
-    #[test]
-    fn syntax_test_3() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_3);
-        let pragma = pragma_string_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
-
-        let pragma_version = pragma_version_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma_version, @"2.0.0");
-    }
-
-    #[test]
-    fn syntax_test_4() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_4);
-        let pragma = pragma_string_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma, @"pragma circom 2.0.0;");
-
-        let pragma_version = pragma_version_from_ast(&ast);
-        insta::assert_yaml_snapshot!(pragma_version, @"2.0.0");
-    }
-
-    #[test]
-    fn syntax_test_5() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_5);
-        let pragma = ast.pragma().is_none();
-        insta::assert_yaml_snapshot!(pragma, @"true");
-
-        let template_names = template_names_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_5_templates", template_names);
-    }
-
-    #[test]
-    fn syntax_test_6() {
-        let ast = ast_from_source(test_programs::PARSER_TEST_6);
-        let pragma = ast.pragma().is_none();
-        insta::assert_yaml_snapshot!(pragma, @"true");
-
-        let template_names = template_names_from_ast(&ast);
-        insta::assert_yaml_snapshot!("syntax_test_6_templates", template_names);
-    }
+    syntax
 }
 
 #[cfg(test)]
-mod grammar_tests {
-
-    use crate::{
-        abstract_syntax_tree::{AstBlock, AstOutputSignalDecl, AstPragma, AstTemplateDef},
-        syntax::SyntaxTreeBuilder,
-        syntax_node::CircomLanguage,
-    };
-    use parser::{grammar::entry::Scope, input::Input, parser::Parser};
-    use rowan::{ast::AstNode, SyntaxNode};
-
-    fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode<CircomLanguage> {
-        let input = Input::new(&source);
-        let output = Parser::parsing_with_scope(&input, scope);
-
-        // output is a tree whose node is index of token, no content of token
-        // convert output into green node
-        let mut builder = SyntaxTreeBuilder::new(&input);
-        builder.build(output);
-        let green = builder.finish();
-
-        // then cast green node into syntax node
-        let syntax = SyntaxNode::new_root(green);
-
-        syntax
-    }
+mod tests {
+    use crate::test_syntax;
+    use parser::grammar::entry::Scope;
 
     #[test]
     fn pragma_happy_test() {
-        // parse source (string) into output tree
-        let version = r#"2.0.1"#;
-        let source = format!(r#"pragma circom {};"#, version);
-
-        let syntax = syntax_node_from_source(&source, Scope::Pragma);
-
-        // cast syntax node into ast node to retrieve more information
-        let pragma = AstPragma::cast(syntax).expect("Can not cast syntax node into ast pragma");
-
-        // finally, assert with expect value
-        let pragma_versison_kind = pragma.version().unwrap().syntax().kind();
-        insta::assert_yaml_snapshot!(pragma_versison_kind, @"Version");
-
-        let pragma_versison_text = pragma.version().unwrap().syntax().text().to_string();
-        insta::assert_yaml_snapshot!(pragma_versison_text, @"2.0.1");
+        test_syntax!("/src/test_files/happy/pragma.circom", Scope::Pragma);
     }
 
     #[test]
     fn template_happy_test() {
         // SOURCE & EXPECTED RESULT
-        const SOURCE: &str = r#"template MultiplierN (N, P, QQ) {
-            //Declaration of signals and components.
-            signal input in[N];
-            signal output out;
-            component comp[N-1];
-            
-            //Statements.
-            for(var i = 0; i < N-1; i++){
-                comp[i] = Multiplier2();
-                }
-                
-                // ... some more code (see below)
-                
-                }"#;
-
-        let syntax = syntax_node_from_source(&SOURCE, Scope::Template);
-
-        // cast syntax node into ast node to retrieve more information
-        let template =
-            AstTemplateDef::cast(syntax).expect("Can not cast syntax node into ast template");
-
-        // finally, assert with expect value
-
-        // name
-        let name = template
-            .name()
-            .expect("Can not extract template name")
-            .syntax()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(name, @"MultiplierN");
-
-        // parameter list
-        let first_param = template
-            .parameter_list()
-            .expect("Can not detect parameter list")
-            .syntax()
-            .first_child()
-            .unwrap()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(first_param, @"N");
-
-        let last_param = template
-            .parameter_list()
-            .expect("Can not detect parameter list")
-            .syntax()
-            .last_child()
-            .unwrap()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(last_param, @"QQ");
-
-        // statements
-        let statements = template.statements().unwrap();
-        let output_signal = statements.find_children::<AstOutputSignalDecl>();
-        println!("{:?}", output_signal);
-
-        let statements: Vec<String> = statements
-            .statement_list()
-            .into_iter()
-            .map(|statement| statement.syntax().text().to_string())
-            .collect();
-        insta::assert_yaml_snapshot!("template_happy_test_statements", statements);
-
-        // input signal
-        let input_signal = template
-            .find_input_signal("in")
-            .unwrap()
-            .syntax()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(input_signal, @"signal input in[N];");
-
-        // output signal
-        let output_signal = template
-            .find_output_signal("out")
-            .unwrap()
-            .syntax()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(output_signal, @"signal output out;");
-
-        // internal signal
-        let internal_signal = template.find_internal_signal("in").is_none();
-        insta::assert_yaml_snapshot!(internal_signal, @"true");
-
-        // component
-        let component = template
-            .find_component("comp")
-            .unwrap()
-            .syntax()
-            .text()
-            .to_string();
-        insta::assert_yaml_snapshot!(component, @"component comp[N-1];");
+        test_syntax!("/src/test_files/happy/template.circom", Scope::Template);
     }
 
     #[test]
     fn block_happy_test() {
-        // SOURCE & EXPECTED RESULT
-        let source = r#"{
-            //Declaration of signals.
-            signal input in[N];
-            signal output out;
-            component comp[N-1];
+        test_syntax!("/src/test_files/happy/block.circom", Scope::Block);
+    }
 
-            //Statements.
-            for(var i = 0; i < N-1; i++){
-                comp[i] = Multiplier2();
-            }
-            comp[0].in1 <== in[0];
-            comp[0].in2 <== in[1];
-            for(var i = 0; i < N-2; i++){
-                comp[i+1].in1 <== comp[i].out;
-                comp[i+1].in2 <== in[i+2];
+    #[test]
+    fn comment_happy_test() {
+        test_syntax!(
+            "/src/test_files/happy/block_comment.circom",
+            Scope::CircomProgram
+        );
+        test_syntax!(
+            "/src/test_files/happy/line_comment.circom",
+            Scope::CircomProgram
+        );
+    }
 
-            }
-            out <== comp[N-2].out; 
-        }"#;
-
-        let syntax = syntax_node_from_source(&source, Scope::Block);
-
-        // cast syntax node into ast node to retrieve more information
-        let block = AstBlock::cast(syntax).expect("Can not cast syntax node into ast block");
-
-        // finally, assert with expect statements
-        let statements = block.statement_list().unwrap().statement_list();
-        let statements: Vec<String> = statements
-            .into_iter()
-            .map(|statement| statement.syntax().text().to_string())
-            .collect();
-        insta::assert_yaml_snapshot!("block_happy_test_statements", statements);
+    #[test]
+    fn full_circom_program() {
+        test_syntax!(
+            "/src/test_files/happy/full_circom_program.circom",
+            Scope::CircomProgram
+        );
     }
 }
