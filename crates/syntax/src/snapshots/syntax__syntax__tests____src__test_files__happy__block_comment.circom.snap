@@ -1,29 +1,35 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate::view_syntax::view_ast(&syntax)"
+expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
- CircomProgram 0..42
-|      EndLine 0..1
-|     |      EndLine 0..1
-|     |     |      EndLine 0..1 "\n"
-|      BlockComment 1..21
-|     |      BlockComment 1..21
-|     |     |      BlockComment 1..21 "/*\ncomment\nblocks\n*/"
-|      EndLine 21..22
-|     |      EndLine 21..22
-|     |     |      EndLine 21..22 "\n"
-|      Pragma 22..42
-|     |      Pragma 22..28
-|     |     |      Pragma 22..28 "pragma"
-|     |      WhiteSpace 28..29
-|     |     |      WhiteSpace 28..29
-|     |     |     |      WhiteSpace 28..29 " "
-|     |      Circom 29..35
-|     |     |      Circom 29..35 "circom"
-|     |      WhiteSpace 35..36
-|     |     |      WhiteSpace 35..36
-|     |     |     |      WhiteSpace 35..36 " "
-|     |      Version 36..41
-|     |     |      Version 36..41 "2.0.0"
-|     |      Semicolon 41..42
-|     |     |      Semicolon 41..42 ";"
+ CircomProgram 0..47
+|      Error 0..1
+|     |      Error 0..1
+|     |     |      Error 0..1 "\r"
+|      EndLine 1..2
+|     |      EndLine 1..2
+|     |     |      EndLine 1..2 "\n"
+|      BlockComment 2..25
+|     |      BlockComment 2..25
+|     |     |      BlockComment 2..25 "/*\r\ncomment\r\nblocks\r\n*/"
+|      Error 25..26
+|     |      Error 25..26
+|     |     |      Error 25..26 "\r"
+|      EndLine 26..27
+|     |      EndLine 26..27
+|     |     |      EndLine 26..27 "\n"
+|      Pragma 27..47
+|     |      Pragma 27..33
+|     |     |      Pragma 27..33 "pragma"
+|     |      WhiteSpace 33..34
+|     |     |      WhiteSpace 33..34
+|     |     |     |      WhiteSpace 33..34 " "
+|     |      Circom 34..40
+|     |     |      Circom 34..40 "circom"
+|     |      WhiteSpace 40..41
+|     |     |      WhiteSpace 40..41
+|     |     |     |      WhiteSpace 40..41 " "
+|     |      Version 41..46
+|     |     |      Version 41..46 "2.0.0"
+|     |      Semicolon 46..47
+|     |     |      Semicolon 46..47 ";"
