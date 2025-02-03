@@ -1,11 +1,4 @@
-pub const PARSER_TEST_1: &str = r#"pragma circom 2.0.0;
-
-    
-    template Multiplier2 () {}
-    template Multiplier2 () {} 
-    "#;
-
-pub const PARSER_TEST_2: &str = r#"/*
+/*
     Copyright 2018 0KIMS association.
 
     This file is part of circom (Zero Knowledge Circuit Compiler).
@@ -104,31 +97,3 @@ template BinSum(n, ops) {
     
         lin === lout;
     }
-    "#;
-
-pub const PARSER_TEST_3: &str = r#"
-
-// comment :>
-
-    pragma circom 2.0.0;
-
-    "#;
-
-pub const PARSER_TEST_4: &str = r#"
-
-/*
-comment
-blocks
-*/
-pragma circom 2.0.0;
-    "#;
-
-pub const PARSER_TEST_5: &str = r#"
-// no pragma here
-    template Multiplier2 () {} 
-    "#;
-
-pub const PARSER_TEST_6: &str = r#"
-/* T _ T */
-    template Multiplier2 () {} 
-    "#;
