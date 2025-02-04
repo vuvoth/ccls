@@ -51,12 +51,12 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
 
 pub(crate) fn var_init(p: &mut Parser) {
     let var_identifier_open_marker = p.open();
-    
+
     // name of variable
     p.expect(Identifier);
     // eg: [N - 1][M]
     array(p);
-    
+
     p.close(var_identifier_open_marker, VarIdentifier);
 
     // assign for variable
@@ -165,7 +165,7 @@ pub(super) fn component_declaration(p: &mut Parser) {
 
     let m_c = p.open();
     p.expect(Identifier);
-    
+
     // support array component
     // eg: comp[N - 1][10]
     let is_array = array(p);
