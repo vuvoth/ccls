@@ -4,25 +4,20 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
  CircomProgram 0..47
 |      EndLine 0..2
-|     |      EndLine 0..2
-|     |     |      EndLine 0..2 "\r\n"
+|     |      EndLine 0..2 "\r\n"
 |      BlockComment 2..25
-|     |      BlockComment 2..25
-|     |     |      BlockComment 2..25 "/*\r\ncomment\r\nblocks\r\n*/"
+|     |      BlockComment 2..25 "/*\r\ncomment\r\nblocks\r\n*/"
 |      EndLine 25..27
-|     |      EndLine 25..27
-|     |     |      EndLine 25..27 "\r\n"
+|     |      EndLine 25..27 "\r\n"
 |      Pragma 27..47
 |     |      Pragma 27..33
 |     |     |      Pragma 27..33 "pragma"
 |     |      WhiteSpace 33..34
-|     |     |      WhiteSpace 33..34
-|     |     |     |      WhiteSpace 33..34 " "
+|     |     |      WhiteSpace 33..34 " "
 |     |      Circom 34..40
 |     |     |      Circom 34..40 "circom"
 |     |      WhiteSpace 40..41
-|     |     |      WhiteSpace 40..41
-|     |     |     |      WhiteSpace 40..41 " "
+|     |     |      WhiteSpace 40..41 " "
 |     |      Version 41..46
 |     |     |      Version 41..46 "2.0.0"
 |     |      Semicolon 46..47

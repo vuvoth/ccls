@@ -4,35 +4,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
  CircomProgram 0..45
 |      EndLine 0..2
-|     |      EndLine 0..2
-|     |     |      EndLine 0..2 "\r\n"
+|     |      EndLine 0..2 "\r\n"
 |      CommentLine 2..15
-|     |      CommentLine 2..15
-|     |     |      CommentLine 2..15 "// comment :>"
+|     |      CommentLine 2..15 "// comment :>"
 |      EndLine 15..17
-|     |      EndLine 15..17
-|     |     |      EndLine 15..17 "\r\n"
+|     |      EndLine 15..17 "\r\n"
 |      EndLine 17..19
-|     |      EndLine 17..19
-|     |     |      EndLine 17..19 "\r\n"
+|     |      EndLine 17..19 "\r\n"
 |      WhiteSpace 19..23
-|     |      WhiteSpace 19..23
-|     |     |      WhiteSpace 19..23 "    "
+|     |      WhiteSpace 19..23 "    "
 |      Pragma 23..43
 |     |      Pragma 23..29
 |     |     |      Pragma 23..29 "pragma"
 |     |      WhiteSpace 29..30
-|     |     |      WhiteSpace 29..30
-|     |     |     |      WhiteSpace 29..30 " "
+|     |     |      WhiteSpace 29..30 " "
 |     |      Circom 30..36
 |     |     |      Circom 30..36 "circom"
 |     |      WhiteSpace 36..37
-|     |     |      WhiteSpace 36..37
-|     |     |     |      WhiteSpace 36..37 " "
+|     |     |      WhiteSpace 36..37 " "
 |     |      Version 37..42
 |     |     |      Version 37..42 "2.0.0"
 |     |      Semicolon 42..43
 |     |     |      Semicolon 42..43 ";"
 |      EndLine 43..45
-|     |      EndLine 43..45
-|     |     |      EndLine 43..45 "\r\n"
+|     |      EndLine 43..45 "\r\n"

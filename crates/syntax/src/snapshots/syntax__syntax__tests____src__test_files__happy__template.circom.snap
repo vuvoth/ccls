@@ -6,14 +6,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      TemplateKw 0..8
 |     |      TemplateKw 0..8 "template"
 |      WhiteSpace 8..9
-|     |      WhiteSpace 8..9
-|     |     |      WhiteSpace 8..9 " "
+|     |      WhiteSpace 8..9 " "
 |      TemplateName 9..20
 |     |      Identifier 9..20
 |     |     |      Identifier 9..20 "MultiplierN"
 |      WhiteSpace 20..21
-|     |      WhiteSpace 20..21
-|     |     |      WhiteSpace 20..21 " "
+|     |      WhiteSpace 20..21 " "
 |      LParen 21..22
 |     |      LParen 21..22 "("
 |      ParameterList 22..30
@@ -22,59 +20,49 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |      Comma 23..24
 |     |     |      Comma 23..24 ","
 |     |      WhiteSpace 24..25
-|     |     |      WhiteSpace 24..25
-|     |     |     |      WhiteSpace 24..25 " "
+|     |     |      WhiteSpace 24..25 " "
 |     |      Identifier 25..26
 |     |     |      Identifier 25..26 "P"
 |     |      Comma 26..27
 |     |     |      Comma 26..27 ","
 |     |      WhiteSpace 27..28
-|     |     |      WhiteSpace 27..28
-|     |     |     |      WhiteSpace 27..28 " "
+|     |     |      WhiteSpace 27..28 " "
 |     |      Identifier 28..30
 |     |     |      Identifier 28..30 "QQ"
 |      RParen 30..31
 |     |      RParen 30..31 ")"
 |      WhiteSpace 31..32
-|     |      WhiteSpace 31..32
-|     |     |      WhiteSpace 31..32 " "
+|     |      WhiteSpace 31..32 " "
 |      Block 32..349
 |     |      LCurly 32..33
 |     |     |      LCurly 32..33 "{"
 |     |      EndLine 33..35
-|     |     |      EndLine 33..35
-|     |     |     |      EndLine 33..35 "\r\n"
+|     |     |      EndLine 33..35 "\r\n"
 |     |      WhiteSpace 35..47
-|     |     |      WhiteSpace 35..47
-|     |     |     |      WhiteSpace 35..47 "            "
+|     |     |      WhiteSpace 35..47 "            "
 |     |      CommentLine 47..87
-|     |     |      CommentLine 47..87
-|     |     |     |      CommentLine 47..87 "//Declaration of signals and components."
+|     |     |      CommentLine 47..87 "//Declaration of signals and components."
 |     |      EndLine 87..89
-|     |     |      EndLine 87..89
-|     |     |     |      EndLine 87..89 "\r\n"
+|     |     |      EndLine 87..89 "\r\n"
 |     |      WhiteSpace 89..101
-|     |     |      WhiteSpace 89..101
-|     |     |     |      WhiteSpace 89..101 "            "
+|     |     |      WhiteSpace 89..101 "            "
 |     |      StatementList 101..348
 |     |     |      InputSignalDecl 101..119
 |     |     |     |      SignalHeader 101..114
 |     |     |     |     |      SignalKw 101..107
 |     |     |     |     |     |      SignalKw 101..107 "signal"
 |     |     |     |     |      WhiteSpace 107..108
-|     |     |     |     |     |      WhiteSpace 107..108
-|     |     |     |     |     |     |      WhiteSpace 107..108 " "
+|     |     |     |     |     |      WhiteSpace 107..108 " "
 |     |     |     |     |      InputKw 108..113
 |     |     |     |     |     |      InputKw 108..113 "input"
 |     |     |     |     |      WhiteSpace 113..114
-|     |     |     |     |     |      WhiteSpace 113..114
-|     |     |     |     |     |     |      WhiteSpace 113..114 " "
+|     |     |     |     |     |      WhiteSpace 113..114 " "
 |     |     |     |      Identifier 114..116
 |     |     |     |     |      Identifier 114..116 "in"
 |     |     |     |      LBracket 116..117
 |     |     |     |     |      LBracket 116..117 "["
 |     |     |     |      Expression 117..118
-|     |     |     |     |      Identifier 117..118
+|     |     |     |     |      ExpressionAtom 117..118
 |     |     |     |     |     |      Identifier 117..118
 |     |     |     |     |     |     |      Identifier 117..118 "N"
 |     |     |     |      RBracket 118..119
@@ -82,39 +70,32 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      Semicolon 119..120
 |     |     |     |      Semicolon 119..120 ";"
 |     |     |      EndLine 120..122
-|     |     |     |      EndLine 120..122
-|     |     |     |     |      EndLine 120..122 "\r\n"
+|     |     |     |      EndLine 120..122 "\r\n"
 |     |     |      WhiteSpace 122..134
-|     |     |     |      WhiteSpace 122..134
-|     |     |     |     |      WhiteSpace 122..134 "            "
+|     |     |     |      WhiteSpace 122..134 "            "
 |     |     |      OutputSignalDecl 134..151
 |     |     |     |      SignalHeader 134..148
 |     |     |     |     |      SignalKw 134..140
 |     |     |     |     |     |      SignalKw 134..140 "signal"
 |     |     |     |     |      WhiteSpace 140..141
-|     |     |     |     |     |      WhiteSpace 140..141
-|     |     |     |     |     |     |      WhiteSpace 140..141 " "
+|     |     |     |     |     |      WhiteSpace 140..141 " "
 |     |     |     |     |      OutputKw 141..147
 |     |     |     |     |     |      OutputKw 141..147 "output"
 |     |     |     |     |      WhiteSpace 147..148
-|     |     |     |     |     |      WhiteSpace 147..148
-|     |     |     |     |     |     |      WhiteSpace 147..148 " "
+|     |     |     |     |     |      WhiteSpace 147..148 " "
 |     |     |     |      Identifier 148..151
 |     |     |     |     |      Identifier 148..151 "out"
 |     |     |      Semicolon 151..152
 |     |     |     |      Semicolon 151..152 ";"
 |     |     |      EndLine 152..154
-|     |     |     |      EndLine 152..154
-|     |     |     |     |      EndLine 152..154 "\r\n"
+|     |     |     |      EndLine 152..154 "\r\n"
 |     |     |      WhiteSpace 154..166
-|     |     |     |      WhiteSpace 154..166
-|     |     |     |     |      WhiteSpace 154..166 "            "
+|     |     |     |      WhiteSpace 154..166 "            "
 |     |     |      ComponentDecl 166..185
 |     |     |     |      ComponentKw 166..175
 |     |     |     |     |      ComponentKw 166..175 "component"
 |     |     |     |      WhiteSpace 175..176
-|     |     |     |     |      WhiteSpace 175..176
-|     |     |     |     |     |      WhiteSpace 175..176 " "
+|     |     |     |     |      WhiteSpace 175..176 " "
 |     |     |     |      ComponentIdentifier 176..180
 |     |     |     |     |      Identifier 176..180
 |     |     |     |     |     |      Identifier 176..180 "comp"
@@ -122,12 +103,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      LBracket 180..181 "["
 |     |     |     |      Expression 181..184
 |     |     |     |     |      Sub 181..184
-|     |     |     |     |     |      Identifier 181..182
+|     |     |     |     |     |      ExpressionAtom 181..182
 |     |     |     |     |     |     |      Identifier 181..182
 |     |     |     |     |     |     |     |      Identifier 181..182 "N"
 |     |     |     |     |     |      Sub 182..183
 |     |     |     |     |     |     |      Sub 182..183 "-"
-|     |     |     |     |     |      Number 183..184
+|     |     |     |     |     |      ExpressionAtom 183..184
 |     |     |     |     |     |     |      Number 183..184
 |     |     |     |     |     |     |     |      Number 183..184 "1"
 |     |     |     |      RBracket 184..185
@@ -135,26 +116,19 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      Semicolon 185..186
 |     |     |     |      Semicolon 185..186 ";"
 |     |     |      EndLine 186..188
-|     |     |     |      EndLine 186..188
-|     |     |     |     |      EndLine 186..188 "\r\n"
+|     |     |     |      EndLine 186..188 "\r\n"
 |     |     |      WhiteSpace 188..201
-|     |     |     |      WhiteSpace 188..201
-|     |     |     |     |      WhiteSpace 188..201 "             "
+|     |     |     |      WhiteSpace 188..201 "             "
 |     |     |      EndLine 201..203
-|     |     |     |      EndLine 201..203
-|     |     |     |     |      EndLine 201..203 "\r\n"
+|     |     |     |      EndLine 201..203 "\r\n"
 |     |     |      WhiteSpace 203..215
-|     |     |     |      WhiteSpace 203..215
-|     |     |     |     |      WhiteSpace 203..215 "            "
+|     |     |     |      WhiteSpace 203..215 "            "
 |     |     |      CommentLine 215..228
-|     |     |     |      CommentLine 215..228
-|     |     |     |     |      CommentLine 215..228 "//Statements."
+|     |     |     |      CommentLine 215..228 "//Statements."
 |     |     |      EndLine 228..230
-|     |     |     |      EndLine 228..230
-|     |     |     |     |      EndLine 228..230 "\r\n"
+|     |     |     |      EndLine 228..230 "\r\n"
 |     |     |      WhiteSpace 230..242
-|     |     |     |      WhiteSpace 230..242
-|     |     |     |     |      WhiteSpace 230..242 "            "
+|     |     |     |      WhiteSpace 230..242 "            "
 |     |     |      Statement 242..328
 |     |     |     |      ForLoop 242..328
 |     |     |     |     |      ForKw 242..245
@@ -165,54 +139,47 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 246..249
 |     |     |     |     |     |     |      VarKw 246..249 "var"
 |     |     |     |     |     |      WhiteSpace 249..250
-|     |     |     |     |     |     |      WhiteSpace 249..250
-|     |     |     |     |     |     |     |      WhiteSpace 249..250 " "
+|     |     |     |     |     |     |      WhiteSpace 249..250 " "
 |     |     |     |     |     |      Identifier 250..251
 |     |     |     |     |     |     |      Identifier 250..251 "i"
 |     |     |     |     |     |      WhiteSpace 251..252
-|     |     |     |     |     |     |      WhiteSpace 251..252
-|     |     |     |     |     |     |     |      WhiteSpace 251..252 " "
+|     |     |     |     |     |     |      WhiteSpace 251..252 " "
 |     |     |     |     |     |      Assign 252..253
 |     |     |     |     |     |     |      Assign 252..253 "="
 |     |     |     |     |     |      WhiteSpace 253..254
-|     |     |     |     |     |     |      WhiteSpace 253..254
-|     |     |     |     |     |     |     |      WhiteSpace 253..254 " "
+|     |     |     |     |     |     |      WhiteSpace 253..254 " "
 |     |     |     |     |     |      Expression 254..255
-|     |     |     |     |     |     |      Number 254..255
+|     |     |     |     |     |     |      ExpressionAtom 254..255
 |     |     |     |     |     |     |     |      Number 254..255
 |     |     |     |     |     |     |     |     |      Number 254..255 "0"
 |     |     |     |     |      Semicolon 255..256
 |     |     |     |     |     |      Semicolon 255..256 ";"
 |     |     |     |     |      WhiteSpace 256..257
-|     |     |     |     |     |      WhiteSpace 256..257
-|     |     |     |     |     |     |      WhiteSpace 256..257 " "
+|     |     |     |     |     |      WhiteSpace 256..257 " "
 |     |     |     |     |      Expression 257..264
 |     |     |     |     |     |      LessThan 257..264
-|     |     |     |     |     |     |      Identifier 257..258
+|     |     |     |     |     |     |      ExpressionAtom 257..258
 |     |     |     |     |     |     |     |      Identifier 257..258
 |     |     |     |     |     |     |     |     |      Identifier 257..258 "i"
 |     |     |     |     |     |     |      WhiteSpace 258..259
-|     |     |     |     |     |     |     |      WhiteSpace 258..259
-|     |     |     |     |     |     |     |     |      WhiteSpace 258..259 " "
+|     |     |     |     |     |     |     |      WhiteSpace 258..259 " "
 |     |     |     |     |     |     |      LessThan 259..260
 |     |     |     |     |     |     |     |      LessThan 259..260 "<"
 |     |     |     |     |     |     |      WhiteSpace 260..261
-|     |     |     |     |     |     |     |      WhiteSpace 260..261
-|     |     |     |     |     |     |     |     |      WhiteSpace 260..261 " "
+|     |     |     |     |     |     |     |      WhiteSpace 260..261 " "
 |     |     |     |     |     |     |      Sub 261..264
-|     |     |     |     |     |     |     |      Identifier 261..262
+|     |     |     |     |     |     |     |      ExpressionAtom 261..262
 |     |     |     |     |     |     |     |     |      Identifier 261..262
 |     |     |     |     |     |     |     |     |     |      Identifier 261..262 "N"
 |     |     |     |     |     |     |     |      Sub 262..263
 |     |     |     |     |     |     |     |     |      Sub 262..263 "-"
-|     |     |     |     |     |     |     |      Number 263..264
+|     |     |     |     |     |     |     |      ExpressionAtom 263..264
 |     |     |     |     |     |     |     |     |      Number 263..264
 |     |     |     |     |     |     |     |     |     |      Number 263..264 "1"
 |     |     |     |     |      Semicolon 264..265
 |     |     |     |     |     |      Semicolon 264..265 ";"
 |     |     |     |     |      WhiteSpace 265..266
-|     |     |     |     |     |      WhiteSpace 265..266
-|     |     |     |     |     |     |      WhiteSpace 265..266 " "
+|     |     |     |     |     |      WhiteSpace 265..266 " "
 |     |     |     |     |      AssignStatement 266..269
 |     |     |     |     |     |      Expression 266..267
 |     |     |     |     |     |     |      ComponentIdentifier 266..267
@@ -227,11 +194,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      LCurly 270..271
 |     |     |     |     |     |     |     |      LCurly 270..271 "{"
 |     |     |     |     |     |     |      EndLine 271..273
-|     |     |     |     |     |     |     |      EndLine 271..273
-|     |     |     |     |     |     |     |     |      EndLine 271..273 "\r\n"
+|     |     |     |     |     |     |     |      EndLine 271..273 "\r\n"
 |     |     |     |     |     |     |      WhiteSpace 273..289
-|     |     |     |     |     |     |     |      WhiteSpace 273..289
-|     |     |     |     |     |     |     |     |      WhiteSpace 273..289 "                "
+|     |     |     |     |     |     |     |      WhiteSpace 273..289 "                "
 |     |     |     |     |     |     |      StatementList 289..327
 |     |     |     |     |     |     |     |      Statement 289..313
 |     |     |     |     |     |     |     |     |      AssignStatement 289..312
@@ -242,22 +207,20 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |      LBracket 293..294
 |     |     |     |     |     |     |     |     |     |     |     |      LBracket 293..294 "["
 |     |     |     |     |     |     |     |     |     |     |      Expression 294..295
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 294..295
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 294..295
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 294..295
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 294..295 "i"
 |     |     |     |     |     |     |     |     |     |     |      RBracket 295..296
 |     |     |     |     |     |     |     |     |     |     |     |      RBracket 295..296 "]"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 296..297
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 296..297
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 296..297 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 296..297 " "
 |     |     |     |     |     |     |     |     |     |      Assign 297..298
 |     |     |     |     |     |     |     |     |     |     |      Assign 297..298 "="
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 298..299
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 298..299
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 298..299 " "
+|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 298..299 " "
 |     |     |     |     |     |     |     |     |     |      Expression 299..312
 |     |     |     |     |     |     |     |     |     |     |      Call 299..312
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 299..310
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 299..310
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 299..310
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 299..310 "Multiplier2"
 |     |     |     |     |     |     |     |     |     |     |     |      Tuple 310..312
@@ -268,21 +231,16 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      Semicolon 312..313
 |     |     |     |     |     |     |     |     |     |      Semicolon 312..313 ";"
 |     |     |     |     |     |     |     |      EndLine 313..315
-|     |     |     |     |     |     |     |     |      EndLine 313..315
-|     |     |     |     |     |     |     |     |     |      EndLine 313..315 "\r\n"
+|     |     |     |     |     |     |     |     |      EndLine 313..315 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 315..327
-|     |     |     |     |     |     |     |     |      WhiteSpace 315..327
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 315..327 "            "
+|     |     |     |     |     |     |     |     |      WhiteSpace 315..327 "            "
 |     |     |     |     |     |     |      RCurly 327..328
 |     |     |     |     |     |     |     |      RCurly 327..328 "}"
 |     |     |      EndLine 328..330
-|     |     |     |      EndLine 328..330
-|     |     |     |     |      EndLine 328..330 "\r\n"
+|     |     |     |      EndLine 328..330 "\r\n"
 |     |     |      WhiteSpace 330..346
-|     |     |     |      WhiteSpace 330..346
-|     |     |     |     |      WhiteSpace 330..346 "                "
+|     |     |     |      WhiteSpace 330..346 "                "
 |     |     |      EndLine 346..348
-|     |     |     |      EndLine 346..348
-|     |     |     |     |      EndLine 346..348 "\r\n"
+|     |     |     |      EndLine 346..348 "\r\n"
 |     |      RCurly 348..349
 |     |     |      RCurly 348..349 "}"

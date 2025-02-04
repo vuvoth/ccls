@@ -122,7 +122,6 @@ pub enum TokenKind {
     #[token("<<")]
     ShiftL,
     // Combined bitwise assignments
-    // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
     #[token("|=")]
@@ -201,6 +200,7 @@ pub enum TokenKind {
     Call,
     TenaryConditional,
     Condition,
+    ExpressionAtom,
     Expression,
     FunctionDef,
     Statement,

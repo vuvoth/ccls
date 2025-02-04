@@ -4,59 +4,45 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
  CircomProgram 0..2508
 |      BlockComment 0..764
-|     |      BlockComment 0..764
-|     |     |      BlockComment 0..764 "/*\r\n    Copyright 2018 0KIMS association.\r\n\r\n    This file is part of circom (Zero Knowledge Circuit Compiler).\r\n\r\n    circom is a free software: you can redistribute it and/or modify it\r\n    under the terms of the GNU General Public License as published by\r\n    the Free Software Foundation, either version 3 of the License, or\r\n    (at your option) any later version.\r\n\r\n    circom is distributed in the hope that it will be useful, but WITHOUT\r\n    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\r\n    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public\r\n    License for more details.\r\n\r\n    You should have received a copy of the GNU General Public License\r\n    along with circom. If not, see <https://www.gnu.org/licenses/>.\r\n*/"
+|     |      BlockComment 0..764 "/*\r\n    Copyright 2018 0KIMS association.\r\n\r\n    This file is part of circom (Zero Knowledge Circuit Compiler).\r\n\r\n    circom is a free software: you can redistribute it and/or modify it\r\n    under the terms of the GNU General Public License as published by\r\n    the Free Software Foundation, either version 3 of the License, or\r\n    (at your option) any later version.\r\n\r\n    circom is distributed in the hope that it will be useful, but WITHOUT\r\n    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\r\n    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public\r\n    License for more details.\r\n\r\n    You should have received a copy of the GNU General Public License\r\n    along with circom. If not, see <https://www.gnu.org/licenses/>.\r\n*/"
 |      EndLine 764..766
-|     |      EndLine 764..766
-|     |     |      EndLine 764..766 "\r\n"
+|     |      EndLine 764..766 "\r\n"
 |      BlockComment 766..1478
-|     |      BlockComment 766..1478
-|     |     |      BlockComment 766..1478 "/*\r\n\r\nBinary Sum\r\n==========\r\n\r\nThis component creates a binary sum componet of ops operands and n bits each operand.\r\n\r\ne is Number of carries: Depends on the number of operands in the input.\r\n\r\nMain Constraint:\r\n   in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +\r\n + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +\r\n + ..\r\n + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +\r\n ===\r\n   out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)\r\n\r\nTo waranty binary outputs:\r\n\r\n    out[0]     * (out[0] - 1) === 0\r\n    out[1]     * (out[0] - 1) === 0\r\n    .\r\n    .\r\n    .\r\n    out[n+e-1] * (out[n+e-1] - 1) == 0\r\n\r\n */"
+|     |      BlockComment 766..1478 "/*\r\n\r\nBinary Sum\r\n==========\r\n\r\nThis component creates a binary sum componet of ops operands and n bits each operand.\r\n\r\ne is Number of carries: Depends on the number of operands in the input.\r\n\r\nMain Constraint:\r\n   in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +\r\n + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +\r\n + ..\r\n + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +\r\n ===\r\n   out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)\r\n\r\nTo waranty binary outputs:\r\n\r\n    out[0]     * (out[0] - 1) === 0\r\n    out[1]     * (out[0] - 1) === 0\r\n    .\r\n    .\r\n    .\r\n    out[n+e-1] * (out[n+e-1] - 1) == 0\r\n\r\n */"
 |      EndLine 1478..1480
-|     |      EndLine 1478..1480
-|     |     |      EndLine 1478..1480 "\r\n"
+|     |      EndLine 1478..1480 "\r\n"
 |      EndLine 1480..1482
-|     |      EndLine 1480..1482
-|     |     |      EndLine 1480..1482 "\r\n"
+|     |      EndLine 1480..1482 "\r\n"
 |      EndLine 1482..1484
-|     |      EndLine 1482..1484
-|     |     |      EndLine 1482..1484 "\r\n"
+|     |      EndLine 1482..1484 "\r\n"
 |      BlockComment 1484..1580
-|     |      BlockComment 1484..1580
-|     |     |      BlockComment 1484..1580 "/*\r\n    This function calculates the number of extra bits in the output to do the full sum.\r\n */"
+|     |      BlockComment 1484..1580 "/*\r\n    This function calculates the number of extra bits in the output to do the full sum.\r\n */"
 |      EndLine 1580..1582
-|     |      EndLine 1580..1582
-|     |     |      EndLine 1580..1582 "\r\n"
+|     |      EndLine 1580..1582 "\r\n"
 |      WhiteSpace 1582..1583
-|     |      WhiteSpace 1582..1583
-|     |     |      WhiteSpace 1582..1583 " "
+|     |      WhiteSpace 1582..1583 " "
 |      Pragma 1583..1603
 |     |      Pragma 1583..1589
 |     |     |      Pragma 1583..1589 "pragma"
 |     |      WhiteSpace 1589..1590
-|     |     |      WhiteSpace 1589..1590
-|     |     |     |      WhiteSpace 1589..1590 " "
+|     |     |      WhiteSpace 1589..1590 " "
 |     |      Circom 1590..1596
 |     |     |      Circom 1590..1596 "circom"
 |     |      WhiteSpace 1596..1597
-|     |     |      WhiteSpace 1596..1597
-|     |     |     |      WhiteSpace 1596..1597 " "
+|     |     |      WhiteSpace 1596..1597 " "
 |     |      Version 1597..1602
 |     |     |      Version 1597..1602 "2.0.0"
 |     |      Semicolon 1602..1603
 |     |     |      Semicolon 1602..1603 ";"
 |      EndLine 1603..1605
-|     |      EndLine 1603..1605
-|     |     |      EndLine 1603..1605 "\r\n"
+|     |      EndLine 1603..1605 "\r\n"
 |      EndLine 1605..1607
-|     |      EndLine 1605..1607
-|     |     |      EndLine 1605..1607 "\r\n"
+|     |      EndLine 1605..1607 "\r\n"
 |      FunctionDef 1607..1735
 |     |      FunctionKw 1607..1615
 |     |     |      FunctionKw 1607..1615 "function"
 |     |      WhiteSpace 1615..1616
-|     |     |      WhiteSpace 1615..1616
-|     |     |     |      WhiteSpace 1615..1616 " "
+|     |     |      WhiteSpace 1615..1616 " "
 |     |      FunctionName 1616..1621
 |     |     |      Identifier 1616..1621
 |     |     |     |      Identifier 1616..1621 "nbits"
@@ -68,113 +54,96 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |      RParen 1623..1624
 |     |     |      RParen 1623..1624 ")"
 |     |      WhiteSpace 1624..1625
-|     |     |      WhiteSpace 1624..1625
-|     |     |     |      WhiteSpace 1624..1625 " "
+|     |     |      WhiteSpace 1624..1625 " "
 |     |      Block 1625..1735
 |     |     |      LCurly 1625..1626
 |     |     |     |      LCurly 1625..1626 "{"
 |     |     |      EndLine 1626..1628
-|     |     |     |      EndLine 1626..1628
-|     |     |     |     |      EndLine 1626..1628 "\r\n"
+|     |     |     |      EndLine 1626..1628 "\r\n"
 |     |     |      WhiteSpace 1628..1632
-|     |     |     |      WhiteSpace 1628..1632
-|     |     |     |     |      WhiteSpace 1628..1632 "    "
+|     |     |     |      WhiteSpace 1628..1632 "    "
 |     |     |      StatementList 1632..1734
 |     |     |     |      VarDecl 1632..1641
 |     |     |     |     |      VarKw 1632..1635
 |     |     |     |     |     |      VarKw 1632..1635 "var"
 |     |     |     |     |      WhiteSpace 1635..1636
-|     |     |     |     |     |      WhiteSpace 1635..1636
-|     |     |     |     |     |     |      WhiteSpace 1635..1636 " "
+|     |     |     |     |     |      WhiteSpace 1635..1636 " "
 |     |     |     |     |      Identifier 1636..1637
 |     |     |     |     |     |      Identifier 1636..1637 "n"
 |     |     |     |     |      WhiteSpace 1637..1638
-|     |     |     |     |     |      WhiteSpace 1637..1638
-|     |     |     |     |     |     |      WhiteSpace 1637..1638 " "
+|     |     |     |     |     |      WhiteSpace 1637..1638 " "
 |     |     |     |     |      Assign 1638..1639
 |     |     |     |     |     |      Assign 1638..1639 "="
 |     |     |     |     |      WhiteSpace 1639..1640
-|     |     |     |     |     |      WhiteSpace 1639..1640
-|     |     |     |     |     |     |      WhiteSpace 1639..1640 " "
+|     |     |     |     |     |      WhiteSpace 1639..1640 " "
 |     |     |     |     |      Expression 1640..1641
-|     |     |     |     |     |      Number 1640..1641
+|     |     |     |     |     |      ExpressionAtom 1640..1641
 |     |     |     |     |     |     |      Number 1640..1641
 |     |     |     |     |     |     |     |      Number 1640..1641 "1"
 |     |     |     |      Semicolon 1641..1642
 |     |     |     |     |      Semicolon 1641..1642 ";"
 |     |     |     |      EndLine 1642..1644
-|     |     |     |     |      EndLine 1642..1644
-|     |     |     |     |     |      EndLine 1642..1644 "\r\n"
+|     |     |     |     |      EndLine 1642..1644 "\r\n"
 |     |     |     |      WhiteSpace 1644..1648
-|     |     |     |     |      WhiteSpace 1644..1648
-|     |     |     |     |     |      WhiteSpace 1644..1648 "    "
+|     |     |     |     |      WhiteSpace 1644..1648 "    "
 |     |     |     |      VarDecl 1648..1657
 |     |     |     |     |      VarKw 1648..1651
 |     |     |     |     |     |      VarKw 1648..1651 "var"
 |     |     |     |     |      WhiteSpace 1651..1652
-|     |     |     |     |     |      WhiteSpace 1651..1652
-|     |     |     |     |     |     |      WhiteSpace 1651..1652 " "
+|     |     |     |     |     |      WhiteSpace 1651..1652 " "
 |     |     |     |     |      Identifier 1652..1653
 |     |     |     |     |     |      Identifier 1652..1653 "r"
 |     |     |     |     |      WhiteSpace 1653..1654
-|     |     |     |     |     |      WhiteSpace 1653..1654
-|     |     |     |     |     |     |      WhiteSpace 1653..1654 " "
+|     |     |     |     |     |      WhiteSpace 1653..1654 " "
 |     |     |     |     |      Assign 1654..1655
 |     |     |     |     |     |      Assign 1654..1655 "="
 |     |     |     |     |      WhiteSpace 1655..1656
-|     |     |     |     |     |      WhiteSpace 1655..1656
-|     |     |     |     |     |     |      WhiteSpace 1655..1656 " "
+|     |     |     |     |     |      WhiteSpace 1655..1656 " "
 |     |     |     |     |      Expression 1656..1657
-|     |     |     |     |     |      Number 1656..1657
+|     |     |     |     |     |      ExpressionAtom 1656..1657
 |     |     |     |     |     |     |      Number 1656..1657
 |     |     |     |     |     |     |     |      Number 1656..1657 "0"
 |     |     |     |      Semicolon 1657..1658
 |     |     |     |     |      Semicolon 1657..1658 ";"
 |     |     |     |      EndLine 1658..1660
-|     |     |     |     |      EndLine 1658..1660
-|     |     |     |     |     |      EndLine 1658..1660 "\r\n"
+|     |     |     |     |      EndLine 1658..1660 "\r\n"
 |     |     |     |      WhiteSpace 1660..1664
-|     |     |     |     |      WhiteSpace 1660..1664
-|     |     |     |     |     |      WhiteSpace 1660..1664 "    "
+|     |     |     |     |      WhiteSpace 1660..1664 "    "
 |     |     |     |      Statement 1664..1717
 |     |     |     |     |      WhileKw 1664..1669
 |     |     |     |     |     |      WhileKw 1664..1669 "while"
 |     |     |     |     |      WhiteSpace 1669..1670
-|     |     |     |     |     |      WhiteSpace 1669..1670
-|     |     |     |     |     |     |      WhiteSpace 1669..1670 " "
+|     |     |     |     |     |      WhiteSpace 1669..1670 " "
 |     |     |     |     |      LParen 1670..1671
 |     |     |     |     |     |      LParen 1670..1671 "("
 |     |     |     |     |      Expression 1671..1676
 |     |     |     |     |     |      LessThan 1671..1676
 |     |     |     |     |     |     |      Sub 1671..1674
-|     |     |     |     |     |     |     |      Identifier 1671..1672
+|     |     |     |     |     |     |     |      ExpressionAtom 1671..1672
 |     |     |     |     |     |     |     |     |      Identifier 1671..1672
 |     |     |     |     |     |     |     |     |     |      Identifier 1671..1672 "n"
 |     |     |     |     |     |     |     |      Sub 1672..1673
 |     |     |     |     |     |     |     |     |      Sub 1672..1673 "-"
-|     |     |     |     |     |     |     |      Number 1673..1674
+|     |     |     |     |     |     |     |      ExpressionAtom 1673..1674
 |     |     |     |     |     |     |     |     |      Number 1673..1674
 |     |     |     |     |     |     |     |     |     |      Number 1673..1674 "1"
 |     |     |     |     |     |     |      LessThan 1674..1675
 |     |     |     |     |     |     |     |      LessThan 1674..1675 "<"
-|     |     |     |     |     |     |      Identifier 1675..1676
+|     |     |     |     |     |     |      ExpressionAtom 1675..1676
 |     |     |     |     |     |     |     |      Identifier 1675..1676
 |     |     |     |     |     |     |     |     |      Identifier 1675..1676 "a"
 |     |     |     |     |      RParen 1676..1677
 |     |     |     |     |     |      RParen 1676..1677 ")"
 |     |     |     |     |      WhiteSpace 1677..1678
-|     |     |     |     |     |      WhiteSpace 1677..1678
-|     |     |     |     |     |     |      WhiteSpace 1677..1678 " "
+|     |     |     |     |     |      WhiteSpace 1677..1678 " "
 |     |     |     |     |      Statement 1678..1717
 |     |     |     |     |     |      Block 1678..1717
 |     |     |     |     |     |     |      LCurly 1678..1679
 |     |     |     |     |     |     |     |      LCurly 1678..1679 "{"
 |     |     |     |     |     |     |      EndLine 1679..1681
-|     |     |     |     |     |     |     |      EndLine 1679..1681
-|     |     |     |     |     |     |     |     |      EndLine 1679..1681 "\r\n"
+|     |     |     |     |     |     |     |      EndLine 1679..1681 "\r\n"
 |     |     |     |     |     |     |      WhiteSpace 1681..1689
-|     |     |     |     |     |     |     |      WhiteSpace 1681..1689
-|     |     |     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
+|     |     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
 |     |     |     |     |     |     |      StatementList 1689..1716
 |     |     |     |     |     |     |     |      Statement 1689..1693
 |     |     |     |     |     |     |     |     |      AssignStatement 1689..1692
@@ -187,11 +156,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      Semicolon 1692..1693
 |     |     |     |     |     |     |     |     |     |      Semicolon 1692..1693 ";"
 |     |     |     |     |     |     |     |      EndLine 1693..1695
-|     |     |     |     |     |     |     |     |      EndLine 1693..1695
-|     |     |     |     |     |     |     |     |     |      EndLine 1693..1695 "\r\n"
+|     |     |     |     |     |     |     |     |      EndLine 1693..1695 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1695..1703
-|     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703 "        "
+|     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703 "        "
 |     |     |     |     |     |     |     |      Statement 1703..1710
 |     |     |     |     |     |     |     |     |      AssignStatement 1703..1709
 |     |     |     |     |     |     |     |     |     |      Expression 1703..1705
@@ -199,66 +166,54 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1703..1704
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1703..1704 "n"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705 " "
 |     |     |     |     |     |     |     |     |     |      MulAssign 1705..1707
 |     |     |     |     |     |     |     |     |     |     |      MulAssign 1705..1707 "*="
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708 " "
+|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708 " "
 |     |     |     |     |     |     |     |     |     |      Expression 1708..1709
-|     |     |     |     |     |     |     |     |     |     |      Number 1708..1709
+|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 1708..1709
 |     |     |     |     |     |     |     |     |     |     |     |      Number 1708..1709
 |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1708..1709 "2"
 |     |     |     |     |     |     |     |     |      Semicolon 1709..1710
 |     |     |     |     |     |     |     |     |     |      Semicolon 1709..1710 ";"
 |     |     |     |     |     |     |     |      EndLine 1710..1712
-|     |     |     |     |     |     |     |     |      EndLine 1710..1712
-|     |     |     |     |     |     |     |     |     |      EndLine 1710..1712 "\r\n"
+|     |     |     |     |     |     |     |     |      EndLine 1710..1712 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1712..1716
-|     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716 "    "
+|     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716 "    "
 |     |     |     |     |     |     |      RCurly 1716..1717
 |     |     |     |     |     |     |     |      RCurly 1716..1717 "}"
 |     |     |     |      EndLine 1717..1719
-|     |     |     |     |      EndLine 1717..1719
-|     |     |     |     |     |      EndLine 1717..1719 "\r\n"
+|     |     |     |     |      EndLine 1717..1719 "\r\n"
 |     |     |     |      WhiteSpace 1719..1723
-|     |     |     |     |      WhiteSpace 1719..1723
-|     |     |     |     |     |      WhiteSpace 1719..1723 "    "
+|     |     |     |     |      WhiteSpace 1719..1723 "    "
 |     |     |     |      Statement 1723..1732
 |     |     |     |     |      ReturnKw 1723..1731
 |     |     |     |     |     |      ReturnKw 1723..1729
 |     |     |     |     |     |     |      ReturnKw 1723..1729 "return"
 |     |     |     |     |     |      WhiteSpace 1729..1730
-|     |     |     |     |     |     |      WhiteSpace 1729..1730
-|     |     |     |     |     |     |     |      WhiteSpace 1729..1730 " "
+|     |     |     |     |     |     |      WhiteSpace 1729..1730 " "
 |     |     |     |     |     |      Expression 1730..1731
-|     |     |     |     |     |     |      Identifier 1730..1731
+|     |     |     |     |     |     |      ExpressionAtom 1730..1731
 |     |     |     |     |     |     |     |      Identifier 1730..1731
 |     |     |     |     |     |     |     |     |      Identifier 1730..1731 "r"
 |     |     |     |     |      Semicolon 1731..1732
 |     |     |     |     |     |      Semicolon 1731..1732 ";"
 |     |     |     |      EndLine 1732..1734
-|     |     |     |     |      EndLine 1732..1734
-|     |     |     |     |     |      EndLine 1732..1734 "\r\n"
+|     |     |     |     |      EndLine 1732..1734 "\r\n"
 |     |     |      RCurly 1734..1735
 |     |     |     |      RCurly 1734..1735 "}"
 |      EndLine 1735..1737
-|     |      EndLine 1735..1737
-|     |     |      EndLine 1735..1737 "\r\n"
+|     |      EndLine 1735..1737 "\r\n"
 |      EndLine 1737..1739
-|     |      EndLine 1737..1739
-|     |     |      EndLine 1737..1739 "\r\n"
+|     |      EndLine 1737..1739 "\r\n"
 |      EndLine 1739..1741
-|     |      EndLine 1739..1741
-|     |     |      EndLine 1739..1741 "\r\n"
+|     |      EndLine 1739..1741 "\r\n"
 |      TemplateDef 1741..2508
 |     |      TemplateKw 1741..1749
 |     |     |      TemplateKw 1741..1749 "template"
 |     |      WhiteSpace 1749..1750
-|     |     |      WhiteSpace 1749..1750
-|     |     |     |      WhiteSpace 1749..1750 " "
+|     |     |      WhiteSpace 1749..1750 " "
 |     |      TemplateName 1750..1756
 |     |     |      Identifier 1750..1756
 |     |     |     |      Identifier 1750..1756 "BinSum"
@@ -270,44 +225,37 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      Comma 1758..1759
 |     |     |     |      Comma 1758..1759 ","
 |     |     |      WhiteSpace 1759..1760
-|     |     |     |      WhiteSpace 1759..1760
-|     |     |     |     |      WhiteSpace 1759..1760 " "
+|     |     |     |      WhiteSpace 1759..1760 " "
 |     |     |      Identifier 1760..1763
 |     |     |     |      Identifier 1760..1763 "ops"
 |     |      RParen 1763..1764
 |     |     |      RParen 1763..1764 ")"
 |     |      WhiteSpace 1764..1765
-|     |     |      WhiteSpace 1764..1765
-|     |     |     |      WhiteSpace 1764..1765 " "
+|     |     |      WhiteSpace 1764..1765 " "
 |     |      Block 1765..2508
 |     |     |      LCurly 1765..1766
 |     |     |     |      LCurly 1765..1766 "{"
 |     |     |      EndLine 1766..1768
-|     |     |     |      EndLine 1766..1768
-|     |     |     |     |      EndLine 1766..1768 "\r\n"
+|     |     |     |      EndLine 1766..1768 "\r\n"
 |     |     |      WhiteSpace 1768..1772
-|     |     |     |      WhiteSpace 1768..1772
-|     |     |     |     |      WhiteSpace 1768..1772 "    "
+|     |     |     |      WhiteSpace 1768..1772 "    "
 |     |     |      StatementList 1772..2483
 |     |     |     |      VarDecl 1772..1803
 |     |     |     |     |      VarKw 1772..1775
 |     |     |     |     |     |      VarKw 1772..1775 "var"
 |     |     |     |     |      WhiteSpace 1775..1776
-|     |     |     |     |     |      WhiteSpace 1775..1776
-|     |     |     |     |     |     |      WhiteSpace 1775..1776 " "
+|     |     |     |     |     |      WhiteSpace 1775..1776 " "
 |     |     |     |     |      Identifier 1776..1780
 |     |     |     |     |     |      Identifier 1776..1780 "nout"
 |     |     |     |     |      WhiteSpace 1780..1781
-|     |     |     |     |     |      WhiteSpace 1780..1781
-|     |     |     |     |     |     |      WhiteSpace 1780..1781 " "
+|     |     |     |     |     |      WhiteSpace 1780..1781 " "
 |     |     |     |     |      Assign 1781..1782
 |     |     |     |     |     |      Assign 1781..1782 "="
 |     |     |     |     |      WhiteSpace 1782..1783
-|     |     |     |     |     |      WhiteSpace 1782..1783
-|     |     |     |     |     |     |      WhiteSpace 1782..1783 " "
+|     |     |     |     |     |      WhiteSpace 1782..1783 " "
 |     |     |     |     |      Expression 1783..1803
 |     |     |     |     |     |      Call 1783..1803
-|     |     |     |     |     |     |      Identifier 1783..1788
+|     |     |     |     |     |     |      ExpressionAtom 1783..1788
 |     |     |     |     |     |     |     |      Identifier 1783..1788
 |     |     |     |     |     |     |     |     |      Identifier 1783..1788 "nbits"
 |     |     |     |     |     |     |      Tuple 1788..1803
@@ -320,27 +268,26 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      LParen 1789..1790 "("
 |     |     |     |     |     |     |     |     |     |     |      Sub 1790..1797
 |     |     |     |     |     |     |     |     |     |     |     |      Power 1790..1795
-|     |     |     |     |     |     |     |     |     |     |     |     |      Number 1790..1791
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 1790..1791
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1790..1791
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1790..1791 "2"
 |     |     |     |     |     |     |     |     |     |     |     |     |      Power 1791..1793
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Power 1791..1793 "**"
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1793..1794
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 1793..1794
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1793..1794
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1793..1794 "n"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1794..1795
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1794..1795
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1794..1795 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1794..1795 " "
 |     |     |     |     |     |     |     |     |     |     |     |      Sub 1795..1796
 |     |     |     |     |     |     |     |     |     |     |     |     |      Sub 1795..1796 "-"
-|     |     |     |     |     |     |     |     |     |     |     |      Number 1796..1797
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 1796..1797
 |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1796..1797
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1796..1797 "1"
 |     |     |     |     |     |     |     |     |     |     |      RParen 1797..1798
 |     |     |     |     |     |     |     |     |     |     |     |      RParen 1797..1798 ")"
 |     |     |     |     |     |     |     |     |     |      Mul 1798..1799
 |     |     |     |     |     |     |     |     |     |     |      Mul 1798..1799 "*"
-|     |     |     |     |     |     |     |     |     |      Identifier 1799..1802
+|     |     |     |     |     |     |     |     |     |      ExpressionAtom 1799..1802
 |     |     |     |     |     |     |     |     |     |     |      Identifier 1799..1802
 |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1799..1802 "ops"
 |     |     |     |     |     |     |     |      RParen 1802..1803
@@ -348,29 +295,25 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      Semicolon 1803..1804
 |     |     |     |     |      Semicolon 1803..1804 ";"
 |     |     |     |      EndLine 1804..1806
-|     |     |     |     |      EndLine 1804..1806
-|     |     |     |     |     |      EndLine 1804..1806 "\r\n"
+|     |     |     |     |      EndLine 1804..1806 "\r\n"
 |     |     |     |      WhiteSpace 1806..1810
-|     |     |     |     |      WhiteSpace 1806..1810
-|     |     |     |     |     |      WhiteSpace 1806..1810 "    "
+|     |     |     |     |      WhiteSpace 1806..1810 "    "
 |     |     |     |      InputSignalDecl 1810..1833
 |     |     |     |     |      SignalHeader 1810..1823
 |     |     |     |     |     |      SignalKw 1810..1816
 |     |     |     |     |     |     |      SignalKw 1810..1816 "signal"
 |     |     |     |     |     |      WhiteSpace 1816..1817
-|     |     |     |     |     |     |      WhiteSpace 1816..1817
-|     |     |     |     |     |     |     |      WhiteSpace 1816..1817 " "
+|     |     |     |     |     |     |      WhiteSpace 1816..1817 " "
 |     |     |     |     |     |      InputKw 1817..1822
 |     |     |     |     |     |     |      InputKw 1817..1822 "input"
 |     |     |     |     |     |      WhiteSpace 1822..1823
-|     |     |     |     |     |     |      WhiteSpace 1822..1823
-|     |     |     |     |     |     |     |      WhiteSpace 1822..1823 " "
+|     |     |     |     |     |     |      WhiteSpace 1822..1823 " "
 |     |     |     |     |      Identifier 1823..1825
 |     |     |     |     |     |      Identifier 1823..1825 "in"
 |     |     |     |     |      LBracket 1825..1826
 |     |     |     |     |     |      LBracket 1825..1826 "["
 |     |     |     |     |      Expression 1826..1829
-|     |     |     |     |     |      Identifier 1826..1829
+|     |     |     |     |     |      ExpressionAtom 1826..1829
 |     |     |     |     |     |     |      Identifier 1826..1829
 |     |     |     |     |     |     |     |      Identifier 1826..1829 "ops"
 |     |     |     |     |      RBracket 1829..1830
@@ -378,7 +321,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      LBracket 1830..1831
 |     |     |     |     |     |      LBracket 1830..1831 "["
 |     |     |     |     |      Expression 1831..1832
-|     |     |     |     |     |      Identifier 1831..1832
+|     |     |     |     |     |      ExpressionAtom 1831..1832
 |     |     |     |     |     |     |      Identifier 1831..1832
 |     |     |     |     |     |     |     |      Identifier 1831..1832 "n"
 |     |     |     |     |      RBracket 1832..1833
@@ -386,29 +329,25 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      Semicolon 1833..1834
 |     |     |     |     |      Semicolon 1833..1834 ";"
 |     |     |     |      EndLine 1834..1836
-|     |     |     |     |      EndLine 1834..1836
-|     |     |     |     |     |      EndLine 1834..1836 "\r\n"
+|     |     |     |     |      EndLine 1834..1836 "\r\n"
 |     |     |     |      WhiteSpace 1836..1840
-|     |     |     |     |      WhiteSpace 1836..1840
-|     |     |     |     |     |      WhiteSpace 1836..1840 "    "
+|     |     |     |     |      WhiteSpace 1836..1840 "    "
 |     |     |     |      OutputSignalDecl 1840..1863
 |     |     |     |     |      SignalHeader 1840..1854
 |     |     |     |     |     |      SignalKw 1840..1846
 |     |     |     |     |     |     |      SignalKw 1840..1846 "signal"
 |     |     |     |     |     |      WhiteSpace 1846..1847
-|     |     |     |     |     |     |      WhiteSpace 1846..1847
-|     |     |     |     |     |     |     |      WhiteSpace 1846..1847 " "
+|     |     |     |     |     |     |      WhiteSpace 1846..1847 " "
 |     |     |     |     |     |      OutputKw 1847..1853
 |     |     |     |     |     |     |      OutputKw 1847..1853 "output"
 |     |     |     |     |     |      WhiteSpace 1853..1854
-|     |     |     |     |     |     |      WhiteSpace 1853..1854
-|     |     |     |     |     |     |     |      WhiteSpace 1853..1854 " "
+|     |     |     |     |     |     |      WhiteSpace 1853..1854 " "
 |     |     |     |     |      Identifier 1854..1857
 |     |     |     |     |     |      Identifier 1854..1857 "out"
 |     |     |     |     |      LBracket 1857..1858
 |     |     |     |     |     |      LBracket 1857..1858 "["
 |     |     |     |     |      Expression 1858..1862
-|     |     |     |     |     |      Identifier 1858..1862
+|     |     |     |     |     |      ExpressionAtom 1858..1862
 |     |     |     |     |     |     |      Identifier 1858..1862
 |     |     |     |     |     |     |     |      Identifier 1858..1862 "nout"
 |     |     |     |     |      RBracket 1862..1863
@@ -416,127 +355,102 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      Semicolon 1863..1864
 |     |     |     |     |      Semicolon 1863..1864 ";"
 |     |     |     |      EndLine 1864..1866
-|     |     |     |     |      EndLine 1864..1866
-|     |     |     |     |     |      EndLine 1864..1866 "\r\n"
+|     |     |     |     |      EndLine 1864..1866 "\r\n"
 |     |     |     |      EndLine 1866..1868
-|     |     |     |     |      EndLine 1866..1868
-|     |     |     |     |     |      EndLine 1866..1868 "\r\n"
+|     |     |     |     |      EndLine 1866..1868 "\r\n"
 |     |     |     |      WhiteSpace 1868..1872
-|     |     |     |     |      WhiteSpace 1868..1872
-|     |     |     |     |     |      WhiteSpace 1868..1872 "    "
+|     |     |     |     |      WhiteSpace 1868..1872 "    "
 |     |     |     |      VarDecl 1872..1883
 |     |     |     |     |      VarKw 1872..1875
 |     |     |     |     |     |      VarKw 1872..1875 "var"
 |     |     |     |     |      WhiteSpace 1875..1876
-|     |     |     |     |     |      WhiteSpace 1875..1876
-|     |     |     |     |     |     |      WhiteSpace 1875..1876 " "
+|     |     |     |     |     |      WhiteSpace 1875..1876 " "
 |     |     |     |     |      Identifier 1876..1879
 |     |     |     |     |     |      Identifier 1876..1879 "lin"
 |     |     |     |     |      WhiteSpace 1879..1880
-|     |     |     |     |     |      WhiteSpace 1879..1880
-|     |     |     |     |     |     |      WhiteSpace 1879..1880 " "
+|     |     |     |     |     |      WhiteSpace 1879..1880 " "
 |     |     |     |     |      Assign 1880..1881
 |     |     |     |     |     |      Assign 1880..1881 "="
 |     |     |     |     |      WhiteSpace 1881..1882
-|     |     |     |     |     |      WhiteSpace 1881..1882
-|     |     |     |     |     |     |      WhiteSpace 1881..1882 " "
+|     |     |     |     |     |      WhiteSpace 1881..1882 " "
 |     |     |     |     |      Expression 1882..1883
-|     |     |     |     |     |      Number 1882..1883
+|     |     |     |     |     |      ExpressionAtom 1882..1883
 |     |     |     |     |     |     |      Number 1882..1883
 |     |     |     |     |     |     |     |      Number 1882..1883 "0"
 |     |     |     |      Semicolon 1883..1884
 |     |     |     |     |      Semicolon 1883..1884 ";"
 |     |     |     |      EndLine 1884..1886
-|     |     |     |     |      EndLine 1884..1886
-|     |     |     |     |     |      EndLine 1884..1886 "\r\n"
+|     |     |     |     |      EndLine 1884..1886 "\r\n"
 |     |     |     |      WhiteSpace 1886..1890
-|     |     |     |     |      WhiteSpace 1886..1890
-|     |     |     |     |     |      WhiteSpace 1886..1890 "    "
+|     |     |     |     |      WhiteSpace 1886..1890 "    "
 |     |     |     |      VarDecl 1890..1902
 |     |     |     |     |      VarKw 1890..1893
 |     |     |     |     |     |      VarKw 1890..1893 "var"
 |     |     |     |     |      WhiteSpace 1893..1894
-|     |     |     |     |     |      WhiteSpace 1893..1894
-|     |     |     |     |     |     |      WhiteSpace 1893..1894 " "
+|     |     |     |     |     |      WhiteSpace 1893..1894 " "
 |     |     |     |     |      Identifier 1894..1898
 |     |     |     |     |     |      Identifier 1894..1898 "lout"
 |     |     |     |     |      WhiteSpace 1898..1899
-|     |     |     |     |     |      WhiteSpace 1898..1899
-|     |     |     |     |     |     |      WhiteSpace 1898..1899 " "
+|     |     |     |     |     |      WhiteSpace 1898..1899 " "
 |     |     |     |     |      Assign 1899..1900
 |     |     |     |     |     |      Assign 1899..1900 "="
 |     |     |     |     |      WhiteSpace 1900..1901
-|     |     |     |     |     |      WhiteSpace 1900..1901
-|     |     |     |     |     |     |      WhiteSpace 1900..1901 " "
+|     |     |     |     |     |      WhiteSpace 1900..1901 " "
 |     |     |     |     |      Expression 1901..1902
-|     |     |     |     |     |      Number 1901..1902
+|     |     |     |     |     |      ExpressionAtom 1901..1902
 |     |     |     |     |     |     |      Number 1901..1902
 |     |     |     |     |     |     |     |      Number 1901..1902 "0"
 |     |     |     |      Semicolon 1902..1903
 |     |     |     |     |      Semicolon 1902..1903 ";"
 |     |     |     |      EndLine 1903..1905
-|     |     |     |     |      EndLine 1903..1905
-|     |     |     |     |     |      EndLine 1903..1905 "\r\n"
+|     |     |     |     |      EndLine 1903..1905 "\r\n"
 |     |     |     |      EndLine 1905..1907
-|     |     |     |     |      EndLine 1905..1907
-|     |     |     |     |     |      EndLine 1905..1907 "\r\n"
+|     |     |     |     |      EndLine 1905..1907 "\r\n"
 |     |     |     |      WhiteSpace 1907..1911
-|     |     |     |     |      WhiteSpace 1907..1911
-|     |     |     |     |     |      WhiteSpace 1907..1911 "    "
+|     |     |     |     |      WhiteSpace 1907..1911 "    "
 |     |     |     |      VarDecl 1911..1916
 |     |     |     |     |      VarKw 1911..1914
 |     |     |     |     |     |      VarKw 1911..1914 "var"
 |     |     |     |     |      WhiteSpace 1914..1915
-|     |     |     |     |     |      WhiteSpace 1914..1915
-|     |     |     |     |     |     |      WhiteSpace 1914..1915 " "
+|     |     |     |     |     |      WhiteSpace 1914..1915 " "
 |     |     |     |     |      Identifier 1915..1916
 |     |     |     |     |     |      Identifier 1915..1916 "k"
 |     |     |     |      Semicolon 1916..1917
 |     |     |     |     |      Semicolon 1916..1917 ";"
 |     |     |     |      EndLine 1917..1919
-|     |     |     |     |      EndLine 1917..1919
-|     |     |     |     |     |      EndLine 1917..1919 "\r\n"
+|     |     |     |     |      EndLine 1917..1919 "\r\n"
 |     |     |     |      WhiteSpace 1919..1923
-|     |     |     |     |      WhiteSpace 1919..1923
-|     |     |     |     |     |      WhiteSpace 1919..1923 "    "
+|     |     |     |     |      WhiteSpace 1919..1923 "    "
 |     |     |     |      VarDecl 1923..1928
 |     |     |     |     |      VarKw 1923..1926
 |     |     |     |     |     |      VarKw 1923..1926 "var"
 |     |     |     |     |      WhiteSpace 1926..1927
-|     |     |     |     |     |      WhiteSpace 1926..1927
-|     |     |     |     |     |     |      WhiteSpace 1926..1927 " "
+|     |     |     |     |     |      WhiteSpace 1926..1927 " "
 |     |     |     |     |      Identifier 1927..1928
 |     |     |     |     |     |      Identifier 1927..1928 "j"
 |     |     |     |      Semicolon 1928..1929
 |     |     |     |     |      Semicolon 1928..1929 ";"
 |     |     |     |      EndLine 1929..1931
-|     |     |     |     |      EndLine 1929..1931
-|     |     |     |     |     |      EndLine 1929..1931 "\r\n"
+|     |     |     |     |      EndLine 1929..1931 "\r\n"
 |     |     |     |      EndLine 1931..1933
-|     |     |     |     |      EndLine 1931..1933
-|     |     |     |     |     |      EndLine 1931..1933 "\r\n"
+|     |     |     |     |      EndLine 1931..1933 "\r\n"
 |     |     |     |      WhiteSpace 1933..1937
-|     |     |     |     |      WhiteSpace 1933..1937
-|     |     |     |     |     |      WhiteSpace 1933..1937 "    "
+|     |     |     |     |      WhiteSpace 1933..1937 "    "
 |     |     |     |      VarDecl 1937..1943
 |     |     |     |     |      VarKw 1937..1940
 |     |     |     |     |     |      VarKw 1937..1940 "var"
 |     |     |     |     |      WhiteSpace 1940..1941
-|     |     |     |     |     |      WhiteSpace 1940..1941
-|     |     |     |     |     |     |      WhiteSpace 1940..1941 " "
+|     |     |     |     |     |      WhiteSpace 1940..1941 " "
 |     |     |     |     |      Identifier 1941..1943
 |     |     |     |     |     |      Identifier 1941..1943 "e2"
 |     |     |     |      Semicolon 1943..1944
 |     |     |     |     |      Semicolon 1943..1944 ";"
 |     |     |     |      EndLine 1944..1946
-|     |     |     |     |      EndLine 1944..1946
-|     |     |     |     |     |      EndLine 1944..1946 "\r\n"
+|     |     |     |     |      EndLine 1944..1946 "\r\n"
 |     |     |     |      EndLine 1946..1948
-|     |     |     |     |      EndLine 1946..1948
-|     |     |     |     |     |      EndLine 1946..1948 "\r\n"
+|     |     |     |     |      EndLine 1946..1948 "\r\n"
 |     |     |     |      WhiteSpace 1948..1952
-|     |     |     |     |      WhiteSpace 1948..1952
-|     |     |     |     |     |      WhiteSpace 1948..1952 "    "
+|     |     |     |     |      WhiteSpace 1948..1952 "    "
 |     |     |     |      Statement 1952..1959
 |     |     |     |     |      AssignStatement 1952..1958
 |     |     |     |     |     |      Expression 1952..1955
@@ -544,32 +458,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      Identifier 1952..1954
 |     |     |     |     |     |     |     |     |      Identifier 1952..1954 "e2"
 |     |     |     |     |     |     |      WhiteSpace 1954..1955
-|     |     |     |     |     |     |     |      WhiteSpace 1954..1955
-|     |     |     |     |     |     |     |     |      WhiteSpace 1954..1955 " "
+|     |     |     |     |     |     |     |      WhiteSpace 1954..1955 " "
 |     |     |     |     |     |      Assign 1955..1956
 |     |     |     |     |     |     |      Assign 1955..1956 "="
 |     |     |     |     |     |      WhiteSpace 1956..1957
-|     |     |     |     |     |     |      WhiteSpace 1956..1957
-|     |     |     |     |     |     |     |      WhiteSpace 1956..1957 " "
+|     |     |     |     |     |     |      WhiteSpace 1956..1957 " "
 |     |     |     |     |     |      Expression 1957..1958
-|     |     |     |     |     |     |      Number 1957..1958
+|     |     |     |     |     |     |      ExpressionAtom 1957..1958
 |     |     |     |     |     |     |     |      Number 1957..1958
 |     |     |     |     |     |     |     |     |      Number 1957..1958 "1"
 |     |     |     |     |      Semicolon 1958..1959
 |     |     |     |     |     |      Semicolon 1958..1959 ";"
 |     |     |     |      EndLine 1959..1961
-|     |     |     |     |      EndLine 1959..1961
-|     |     |     |     |     |      EndLine 1959..1961 "\r\n"
+|     |     |     |     |      EndLine 1959..1961 "\r\n"
 |     |     |     |      WhiteSpace 1961..1965
-|     |     |     |     |      WhiteSpace 1961..1965
-|     |     |     |     |     |      WhiteSpace 1961..1965 "    "
+|     |     |     |     |      WhiteSpace 1961..1965 "    "
 |     |     |     |      Statement 1965..2481
 |     |     |     |     |      ForLoop 1965..2481
 |     |     |     |     |     |      ForKw 1965..1968
 |     |     |     |     |     |     |      ForKw 1965..1968 "for"
 |     |     |     |     |     |      WhiteSpace 1968..1969
-|     |     |     |     |     |     |      WhiteSpace 1968..1969
-|     |     |     |     |     |     |     |      WhiteSpace 1968..1969 " "
+|     |     |     |     |     |     |      WhiteSpace 1968..1969 " "
 |     |     |     |     |     |      LParen 1969..1970
 |     |     |     |     |     |     |      LParen 1969..1970 "("
 |     |     |     |     |     |      AssignStatement 1970..1973
@@ -580,29 +489,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      Assign 1971..1972
 |     |     |     |     |     |     |     |      Assign 1971..1972 "="
 |     |     |     |     |     |     |      Expression 1972..1973
-|     |     |     |     |     |     |     |      Number 1972..1973
+|     |     |     |     |     |     |     |      ExpressionAtom 1972..1973
 |     |     |     |     |     |     |     |     |      Number 1972..1973
 |     |     |     |     |     |     |     |     |     |      Number 1972..1973 "0"
 |     |     |     |     |     |      Semicolon 1973..1974
 |     |     |     |     |     |     |      Semicolon 1973..1974 ";"
 |     |     |     |     |     |      WhiteSpace 1974..1975
-|     |     |     |     |     |     |      WhiteSpace 1974..1975
-|     |     |     |     |     |     |     |      WhiteSpace 1974..1975 " "
+|     |     |     |     |     |     |      WhiteSpace 1974..1975 " "
 |     |     |     |     |     |      Expression 1975..1978
 |     |     |     |     |     |     |      LessThan 1975..1978
-|     |     |     |     |     |     |     |      Identifier 1975..1976
+|     |     |     |     |     |     |     |      ExpressionAtom 1975..1976
 |     |     |     |     |     |     |     |     |      Identifier 1975..1976
 |     |     |     |     |     |     |     |     |     |      Identifier 1975..1976 "k"
 |     |     |     |     |     |     |     |      LessThan 1976..1977
 |     |     |     |     |     |     |     |     |      LessThan 1976..1977 "<"
-|     |     |     |     |     |     |     |      Identifier 1977..1978
+|     |     |     |     |     |     |     |      ExpressionAtom 1977..1978
 |     |     |     |     |     |     |     |     |      Identifier 1977..1978
 |     |     |     |     |     |     |     |     |     |      Identifier 1977..1978 "n"
 |     |     |     |     |     |      Semicolon 1978..1979
 |     |     |     |     |     |     |      Semicolon 1978..1979 ";"
 |     |     |     |     |     |      WhiteSpace 1979..1980
-|     |     |     |     |     |     |      WhiteSpace 1979..1980
-|     |     |     |     |     |     |     |      WhiteSpace 1979..1980 " "
+|     |     |     |     |     |     |      WhiteSpace 1979..1980 " "
 |     |     |     |     |     |      AssignStatement 1980..1983
 |     |     |     |     |     |     |      Expression 1980..1981
 |     |     |     |     |     |     |     |      ComponentIdentifier 1980..1981
@@ -613,26 +520,22 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      RParen 1983..1984
 |     |     |     |     |     |     |      RParen 1983..1984 ")"
 |     |     |     |     |     |      WhiteSpace 1984..1985
-|     |     |     |     |     |     |      WhiteSpace 1984..1985
-|     |     |     |     |     |     |     |      WhiteSpace 1984..1985 " "
+|     |     |     |     |     |     |      WhiteSpace 1984..1985 " "
 |     |     |     |     |     |      Statement 1985..2481
 |     |     |     |     |     |     |      Block 1985..2481
 |     |     |     |     |     |     |     |      LCurly 1985..1986
 |     |     |     |     |     |     |     |     |      LCurly 1985..1986 "{"
 |     |     |     |     |     |     |     |      EndLine 1986..1988
-|     |     |     |     |     |     |     |     |      EndLine 1986..1988
-|     |     |     |     |     |     |     |     |     |      EndLine 1986..1988 "\r\n"
+|     |     |     |     |     |     |     |     |      EndLine 1986..1988 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1988..1996
-|     |     |     |     |     |     |     |     |      WhiteSpace 1988..1996
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 1988..1996 "        "
+|     |     |     |     |     |     |     |     |      WhiteSpace 1988..1996 "        "
 |     |     |     |     |     |     |     |      StatementList 1996..2480
 |     |     |     |     |     |     |     |     |      Statement 1996..2065
 |     |     |     |     |     |     |     |     |     |      ForLoop 1996..2065
 |     |     |     |     |     |     |     |     |     |     |      ForKw 1996..1999
 |     |     |     |     |     |     |     |     |     |     |     |      ForKw 1996..1999 "for"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1999..2000
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1999..2000
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1999..2000 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1999..2000 " "
 |     |     |     |     |     |     |     |     |     |     |      LParen 2000..2001
 |     |     |     |     |     |     |     |     |     |     |     |      LParen 2000..2001 "("
 |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2001..2004
@@ -643,29 +546,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      Assign 2002..2003
 |     |     |     |     |     |     |     |     |     |     |     |     |      Assign 2002..2003 "="
 |     |     |     |     |     |     |     |     |     |     |     |      Expression 2003..2004
-|     |     |     |     |     |     |     |     |     |     |     |     |      Number 2003..2004
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2003..2004
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2003..2004
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2003..2004 "0"
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2004..2005
 |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2004..2005 ";"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2005..2006
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2005..2006
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2005..2006 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2005..2006 " "
 |     |     |     |     |     |     |     |     |     |     |      Expression 2006..2011
 |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2006..2011
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2006..2007
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2006..2007
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2006..2007
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2006..2007 "j"
 |     |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2007..2008
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2007..2008 "<"
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2008..2011
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2008..2011
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2008..2011
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2008..2011 "ops"
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2011..2012
 |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2011..2012 ";"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2012..2013
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2012..2013
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2012..2013 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2012..2013 " "
 |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2013..2016
 |     |     |     |     |     |     |     |     |     |     |     |      Expression 2013..2014
 |     |     |     |     |     |     |     |     |     |     |     |     |      ComponentIdentifier 2013..2014
@@ -676,18 +577,15 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |      RParen 2016..2017
 |     |     |     |     |     |     |     |     |     |     |     |      RParen 2016..2017 ")"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2017..2018
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2017..2018
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2017..2018 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2017..2018 " "
 |     |     |     |     |     |     |     |     |     |     |      Statement 2018..2065
 |     |     |     |     |     |     |     |     |     |     |     |      Block 2018..2065
 |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2018..2019
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2018..2019 "{"
 |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |      StatementList 2033..2064
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Statement 2033..2054
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2033..2053
@@ -696,61 +594,53 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2033..2036
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2033..2036 "lin"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2036..2037
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2036..2037
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2036..2037 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2036..2037 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AddAssign 2037..2039
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AddAssign 2037..2039 "+="
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2039..2040
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2039..2040
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2039..2040 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2039..2040 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2040..2053
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2040..2053
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ArrayQuery 2040..2048
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ArrayQuery 2040..2045
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2040..2042
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2040..2042
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2040..2042
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2040..2042 "in"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2042..2043
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2042..2043 "["
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2043..2044
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2043..2044
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2043..2044
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2043..2044 "j"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2044..2045
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2044..2045 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2045..2046
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2045..2046 "["
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2046..2047
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2046..2047
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2046..2047
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2046..2047 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2047..2048
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2047..2048 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2048..2049
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2048..2049
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2048..2049 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2048..2049 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2049..2050
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2049..2050 "*"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2050..2051
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2050..2051
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2050..2051 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2051..2053
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2050..2051 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2051..2053
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2051..2053
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2051..2053 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2053..2054
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2053..2054 ";"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064 "        "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064 "        "
 |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2064..2065
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2064..2065 "}"
 |     |     |     |     |     |     |     |     |      EndLine 2065..2067
-|     |     |     |     |     |     |     |     |     |      EndLine 2065..2067
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2065..2067 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2065..2067 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075 "        "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075 "        "
 |     |     |     |     |     |     |     |     |      Statement 2075..2088
 |     |     |     |     |     |     |     |     |     |      AssignStatement 2075..2087
 |     |     |     |     |     |     |     |     |     |     |      Expression 2075..2078
@@ -758,43 +648,35 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2075..2077
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2075..2077 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2077..2078
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2077..2078
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2077..2078 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2077..2078 " "
 |     |     |     |     |     |     |     |     |     |     |      Assign 2078..2079
 |     |     |     |     |     |     |     |     |     |     |     |      Assign 2078..2079 "="
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2079..2080
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2079..2080
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2079..2080 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2079..2080 " "
 |     |     |     |     |     |     |     |     |     |     |      Expression 2080..2087
 |     |     |     |     |     |     |     |     |     |     |     |      Add 2080..2087
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2080..2082
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2080..2082
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2080..2082
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2080..2082 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2082..2083
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2082..2083
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2082..2083 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2082..2083 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |      Add 2083..2084
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Add 2083..2084 "+"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2084..2085
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2084..2085
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2084..2085 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2085..2087
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2084..2085 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2085..2087
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2085..2087
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2085..2087 "e2"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2087..2088
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2087..2088 ";"
 |     |     |     |     |     |     |     |     |      EndLine 2088..2090
-|     |     |     |     |     |     |     |     |     |      EndLine 2088..2090
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2088..2090 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2088..2090 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094 "    "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094 "    "
 |     |     |     |     |     |     |     |     |      EndLine 2094..2096
-|     |     |     |     |     |     |     |     |     |      EndLine 2094..2096
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2094..2096 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2094..2096 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104 "        "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104 "        "
 |     |     |     |     |     |     |     |     |      Statement 2104..2111
 |     |     |     |     |     |     |     |     |     |      AssignStatement 2104..2110
 |     |     |     |     |     |     |     |     |     |     |      Expression 2104..2107
@@ -802,32 +684,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2104..2106
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2104..2106 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2106..2107
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2106..2107
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2106..2107 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2106..2107 " "
 |     |     |     |     |     |     |     |     |     |     |      Assign 2107..2108
 |     |     |     |     |     |     |     |     |     |     |     |      Assign 2107..2108 "="
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2108..2109
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2108..2109
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2108..2109 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2108..2109 " "
 |     |     |     |     |     |     |     |     |     |     |      Expression 2109..2110
-|     |     |     |     |     |     |     |     |     |     |     |      Number 2109..2110
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2109..2110
 |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2109..2110
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2109..2110 "1"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2110..2111
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2110..2111 ";"
 |     |     |     |     |     |     |     |     |      EndLine 2111..2113
-|     |     |     |     |     |     |     |     |     |      EndLine 2111..2113
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2111..2113 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2111..2113 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121 "        "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121 "        "
 |     |     |     |     |     |     |     |     |      Statement 2121..2411
 |     |     |     |     |     |     |     |     |     |      ForLoop 2121..2411
 |     |     |     |     |     |     |     |     |     |     |      ForKw 2121..2124
 |     |     |     |     |     |     |     |     |     |     |     |      ForKw 2121..2124 "for"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2124..2125
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2124..2125
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2124..2125 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2124..2125 " "
 |     |     |     |     |     |     |     |     |     |     |      LParen 2125..2126
 |     |     |     |     |     |     |     |     |     |     |     |      LParen 2125..2126 "("
 |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2126..2129
@@ -838,29 +715,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      Assign 2127..2128
 |     |     |     |     |     |     |     |     |     |     |     |     |      Assign 2127..2128 "="
 |     |     |     |     |     |     |     |     |     |     |     |      Expression 2128..2129
-|     |     |     |     |     |     |     |     |     |     |     |     |      Number 2128..2129
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2128..2129
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2128..2129
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2128..2129 "0"
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2129..2130
 |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2129..2130 ";"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2130..2131
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2130..2131
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2130..2131 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2130..2131 " "
 |     |     |     |     |     |     |     |     |     |     |      Expression 2131..2137
 |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2131..2137
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2131..2132
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2131..2132
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2131..2132
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2131..2132 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2132..2133
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LessThan 2132..2133 "<"
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2133..2137
+|     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2133..2137
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2133..2137
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2133..2137 "nout"
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2137..2138
 |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2137..2138 ";"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2138..2139
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2138..2139
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2138..2139 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2138..2139 " "
 |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2139..2142
 |     |     |     |     |     |     |     |     |     |     |     |      Expression 2139..2140
 |     |     |     |     |     |     |     |     |     |     |     |     |      ComponentIdentifier 2139..2140
@@ -871,18 +746,15 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |      RParen 2142..2143
 |     |     |     |     |     |     |     |     |     |     |     |      RParen 2142..2143 ")"
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2143..2144
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2143..2144
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2143..2144 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2143..2144 " "
 |     |     |     |     |     |     |     |     |     |     |      Statement 2144..2411
 |     |     |     |     |     |     |     |     |     |     |     |      Block 2144..2411
 |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2144..2145
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2144..2145 "{"
 |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |      StatementList 2159..2410
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Statement 2159..2185
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2159..2184
@@ -893,75 +765,62 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2162..2163
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2162..2163 "["
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2163..2164
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2163..2164
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2163..2164
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2163..2164
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2163..2164 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2164..2165
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2164..2165 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2165..2166
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2165..2166
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2165..2166 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2165..2166 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RAssignSignal 2166..2169
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RAssignSignal 2166..2169 "<--"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2169..2170
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2169..2170
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2169..2170 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2169..2170 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2170..2184
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      BitAnd 2170..2184
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Tuple 2170..2180
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LParen 2170..2171
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LParen 2170..2171 "("
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ShiftR 2171..2179
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2171..2174
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2171..2174
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2171..2174
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2171..2174 "lin"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2174..2175
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2174..2175
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2174..2175 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2174..2175 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ShiftR 2175..2177
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ShiftR 2175..2177 ">>"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2177..2178
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2177..2178
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2177..2178 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2178..2179
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2177..2178 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2178..2179
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2178..2179
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2178..2179 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RParen 2179..2180
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RParen 2179..2180 ")"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2180..2181
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2180..2181
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2180..2181 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2180..2181 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      BitAnd 2181..2182
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      BitAnd 2181..2182 "&"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2182..2183
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2182..2183
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2182..2183 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2183..2184
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2182..2183 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2183..2184
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2183..2184
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2183..2184 "1"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2184..2185
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2184..2185 ";"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191 "    "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191 "    "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228 "// Ensure out is binary"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228 "// Ensure out is binary"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Statement 2242..2277
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2242..2249
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2242..2249
@@ -971,14 +830,13 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2245..2246
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2245..2246 "["
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2246..2247
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2246..2247
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2246..2247
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2246..2247
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2246..2247 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2247..2248
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2247..2248 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2248..2249
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2248..2249
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2248..2249 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2248..2249 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2249..2277
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2249..2277
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2249..2277 "expect Semicolon but got Mul"
@@ -989,8 +847,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2277..2278
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2277..2278 "*"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2278..2279
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2278..2279
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2278..2279 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2278..2279 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2279..2310
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2279..2310
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2279..2310 "expect Semicolon but got LParen"
@@ -1003,54 +860,46 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LParen 2310..2311 "("
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Sub 2311..2321
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ArrayQuery 2311..2317
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2311..2314
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2311..2314
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2311..2314
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2311..2314 "out"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2314..2315
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2314..2315 "["
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2315..2316
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2315..2316
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2315..2316
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2315..2316 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2316..2317
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2316..2317 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2317..2318
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2317..2318
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2317..2318 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2317..2318 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Sub 2318..2319
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Sub 2318..2319 "-"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2319..2320
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2319..2320
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2319..2320 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2320..2321
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2319..2320 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2320..2321
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2320..2321
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2320..2321 "1"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RParen 2321..2322
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RParen 2321..2322 ")"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2322..2323
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2322..2323
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2322..2323 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2322..2323 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EqualSignal 2323..2326
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EqualSignal 2323..2326 "==="
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2326..2327
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2326..2327
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2326..2327 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2327..2328
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2326..2327 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2327..2328
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2327..2328
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2327..2328 "0"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2328..2329
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2328..2329 ";"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335 "    "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335 "    "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Statement 2349..2369
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2349..2368
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2349..2354
@@ -1058,51 +907,43 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2349..2353
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2349..2353 "lout"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2353..2354
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2353..2354
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2353..2354 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2353..2354 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AddAssign 2354..2356
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AddAssign 2354..2356 "+="
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2356..2357
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2356..2357
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2356..2357 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2356..2357 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2357..2368
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2357..2368
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ArrayQuery 2357..2363
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2357..2360
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2357..2360
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2357..2360
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2357..2360 "out"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2360..2361
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 2360..2361 "["
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2361..2362
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2361..2362
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2361..2362
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2361..2362 "k"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2362..2363
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 2362..2363 "]"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2363..2364
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2363..2364
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2363..2364 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2363..2364 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2364..2365
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Mul 2364..2365 "*"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2365..2366
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2365..2366
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2365..2366 " "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2366..2368
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2365..2366 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2366..2368
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2366..2368
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2366..2368 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2368..2369
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2368..2369 ";"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375 "    "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375 "    "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389 "            "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389 "            "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Statement 2389..2400
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      AssignStatement 2389..2399
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2389..2392
@@ -1110,60 +951,47 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2389..2391
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2389..2391 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2391..2392
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2391..2392
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2391..2392 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2391..2392 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Assign 2392..2393
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Assign 2392..2393 "="
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2393..2394
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2393..2394
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2393..2394 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2393..2394 " "
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Expression 2394..2399
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Add 2394..2399
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2394..2396
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2394..2396
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2394..2396
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2394..2396 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Add 2396..2397
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Add 2396..2397 "+"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2397..2399
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2397..2399
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2397..2399
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2397..2399 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2399..2400
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2399..2400 ";"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402 "\r\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410 "        "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410 "        "
 |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2410..2411
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2410..2411 "}"
 |     |     |     |     |     |     |     |     |      EndLine 2411..2413
-|     |     |     |     |     |     |     |     |     |      EndLine 2411..2413
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2411..2413 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2411..2413 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417 "    "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417 "    "
 |     |     |     |     |     |     |     |     |      EndLine 2417..2419
-|     |     |     |     |     |     |     |     |     |      EndLine 2417..2419
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2417..2419 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2417..2419 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427 "        "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427 "        "
 |     |     |     |     |     |     |     |     |      CommentLine 2427..2445
-|     |     |     |     |     |     |     |     |     |      CommentLine 2427..2445
-|     |     |     |     |     |     |     |     |     |     |      CommentLine 2427..2445 "// Ensure the sum;"
+|     |     |     |     |     |     |     |     |     |      CommentLine 2427..2445 "// Ensure the sum;"
 |     |     |     |     |     |     |     |     |      EndLine 2445..2447
-|     |     |     |     |     |     |     |     |     |      EndLine 2445..2447
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2445..2447 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2445..2447 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451 "    "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451 "    "
 |     |     |     |     |     |     |     |     |      EndLine 2451..2453
-|     |     |     |     |     |     |     |     |     |      EndLine 2451..2453
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2451..2453 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2451..2453 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461 "        "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461 "        "
 |     |     |     |     |     |     |     |     |      Statement 2461..2474
 |     |     |     |     |     |     |     |     |     |      AssignStatement 2461..2473
 |     |     |     |     |     |     |     |     |     |     |      Expression 2461..2465
@@ -1171,30 +999,25 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2461..2464
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2461..2464 "lin"
 |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2464..2465
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2464..2465
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2464..2465 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2464..2465 " "
 |     |     |     |     |     |     |     |     |     |     |      EqualSignal 2465..2468
 |     |     |     |     |     |     |     |     |     |     |     |      EqualSignal 2465..2468 "==="
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2468..2469
-|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2468..2469
-|     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2468..2469 " "
+|     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2468..2469 " "
 |     |     |     |     |     |     |     |     |     |     |      Expression 2469..2473
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2469..2473
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2469..2473
 |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2469..2473
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2469..2473 "lout"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2473..2474
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2473..2474 ";"
 |     |     |     |     |     |     |     |     |      EndLine 2474..2476
-|     |     |     |     |     |     |     |     |     |      EndLine 2474..2476
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2474..2476 "\r\n"
+|     |     |     |     |     |     |     |     |     |      EndLine 2474..2476 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480
-|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480 "    "
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480 "    "
 |     |     |     |     |     |     |     |      RCurly 2480..2481
 |     |     |     |     |     |     |     |     |      RCurly 2480..2481 "}"
 |     |     |     |      EndLine 2481..2483
-|     |     |     |     |      EndLine 2481..2483
-|     |     |     |     |     |      EndLine 2481..2483 "\r\n"
+|     |     |     |     |      EndLine 2481..2483 "\r\n"
 |     |     |      Error 2483..2508
 |     |     |     |      Error 2483..2508
 |     |     |     |     |      Error 2483..2508 "expect RCurly but got EOF"

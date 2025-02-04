@@ -59,16 +59,10 @@ pub(super) fn tuple_init(p: &mut Parser) {
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let m_close: Marker;
     match p.current() {
-        Number => {
+        Number | Identifier => {
             let m = p.open();
             p.advance();
-            m_close = p.close(m, Number);
-            Some(m_close)
-        }
-        Identifier => {
-            let m = p.open();
-            p.advance();
-            m_close = p.close(m, Identifier);
+            m_close = p.close(m, ExpressionAtom);
             Some(m_close)
         }
         LParen => {
