@@ -207,7 +207,7 @@ mod tests {
                 .statement_list()
                 .unwrap()
                 .find_children::<AstInputSignalDecl>();
-            let signal_name = inputs[0].name().unwrap();
+            let signal_name = inputs[0].signal_identifier().unwrap().name().unwrap();
 
             let tmp = signal_name.syntax().text_range().start();
 

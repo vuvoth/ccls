@@ -22,8 +22,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      WhiteSpace 1582..1583
 |     |      WhiteSpace 1582..1583 " "
 |      Pragma 1583..1603
-|     |      Pragma 1583..1589
-|     |     |      Pragma 1583..1589 "pragma"
+|     |      PragmaKw 1583..1589
+|     |     |      PragmaKw 1583..1589 "pragma"
 |     |      WhiteSpace 1589..1590
 |     |     |      WhiteSpace 1589..1590 " "
 |     |      Circom 1590..1596
@@ -68,10 +68,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1632..1635 "var"
 |     |     |     |     |      WhiteSpace 1635..1636
 |     |     |     |     |     |      WhiteSpace 1635..1636 " "
-|     |     |     |     |      Identifier 1636..1637
-|     |     |     |     |     |      Identifier 1636..1637 "n"
-|     |     |     |     |      WhiteSpace 1637..1638
-|     |     |     |     |     |      WhiteSpace 1637..1638 " "
+|     |     |     |     |      VarIdentifier 1636..1638
+|     |     |     |     |     |      Identifier 1636..1637
+|     |     |     |     |     |     |      Identifier 1636..1637 "n"
+|     |     |     |     |     |      WhiteSpace 1637..1638
+|     |     |     |     |     |     |      WhiteSpace 1637..1638 " "
 |     |     |     |     |      Assign 1638..1639
 |     |     |     |     |     |      Assign 1638..1639 "="
 |     |     |     |     |      WhiteSpace 1639..1640
@@ -91,10 +92,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1648..1651 "var"
 |     |     |     |     |      WhiteSpace 1651..1652
 |     |     |     |     |     |      WhiteSpace 1651..1652 " "
-|     |     |     |     |      Identifier 1652..1653
-|     |     |     |     |     |      Identifier 1652..1653 "r"
-|     |     |     |     |      WhiteSpace 1653..1654
-|     |     |     |     |     |      WhiteSpace 1653..1654 " "
+|     |     |     |     |      VarIdentifier 1652..1654
+|     |     |     |     |     |      Identifier 1652..1653
+|     |     |     |     |     |     |      Identifier 1652..1653 "r"
+|     |     |     |     |     |      WhiteSpace 1653..1654
+|     |     |     |     |     |     |      WhiteSpace 1653..1654 " "
 |     |     |     |     |      Assign 1654..1655
 |     |     |     |     |     |      Assign 1654..1655 "="
 |     |     |     |     |      WhiteSpace 1655..1656
@@ -245,10 +247,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1772..1775 "var"
 |     |     |     |     |      WhiteSpace 1775..1776
 |     |     |     |     |     |      WhiteSpace 1775..1776 " "
-|     |     |     |     |      Identifier 1776..1780
-|     |     |     |     |     |      Identifier 1776..1780 "nout"
-|     |     |     |     |      WhiteSpace 1780..1781
-|     |     |     |     |     |      WhiteSpace 1780..1781 " "
+|     |     |     |     |      VarIdentifier 1776..1781
+|     |     |     |     |     |      Identifier 1776..1780
+|     |     |     |     |     |     |      Identifier 1776..1780 "nout"
+|     |     |     |     |     |      WhiteSpace 1780..1781
+|     |     |     |     |     |     |      WhiteSpace 1780..1781 " "
 |     |     |     |     |      Assign 1781..1782
 |     |     |     |     |     |      Assign 1781..1782 "="
 |     |     |     |     |      WhiteSpace 1782..1783
@@ -308,24 +311,25 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      InputKw 1817..1822 "input"
 |     |     |     |     |     |      WhiteSpace 1822..1823
 |     |     |     |     |     |     |      WhiteSpace 1822..1823 " "
-|     |     |     |     |      Identifier 1823..1825
-|     |     |     |     |     |      Identifier 1823..1825 "in"
-|     |     |     |     |      LBracket 1825..1826
-|     |     |     |     |     |      LBracket 1825..1826 "["
-|     |     |     |     |      Expression 1826..1829
-|     |     |     |     |     |      ExpressionAtom 1826..1829
-|     |     |     |     |     |     |      Identifier 1826..1829
-|     |     |     |     |     |     |     |      Identifier 1826..1829 "ops"
-|     |     |     |     |      RBracket 1829..1830
-|     |     |     |     |     |      RBracket 1829..1830 "]"
-|     |     |     |     |      LBracket 1830..1831
-|     |     |     |     |     |      LBracket 1830..1831 "["
-|     |     |     |     |      Expression 1831..1832
-|     |     |     |     |     |      ExpressionAtom 1831..1832
-|     |     |     |     |     |     |      Identifier 1831..1832
-|     |     |     |     |     |     |     |      Identifier 1831..1832 "n"
-|     |     |     |     |      RBracket 1832..1833
-|     |     |     |     |     |      RBracket 1832..1833 "]"
+|     |     |     |     |      SignalIdentifier 1823..1833
+|     |     |     |     |     |      Identifier 1823..1825
+|     |     |     |     |     |     |      Identifier 1823..1825 "in"
+|     |     |     |     |     |      LBracket 1825..1826
+|     |     |     |     |     |     |      LBracket 1825..1826 "["
+|     |     |     |     |     |      Expression 1826..1829
+|     |     |     |     |     |     |      ExpressionAtom 1826..1829
+|     |     |     |     |     |     |     |      Identifier 1826..1829
+|     |     |     |     |     |     |     |     |      Identifier 1826..1829 "ops"
+|     |     |     |     |     |      RBracket 1829..1830
+|     |     |     |     |     |     |      RBracket 1829..1830 "]"
+|     |     |     |     |     |      LBracket 1830..1831
+|     |     |     |     |     |     |      LBracket 1830..1831 "["
+|     |     |     |     |     |      Expression 1831..1832
+|     |     |     |     |     |     |      ExpressionAtom 1831..1832
+|     |     |     |     |     |     |     |      Identifier 1831..1832
+|     |     |     |     |     |     |     |     |      Identifier 1831..1832 "n"
+|     |     |     |     |     |      RBracket 1832..1833
+|     |     |     |     |     |     |      RBracket 1832..1833 "]"
 |     |     |     |      Semicolon 1833..1834
 |     |     |     |     |      Semicolon 1833..1834 ";"
 |     |     |     |      EndLine 1834..1836
@@ -342,16 +346,17 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      OutputKw 1847..1853 "output"
 |     |     |     |     |     |      WhiteSpace 1853..1854
 |     |     |     |     |     |     |      WhiteSpace 1853..1854 " "
-|     |     |     |     |      Identifier 1854..1857
-|     |     |     |     |     |      Identifier 1854..1857 "out"
-|     |     |     |     |      LBracket 1857..1858
-|     |     |     |     |     |      LBracket 1857..1858 "["
-|     |     |     |     |      Expression 1858..1862
-|     |     |     |     |     |      ExpressionAtom 1858..1862
-|     |     |     |     |     |     |      Identifier 1858..1862
-|     |     |     |     |     |     |     |      Identifier 1858..1862 "nout"
-|     |     |     |     |      RBracket 1862..1863
-|     |     |     |     |     |      RBracket 1862..1863 "]"
+|     |     |     |     |      SignalIdentifier 1854..1863
+|     |     |     |     |     |      Identifier 1854..1857
+|     |     |     |     |     |     |      Identifier 1854..1857 "out"
+|     |     |     |     |     |      LBracket 1857..1858
+|     |     |     |     |     |     |      LBracket 1857..1858 "["
+|     |     |     |     |     |      Expression 1858..1862
+|     |     |     |     |     |     |      ExpressionAtom 1858..1862
+|     |     |     |     |     |     |     |      Identifier 1858..1862
+|     |     |     |     |     |     |     |     |      Identifier 1858..1862 "nout"
+|     |     |     |     |     |      RBracket 1862..1863
+|     |     |     |     |     |     |      RBracket 1862..1863 "]"
 |     |     |     |      Semicolon 1863..1864
 |     |     |     |     |      Semicolon 1863..1864 ";"
 |     |     |     |      EndLine 1864..1866
@@ -365,10 +370,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1872..1875 "var"
 |     |     |     |     |      WhiteSpace 1875..1876
 |     |     |     |     |     |      WhiteSpace 1875..1876 " "
-|     |     |     |     |      Identifier 1876..1879
-|     |     |     |     |     |      Identifier 1876..1879 "lin"
-|     |     |     |     |      WhiteSpace 1879..1880
-|     |     |     |     |     |      WhiteSpace 1879..1880 " "
+|     |     |     |     |      VarIdentifier 1876..1880
+|     |     |     |     |     |      Identifier 1876..1879
+|     |     |     |     |     |     |      Identifier 1876..1879 "lin"
+|     |     |     |     |     |      WhiteSpace 1879..1880
+|     |     |     |     |     |     |      WhiteSpace 1879..1880 " "
 |     |     |     |     |      Assign 1880..1881
 |     |     |     |     |     |      Assign 1880..1881 "="
 |     |     |     |     |      WhiteSpace 1881..1882
@@ -388,10 +394,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1890..1893 "var"
 |     |     |     |     |      WhiteSpace 1893..1894
 |     |     |     |     |     |      WhiteSpace 1893..1894 " "
-|     |     |     |     |      Identifier 1894..1898
-|     |     |     |     |     |      Identifier 1894..1898 "lout"
-|     |     |     |     |      WhiteSpace 1898..1899
-|     |     |     |     |     |      WhiteSpace 1898..1899 " "
+|     |     |     |     |      VarIdentifier 1894..1899
+|     |     |     |     |     |      Identifier 1894..1898
+|     |     |     |     |     |     |      Identifier 1894..1898 "lout"
+|     |     |     |     |     |      WhiteSpace 1898..1899
+|     |     |     |     |     |     |      WhiteSpace 1898..1899 " "
 |     |     |     |     |      Assign 1899..1900
 |     |     |     |     |     |      Assign 1899..1900 "="
 |     |     |     |     |      WhiteSpace 1900..1901
@@ -413,8 +420,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1911..1914 "var"
 |     |     |     |     |      WhiteSpace 1914..1915
 |     |     |     |     |     |      WhiteSpace 1914..1915 " "
-|     |     |     |     |      Identifier 1915..1916
-|     |     |     |     |     |      Identifier 1915..1916 "k"
+|     |     |     |     |      VarIdentifier 1915..1916
+|     |     |     |     |     |      Identifier 1915..1916
+|     |     |     |     |     |     |      Identifier 1915..1916 "k"
 |     |     |     |      Semicolon 1916..1917
 |     |     |     |     |      Semicolon 1916..1917 ";"
 |     |     |     |      EndLine 1917..1919
@@ -426,8 +434,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1923..1926 "var"
 |     |     |     |     |      WhiteSpace 1926..1927
 |     |     |     |     |     |      WhiteSpace 1926..1927 " "
-|     |     |     |     |      Identifier 1927..1928
-|     |     |     |     |     |      Identifier 1927..1928 "j"
+|     |     |     |     |      VarIdentifier 1927..1928
+|     |     |     |     |     |      Identifier 1927..1928
+|     |     |     |     |     |     |      Identifier 1927..1928 "j"
 |     |     |     |      Semicolon 1928..1929
 |     |     |     |     |      Semicolon 1928..1929 ";"
 |     |     |     |      EndLine 1929..1931
@@ -441,8 +450,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1937..1940 "var"
 |     |     |     |     |      WhiteSpace 1940..1941
 |     |     |     |     |     |      WhiteSpace 1940..1941 " "
-|     |     |     |     |      Identifier 1941..1943
-|     |     |     |     |     |      Identifier 1941..1943 "e2"
+|     |     |     |     |      VarIdentifier 1941..1943
+|     |     |     |     |     |      Identifier 1941..1943
+|     |     |     |     |     |     |      Identifier 1941..1943 "e2"
 |     |     |     |      Semicolon 1943..1944
 |     |     |     |     |      Semicolon 1943..1944 ";"
 |     |     |     |      EndLine 1944..1946

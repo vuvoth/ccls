@@ -26,16 +26,17 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      InputKw 50..55 "input"
 |     |     |     |      WhiteSpace 55..56
 |     |     |     |     |      WhiteSpace 55..56 " "
-|     |     |      Identifier 56..58
-|     |     |     |      Identifier 56..58 "in"
-|     |     |      LBracket 58..59
-|     |     |     |      LBracket 58..59 "["
-|     |     |      Expression 59..60
-|     |     |     |      ExpressionAtom 59..60
-|     |     |     |     |      Identifier 59..60
-|     |     |     |     |     |      Identifier 59..60 "N"
-|     |     |      RBracket 60..61
-|     |     |     |      RBracket 60..61 "]"
+|     |     |      SignalIdentifier 56..61
+|     |     |     |      Identifier 56..58
+|     |     |     |     |      Identifier 56..58 "in"
+|     |     |     |      LBracket 58..59
+|     |     |     |     |      LBracket 58..59 "["
+|     |     |     |      Expression 59..60
+|     |     |     |     |      ExpressionAtom 59..60
+|     |     |     |     |     |      Identifier 59..60
+|     |     |     |     |     |     |      Identifier 59..60 "N"
+|     |     |     |      RBracket 60..61
+|     |     |     |     |      RBracket 60..61 "]"
 |     |      Semicolon 61..62
 |     |     |      Semicolon 61..62 ";"
 |     |      EndLine 62..64
@@ -52,8 +53,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      OutputKw 83..89 "output"
 |     |     |     |      WhiteSpace 89..90
 |     |     |     |     |      WhiteSpace 89..90 " "
-|     |     |      Identifier 90..93
-|     |     |     |      Identifier 90..93 "out"
+|     |     |      SignalIdentifier 90..93
+|     |     |     |      Identifier 90..93
+|     |     |     |     |      Identifier 90..93 "out"
 |     |      Semicolon 93..94
 |     |     |      Semicolon 93..94 ";"
 |     |      EndLine 94..96
@@ -65,23 +67,23 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      ComponentKw 108..117 "component"
 |     |     |      WhiteSpace 117..118
 |     |     |     |      WhiteSpace 117..118 " "
-|     |     |      ComponentIdentifier 118..122
+|     |     |      ComponentIdentifier 118..127
 |     |     |     |      Identifier 118..122
 |     |     |     |     |      Identifier 118..122 "comp"
-|     |     |      LBracket 122..123
-|     |     |     |      LBracket 122..123 "["
-|     |     |      Expression 123..126
-|     |     |     |      Sub 123..126
-|     |     |     |     |      ExpressionAtom 123..124
-|     |     |     |     |     |      Identifier 123..124
-|     |     |     |     |     |     |      Identifier 123..124 "N"
-|     |     |     |     |      Sub 124..125
-|     |     |     |     |     |      Sub 124..125 "-"
-|     |     |     |     |      ExpressionAtom 125..126
-|     |     |     |     |     |      Number 125..126
-|     |     |     |     |     |     |      Number 125..126 "1"
-|     |     |      RBracket 126..127
-|     |     |     |      RBracket 126..127 "]"
+|     |     |     |      LBracket 122..123
+|     |     |     |     |      LBracket 122..123 "["
+|     |     |     |      Expression 123..126
+|     |     |     |     |      Sub 123..126
+|     |     |     |     |     |      ExpressionAtom 123..124
+|     |     |     |     |     |     |      Identifier 123..124
+|     |     |     |     |     |     |     |      Identifier 123..124 "N"
+|     |     |     |     |     |      Sub 124..125
+|     |     |     |     |     |     |      Sub 124..125 "-"
+|     |     |     |     |     |      ExpressionAtom 125..126
+|     |     |     |     |     |     |      Number 125..126
+|     |     |     |     |     |     |     |      Number 125..126 "1"
+|     |     |     |      RBracket 126..127
+|     |     |     |     |      RBracket 126..127 "]"
 |     |      Semicolon 127..128
 |     |     |      Semicolon 127..128 ";"
 |     |      EndLine 128..130
@@ -107,10 +109,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 175..178 "var"
 |     |     |     |     |      WhiteSpace 178..179
 |     |     |     |     |     |      WhiteSpace 178..179 " "
-|     |     |     |     |      Identifier 179..180
-|     |     |     |     |     |      Identifier 179..180 "i"
-|     |     |     |     |      WhiteSpace 180..181
-|     |     |     |     |     |      WhiteSpace 180..181 " "
+|     |     |     |     |      VarIdentifier 179..181
+|     |     |     |     |     |      Identifier 179..180
+|     |     |     |     |     |     |      Identifier 179..180 "i"
+|     |     |     |     |     |      WhiteSpace 180..181
+|     |     |     |     |     |     |      WhiteSpace 180..181 " "
 |     |     |     |     |      Assign 181..182
 |     |     |     |     |     |      Assign 181..182 "="
 |     |     |     |     |      WhiteSpace 182..183
@@ -302,10 +305,11 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 347..350 "var"
 |     |     |     |     |      WhiteSpace 350..351
 |     |     |     |     |     |      WhiteSpace 350..351 " "
-|     |     |     |     |      Identifier 351..352
-|     |     |     |     |     |      Identifier 351..352 "i"
-|     |     |     |     |      WhiteSpace 352..353
-|     |     |     |     |     |      WhiteSpace 352..353 " "
+|     |     |     |     |      VarIdentifier 351..353
+|     |     |     |     |     |      Identifier 351..352
+|     |     |     |     |     |     |      Identifier 351..352 "i"
+|     |     |     |     |     |      WhiteSpace 352..353
+|     |     |     |     |     |     |      WhiteSpace 352..353 " "
 |     |     |     |     |      Assign 353..354
 |     |     |     |     |     |      Assign 353..354 "="
 |     |     |     |     |      WhiteSpace 354..355

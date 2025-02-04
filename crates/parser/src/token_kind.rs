@@ -20,9 +20,10 @@ pub enum TokenKind {
     WhiteSpace,
     #[regex(r"\r?\n")]
     EndLine,
-    // Circom
-    #[token("pragma")]
+    // Pragma
     Pragma,
+    #[token("pragma")]
+    PragmaKw,
     #[token("circom")]
     Circom,
     #[regex("2.[0-9].[0-9]")]
@@ -211,6 +212,7 @@ pub enum TokenKind {
     FunctionName,
     ParameterList,
     SignalDecl,
+    VarIdentifier,
     VarDecl,
     InputSignalDecl,
     OutputSignalDecl,

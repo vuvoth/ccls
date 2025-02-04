@@ -10,8 +10,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      EndLine 25..27
 |     |      EndLine 25..27 "\r\n"
 |      Pragma 27..47
-|     |      Pragma 27..33
-|     |     |      Pragma 27..33 "pragma"
+|     |      PragmaKw 27..33
+|     |     |      PragmaKw 27..33 "pragma"
 |     |      WhiteSpace 33..34
 |     |     |      WhiteSpace 33..34 " "
 |     |      Circom 34..40

@@ -14,8 +14,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      WhiteSpace 19..23
 |     |      WhiteSpace 19..23 "    "
 |      Pragma 23..43
-|     |      Pragma 23..29
-|     |     |      Pragma 23..29 "pragma"
+|     |      PragmaKw 23..29
+|     |     |      PragmaKw 23..29 "pragma"
 |     |      WhiteSpace 29..30
 |     |     |      WhiteSpace 29..30 " "
 |     |      Circom 30..36

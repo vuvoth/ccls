@@ -50,11 +50,14 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
 }
 
 pub(crate) fn var_init(p: &mut Parser) {
+    let var_identifier_open_marker = p.open();
+    
     // name of variable
     p.expect(Identifier);
-
     // eg: [N - 1][M]
     array(p);
+    
+    p.close(var_identifier_open_marker, VarIdentifier);
 
     // assign for variable
     // eg: = 10
@@ -66,11 +69,12 @@ pub(crate) fn var_init(p: &mut Parser) {
 
 // eg: in[N - 1] <== c.in;
 pub(crate) fn signal_init(p: &mut Parser, assign_able: bool) {
+    let signal_identifier_open_marker = p.open();
     // name of signal
     p.expect(Identifier);
-
     // eg: [N][M-1]
     array(p);
+    p.close(signal_identifier_open_marker, SignalIdentifier);
 
     // assign for  intermediate and outputs signals
     // eg: <== Multiplier2().out
@@ -159,14 +163,13 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
 
-    // TODO: why do we need `ComponentIdentifier` kind here?
     let m_c = p.open();
     p.expect(Identifier);
-    p.close(m_c, ComponentIdentifier);
-
+    
     // support array component
     // eg: comp[N - 1][10]
     let is_array = array(p);
+    p.close(m_c, ComponentIdentifier);
 
     // do not assign for array components
     if !is_array && p.at(Assign) {

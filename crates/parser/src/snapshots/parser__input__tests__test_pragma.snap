@@ -9,7 +9,7 @@ kind:
   - EndLine
   - EndLine
   - WhiteSpace
-  - Pragma
+  - PragmaKw
   - WhiteSpace
   - Circom
   - WhiteSpace

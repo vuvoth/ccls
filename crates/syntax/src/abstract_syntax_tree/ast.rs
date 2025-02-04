@@ -14,33 +14,42 @@ ast_node!(AstSignalHeader, SignalHeader);
 ast_node!(AstInputSignalDecl, InputSignalDecl);
 ast_node!(AstOutputSignalDecl, OutputSignalDecl);
 ast_node!(AstSignalDecl, SignalDecl);
+ast_node!(AstSignalIdentifier, SignalIdentifier);
 
 impl AstInputSignalDecl {
-    pub fn name(&self) -> Option<AstIdentifier> {
+    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
         support::child(self.syntax())
-    }
-
-    pub fn same_name(&self, other: &SyntaxText) -> bool {
-        if let Some(name) = self.name() {
-            return name.equal(other);
-        }
-        false
     }
 }
 
 impl AstOutputSignalDecl {
-    pub fn name(&self) -> Option<AstIdentifier> {
+    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
         support::child(self.syntax())
     }
 }
+
 impl AstSignalDecl {
+    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
+impl AstSignalIdentifier {
     pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 }
+
 ast_node!(AstVarDecl, VarDecl);
+ast_node!(AstVarIdentifier, VarIdentifier);
 
 impl AstVarDecl {
+    pub fn var_identifier(&self) -> Option<AstVarIdentifier> {
+        support::child(self.syntax())
+    }
+}
+
+impl AstVarIdentifier {
     pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
