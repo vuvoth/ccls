@@ -6,42 +6,27 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      BlockComment 0..764
 |     |      BlockComment 0..764
 |     |     |      BlockComment 0..764 "/*\r\n    Copyright 2018 0KIMS association.\r\n\r\n    This file is part of circom (Zero Knowledge Circuit Compiler).\r\n\r\n    circom is a free software: you can redistribute it and/or modify it\r\n    under the terms of the GNU General Public License as published by\r\n    the Free Software Foundation, either version 3 of the License, or\r\n    (at your option) any later version.\r\n\r\n    circom is distributed in the hope that it will be useful, but WITHOUT\r\n    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\r\n    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public\r\n    License for more details.\r\n\r\n    You should have received a copy of the GNU General Public License\r\n    along with circom. If not, see <https://www.gnu.org/licenses/>.\r\n*/"
-|      Error 764..765
-|     |      Error 764..765
-|     |     |      Error 764..765 "\r"
-|      EndLine 765..766
-|     |      EndLine 765..766
-|     |     |      EndLine 765..766 "\n"
+|      EndLine 764..766
+|     |      EndLine 764..766
+|     |     |      EndLine 764..766 "\r\n"
 |      BlockComment 766..1478
 |     |      BlockComment 766..1478
 |     |     |      BlockComment 766..1478 "/*\r\n\r\nBinary Sum\r\n==========\r\n\r\nThis component creates a binary sum componet of ops operands and n bits each operand.\r\n\r\ne is Number of carries: Depends on the number of operands in the input.\r\n\r\nMain Constraint:\r\n   in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +\r\n + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +\r\n + ..\r\n + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +\r\n ===\r\n   out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)\r\n\r\nTo waranty binary outputs:\r\n\r\n    out[0]     * (out[0] - 1) === 0\r\n    out[1]     * (out[0] - 1) === 0\r\n    .\r\n    .\r\n    .\r\n    out[n+e-1] * (out[n+e-1] - 1) == 0\r\n\r\n */"
-|      Error 1478..1479
-|     |      Error 1478..1479
-|     |     |      Error 1478..1479 "\r"
-|      EndLine 1479..1480
-|     |      EndLine 1479..1480
-|     |     |      EndLine 1479..1480 "\n"
-|      Error 1480..1481
-|     |      Error 1480..1481
-|     |     |      Error 1480..1481 "\r"
-|      EndLine 1481..1482
-|     |      EndLine 1481..1482
-|     |     |      EndLine 1481..1482 "\n"
-|      Error 1482..1483
-|     |      Error 1482..1483
-|     |     |      Error 1482..1483 "\r"
-|      EndLine 1483..1484
-|     |      EndLine 1483..1484
-|     |     |      EndLine 1483..1484 "\n"
+|      EndLine 1478..1480
+|     |      EndLine 1478..1480
+|     |     |      EndLine 1478..1480 "\r\n"
+|      EndLine 1480..1482
+|     |      EndLine 1480..1482
+|     |     |      EndLine 1480..1482 "\r\n"
+|      EndLine 1482..1484
+|     |      EndLine 1482..1484
+|     |     |      EndLine 1482..1484 "\r\n"
 |      BlockComment 1484..1580
 |     |      BlockComment 1484..1580
 |     |     |      BlockComment 1484..1580 "/*\r\n    This function calculates the number of extra bits in the output to do the full sum.\r\n */"
-|      Error 1580..1581
-|     |      Error 1580..1581
-|     |     |      Error 1580..1581 "\r"
-|      EndLine 1581..1582
-|     |      EndLine 1581..1582
-|     |     |      EndLine 1581..1582 "\n"
+|      EndLine 1580..1582
+|     |      EndLine 1580..1582
+|     |     |      EndLine 1580..1582 "\r\n"
 |      WhiteSpace 1582..1583
 |     |      WhiteSpace 1582..1583
 |     |     |      WhiteSpace 1582..1583 " "
@@ -60,18 +45,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      Version 1597..1602 "2.0.0"
 |     |      Semicolon 1602..1603
 |     |     |      Semicolon 1602..1603 ";"
-|      Error 1603..1604
-|     |      Error 1603..1604
-|     |     |      Error 1603..1604 "\r"
-|      EndLine 1604..1605
-|     |      EndLine 1604..1605
-|     |     |      EndLine 1604..1605 "\n"
-|      Error 1605..1606
-|     |      Error 1605..1606
-|     |     |      Error 1605..1606 "\r"
-|      EndLine 1606..1607
-|     |      EndLine 1606..1607
-|     |     |      EndLine 1606..1607 "\n"
+|      EndLine 1603..1605
+|     |      EndLine 1603..1605
+|     |     |      EndLine 1603..1605 "\r\n"
+|      EndLine 1605..1607
+|     |      EndLine 1605..1607
+|     |     |      EndLine 1605..1607 "\r\n"
 |      FunctionDef 1607..1735
 |     |      FunctionKw 1607..1615
 |     |     |      FunctionKw 1607..1615 "function"
@@ -94,12 +73,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |      Block 1625..1735
 |     |     |      LCurly 1625..1626
 |     |     |     |      LCurly 1625..1626 "{"
-|     |     |      Error 1626..1627
-|     |     |     |      Error 1626..1627
-|     |     |     |     |      Error 1626..1627 "\r"
-|     |     |      EndLine 1627..1628
-|     |     |     |      EndLine 1627..1628
-|     |     |     |     |      EndLine 1627..1628 "\n"
+|     |     |      EndLine 1626..1628
+|     |     |     |      EndLine 1626..1628
+|     |     |     |     |      EndLine 1626..1628 "\r\n"
 |     |     |      WhiteSpace 1628..1632
 |     |     |     |      WhiteSpace 1628..1632
 |     |     |     |     |      WhiteSpace 1628..1632 "    "
@@ -126,12 +102,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      Number 1640..1641 "1"
 |     |     |     |      Semicolon 1641..1642
 |     |     |     |     |      Semicolon 1641..1642 ";"
-|     |     |     |      Error 1642..1643
-|     |     |     |     |      Error 1642..1643
-|     |     |     |     |     |      Error 1642..1643 "\r"
-|     |     |     |      EndLine 1643..1644
-|     |     |     |     |      EndLine 1643..1644
-|     |     |     |     |     |      EndLine 1643..1644 "\n"
+|     |     |     |      EndLine 1642..1644
+|     |     |     |     |      EndLine 1642..1644
+|     |     |     |     |     |      EndLine 1642..1644 "\r\n"
 |     |     |     |      WhiteSpace 1644..1648
 |     |     |     |     |      WhiteSpace 1644..1648
 |     |     |     |     |     |      WhiteSpace 1644..1648 "    "
@@ -157,12 +130,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      Number 1656..1657 "0"
 |     |     |     |      Semicolon 1657..1658
 |     |     |     |     |      Semicolon 1657..1658 ";"
-|     |     |     |      Error 1658..1659
-|     |     |     |     |      Error 1658..1659
-|     |     |     |     |     |      Error 1658..1659 "\r"
-|     |     |     |      EndLine 1659..1660
-|     |     |     |     |      EndLine 1659..1660
-|     |     |     |     |     |      EndLine 1659..1660 "\n"
+|     |     |     |      EndLine 1658..1660
+|     |     |     |     |      EndLine 1658..1660
+|     |     |     |     |     |      EndLine 1658..1660 "\r\n"
 |     |     |     |      WhiteSpace 1660..1664
 |     |     |     |     |      WhiteSpace 1660..1664
 |     |     |     |     |     |      WhiteSpace 1660..1664 "    "
@@ -199,12 +169,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Block 1678..1717
 |     |     |     |     |     |     |      LCurly 1678..1679
 |     |     |     |     |     |     |     |      LCurly 1678..1679 "{"
-|     |     |     |     |     |     |      Error 1679..1680
-|     |     |     |     |     |     |     |      Error 1679..1680
-|     |     |     |     |     |     |     |     |      Error 1679..1680 "\r"
-|     |     |     |     |     |     |      EndLine 1680..1681
-|     |     |     |     |     |     |     |      EndLine 1680..1681
-|     |     |     |     |     |     |     |     |      EndLine 1680..1681 "\n"
+|     |     |     |     |     |     |      EndLine 1679..1681
+|     |     |     |     |     |     |     |      EndLine 1679..1681
+|     |     |     |     |     |     |     |     |      EndLine 1679..1681 "\r\n"
 |     |     |     |     |     |     |      WhiteSpace 1681..1689
 |     |     |     |     |     |     |     |      WhiteSpace 1681..1689
 |     |     |     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
@@ -219,12 +186,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692 "++"
 |     |     |     |     |     |     |     |     |      Semicolon 1692..1693
 |     |     |     |     |     |     |     |     |     |      Semicolon 1692..1693 ";"
-|     |     |     |     |     |     |     |      Error 1693..1694
-|     |     |     |     |     |     |     |     |      Error 1693..1694
-|     |     |     |     |     |     |     |     |     |      Error 1693..1694 "\r"
-|     |     |     |     |     |     |     |      EndLine 1694..1695
-|     |     |     |     |     |     |     |     |      EndLine 1694..1695
-|     |     |     |     |     |     |     |     |     |      EndLine 1694..1695 "\n"
+|     |     |     |     |     |     |     |      EndLine 1693..1695
+|     |     |     |     |     |     |     |     |      EndLine 1693..1695
+|     |     |     |     |     |     |     |     |     |      EndLine 1693..1695 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1695..1703
 |     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703 "        "
@@ -248,23 +212,17 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1708..1709 "2"
 |     |     |     |     |     |     |     |     |      Semicolon 1709..1710
 |     |     |     |     |     |     |     |     |     |      Semicolon 1709..1710 ";"
-|     |     |     |     |     |     |     |      Error 1710..1711
-|     |     |     |     |     |     |     |     |      Error 1710..1711
-|     |     |     |     |     |     |     |     |     |      Error 1710..1711 "\r"
-|     |     |     |     |     |     |     |      EndLine 1711..1712
-|     |     |     |     |     |     |     |     |      EndLine 1711..1712
-|     |     |     |     |     |     |     |     |     |      EndLine 1711..1712 "\n"
+|     |     |     |     |     |     |     |      EndLine 1710..1712
+|     |     |     |     |     |     |     |     |      EndLine 1710..1712
+|     |     |     |     |     |     |     |     |     |      EndLine 1710..1712 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1712..1716
 |     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716 "    "
 |     |     |     |     |     |     |      RCurly 1716..1717
 |     |     |     |     |     |     |     |      RCurly 1716..1717 "}"
-|     |     |     |      Error 1717..1718
-|     |     |     |     |      Error 1717..1718
-|     |     |     |     |     |      Error 1717..1718 "\r"
-|     |     |     |      EndLine 1718..1719
-|     |     |     |     |      EndLine 1718..1719
-|     |     |     |     |     |      EndLine 1718..1719 "\n"
+|     |     |     |      EndLine 1717..1719
+|     |     |     |     |      EndLine 1717..1719
+|     |     |     |     |     |      EndLine 1717..1719 "\r\n"
 |     |     |     |      WhiteSpace 1719..1723
 |     |     |     |     |      WhiteSpace 1719..1723
 |     |     |     |     |     |      WhiteSpace 1719..1723 "    "
@@ -281,32 +239,20 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      Identifier 1730..1731 "r"
 |     |     |     |     |      Semicolon 1731..1732
 |     |     |     |     |     |      Semicolon 1731..1732 ";"
-|     |     |     |      Error 1732..1733
-|     |     |     |     |      Error 1732..1733
-|     |     |     |     |     |      Error 1732..1733 "\r"
-|     |     |     |      EndLine 1733..1734
-|     |     |     |     |      EndLine 1733..1734
-|     |     |     |     |     |      EndLine 1733..1734 "\n"
+|     |     |     |      EndLine 1732..1734
+|     |     |     |     |      EndLine 1732..1734
+|     |     |     |     |     |      EndLine 1732..1734 "\r\n"
 |     |     |      RCurly 1734..1735
 |     |     |     |      RCurly 1734..1735 "}"
-|      Error 1735..1736
-|     |      Error 1735..1736
-|     |     |      Error 1735..1736 "\r"
-|      EndLine 1736..1737
-|     |      EndLine 1736..1737
-|     |     |      EndLine 1736..1737 "\n"
-|      Error 1737..1738
-|     |      Error 1737..1738
-|     |     |      Error 1737..1738 "\r"
-|      EndLine 1738..1739
-|     |      EndLine 1738..1739
-|     |     |      EndLine 1738..1739 "\n"
-|      Error 1739..1740
-|     |      Error 1739..1740
-|     |     |      Error 1739..1740 "\r"
-|      EndLine 1740..1741
-|     |      EndLine 1740..1741
-|     |     |      EndLine 1740..1741 "\n"
+|      EndLine 1735..1737
+|     |      EndLine 1735..1737
+|     |     |      EndLine 1735..1737 "\r\n"
+|      EndLine 1737..1739
+|     |      EndLine 1737..1739
+|     |     |      EndLine 1737..1739 "\r\n"
+|      EndLine 1739..1741
+|     |      EndLine 1739..1741
+|     |     |      EndLine 1739..1741 "\r\n"
 |      TemplateDef 1741..2508
 |     |      TemplateKw 1741..1749
 |     |     |      TemplateKw 1741..1749 "template"
@@ -336,12 +282,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |      Block 1765..2508
 |     |     |      LCurly 1765..1766
 |     |     |     |      LCurly 1765..1766 "{"
-|     |     |      Error 1766..1767
-|     |     |     |      Error 1766..1767
-|     |     |     |     |      Error 1766..1767 "\r"
-|     |     |      EndLine 1767..1768
-|     |     |     |      EndLine 1767..1768
-|     |     |     |     |      EndLine 1767..1768 "\n"
+|     |     |      EndLine 1766..1768
+|     |     |     |      EndLine 1766..1768
+|     |     |     |     |      EndLine 1766..1768 "\r\n"
 |     |     |      WhiteSpace 1768..1772
 |     |     |     |      WhiteSpace 1768..1772
 |     |     |     |     |      WhiteSpace 1768..1772 "    "
@@ -404,12 +347,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      RParen 1802..1803 ")"
 |     |     |     |      Semicolon 1803..1804
 |     |     |     |     |      Semicolon 1803..1804 ";"
-|     |     |     |      Error 1804..1805
-|     |     |     |     |      Error 1804..1805
-|     |     |     |     |     |      Error 1804..1805 "\r"
-|     |     |     |      EndLine 1805..1806
-|     |     |     |     |      EndLine 1805..1806
-|     |     |     |     |     |      EndLine 1805..1806 "\n"
+|     |     |     |      EndLine 1804..1806
+|     |     |     |     |      EndLine 1804..1806
+|     |     |     |     |     |      EndLine 1804..1806 "\r\n"
 |     |     |     |      WhiteSpace 1806..1810
 |     |     |     |     |      WhiteSpace 1806..1810
 |     |     |     |     |     |      WhiteSpace 1806..1810 "    "
@@ -445,12 +385,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      RBracket 1832..1833 "]"
 |     |     |     |      Semicolon 1833..1834
 |     |     |     |     |      Semicolon 1833..1834 ";"
-|     |     |     |      Error 1834..1835
-|     |     |     |     |      Error 1834..1835
-|     |     |     |     |     |      Error 1834..1835 "\r"
-|     |     |     |      EndLine 1835..1836
-|     |     |     |     |      EndLine 1835..1836
-|     |     |     |     |     |      EndLine 1835..1836 "\n"
+|     |     |     |      EndLine 1834..1836
+|     |     |     |     |      EndLine 1834..1836
+|     |     |     |     |     |      EndLine 1834..1836 "\r\n"
 |     |     |     |      WhiteSpace 1836..1840
 |     |     |     |     |      WhiteSpace 1836..1840
 |     |     |     |     |     |      WhiteSpace 1836..1840 "    "
@@ -478,18 +415,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      RBracket 1862..1863 "]"
 |     |     |     |      Semicolon 1863..1864
 |     |     |     |     |      Semicolon 1863..1864 ";"
-|     |     |     |      Error 1864..1865
-|     |     |     |     |      Error 1864..1865
-|     |     |     |     |     |      Error 1864..1865 "\r"
-|     |     |     |      EndLine 1865..1866
-|     |     |     |     |      EndLine 1865..1866
-|     |     |     |     |     |      EndLine 1865..1866 "\n"
-|     |     |     |      Error 1866..1867
-|     |     |     |     |      Error 1866..1867
-|     |     |     |     |     |      Error 1866..1867 "\r"
-|     |     |     |      EndLine 1867..1868
-|     |     |     |     |      EndLine 1867..1868
-|     |     |     |     |     |      EndLine 1867..1868 "\n"
+|     |     |     |      EndLine 1864..1866
+|     |     |     |     |      EndLine 1864..1866
+|     |     |     |     |     |      EndLine 1864..1866 "\r\n"
+|     |     |     |      EndLine 1866..1868
+|     |     |     |     |      EndLine 1866..1868
+|     |     |     |     |     |      EndLine 1866..1868 "\r\n"
 |     |     |     |      WhiteSpace 1868..1872
 |     |     |     |     |      WhiteSpace 1868..1872
 |     |     |     |     |     |      WhiteSpace 1868..1872 "    "
@@ -515,12 +446,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      Number 1882..1883 "0"
 |     |     |     |      Semicolon 1883..1884
 |     |     |     |     |      Semicolon 1883..1884 ";"
-|     |     |     |      Error 1884..1885
-|     |     |     |     |      Error 1884..1885
-|     |     |     |     |     |      Error 1884..1885 "\r"
-|     |     |     |      EndLine 1885..1886
-|     |     |     |     |      EndLine 1885..1886
-|     |     |     |     |     |      EndLine 1885..1886 "\n"
+|     |     |     |      EndLine 1884..1886
+|     |     |     |     |      EndLine 1884..1886
+|     |     |     |     |     |      EndLine 1884..1886 "\r\n"
 |     |     |     |      WhiteSpace 1886..1890
 |     |     |     |     |      WhiteSpace 1886..1890
 |     |     |     |     |     |      WhiteSpace 1886..1890 "    "
@@ -546,18 +474,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      Number 1901..1902 "0"
 |     |     |     |      Semicolon 1902..1903
 |     |     |     |     |      Semicolon 1902..1903 ";"
-|     |     |     |      Error 1903..1904
-|     |     |     |     |      Error 1903..1904
-|     |     |     |     |     |      Error 1903..1904 "\r"
-|     |     |     |      EndLine 1904..1905
-|     |     |     |     |      EndLine 1904..1905
-|     |     |     |     |     |      EndLine 1904..1905 "\n"
-|     |     |     |      Error 1905..1906
-|     |     |     |     |      Error 1905..1906
-|     |     |     |     |     |      Error 1905..1906 "\r"
-|     |     |     |      EndLine 1906..1907
-|     |     |     |     |      EndLine 1906..1907
-|     |     |     |     |     |      EndLine 1906..1907 "\n"
+|     |     |     |      EndLine 1903..1905
+|     |     |     |     |      EndLine 1903..1905
+|     |     |     |     |     |      EndLine 1903..1905 "\r\n"
+|     |     |     |      EndLine 1905..1907
+|     |     |     |     |      EndLine 1905..1907
+|     |     |     |     |     |      EndLine 1905..1907 "\r\n"
 |     |     |     |      WhiteSpace 1907..1911
 |     |     |     |     |      WhiteSpace 1907..1911
 |     |     |     |     |     |      WhiteSpace 1907..1911 "    "
@@ -571,12 +493,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Identifier 1915..1916 "k"
 |     |     |     |      Semicolon 1916..1917
 |     |     |     |     |      Semicolon 1916..1917 ";"
-|     |     |     |      Error 1917..1918
-|     |     |     |     |      Error 1917..1918
-|     |     |     |     |     |      Error 1917..1918 "\r"
-|     |     |     |      EndLine 1918..1919
-|     |     |     |     |      EndLine 1918..1919
-|     |     |     |     |     |      EndLine 1918..1919 "\n"
+|     |     |     |      EndLine 1917..1919
+|     |     |     |     |      EndLine 1917..1919
+|     |     |     |     |     |      EndLine 1917..1919 "\r\n"
 |     |     |     |      WhiteSpace 1919..1923
 |     |     |     |     |      WhiteSpace 1919..1923
 |     |     |     |     |     |      WhiteSpace 1919..1923 "    "
@@ -590,18 +509,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Identifier 1927..1928 "j"
 |     |     |     |      Semicolon 1928..1929
 |     |     |     |     |      Semicolon 1928..1929 ";"
-|     |     |     |      Error 1929..1930
-|     |     |     |     |      Error 1929..1930
-|     |     |     |     |     |      Error 1929..1930 "\r"
-|     |     |     |      EndLine 1930..1931
-|     |     |     |     |      EndLine 1930..1931
-|     |     |     |     |     |      EndLine 1930..1931 "\n"
-|     |     |     |      Error 1931..1932
-|     |     |     |     |      Error 1931..1932
-|     |     |     |     |     |      Error 1931..1932 "\r"
-|     |     |     |      EndLine 1932..1933
-|     |     |     |     |      EndLine 1932..1933
-|     |     |     |     |     |      EndLine 1932..1933 "\n"
+|     |     |     |      EndLine 1929..1931
+|     |     |     |     |      EndLine 1929..1931
+|     |     |     |     |     |      EndLine 1929..1931 "\r\n"
+|     |     |     |      EndLine 1931..1933
+|     |     |     |     |      EndLine 1931..1933
+|     |     |     |     |     |      EndLine 1931..1933 "\r\n"
 |     |     |     |      WhiteSpace 1933..1937
 |     |     |     |     |      WhiteSpace 1933..1937
 |     |     |     |     |     |      WhiteSpace 1933..1937 "    "
@@ -615,18 +528,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Identifier 1941..1943 "e2"
 |     |     |     |      Semicolon 1943..1944
 |     |     |     |     |      Semicolon 1943..1944 ";"
-|     |     |     |      Error 1944..1945
-|     |     |     |     |      Error 1944..1945
-|     |     |     |     |     |      Error 1944..1945 "\r"
-|     |     |     |      EndLine 1945..1946
-|     |     |     |     |      EndLine 1945..1946
-|     |     |     |     |     |      EndLine 1945..1946 "\n"
-|     |     |     |      Error 1946..1947
-|     |     |     |     |      Error 1946..1947
-|     |     |     |     |     |      Error 1946..1947 "\r"
-|     |     |     |      EndLine 1947..1948
-|     |     |     |     |      EndLine 1947..1948
-|     |     |     |     |     |      EndLine 1947..1948 "\n"
+|     |     |     |      EndLine 1944..1946
+|     |     |     |     |      EndLine 1944..1946
+|     |     |     |     |     |      EndLine 1944..1946 "\r\n"
+|     |     |     |      EndLine 1946..1948
+|     |     |     |     |      EndLine 1946..1948
+|     |     |     |     |     |      EndLine 1946..1948 "\r\n"
 |     |     |     |      WhiteSpace 1948..1952
 |     |     |     |     |      WhiteSpace 1948..1952
 |     |     |     |     |     |      WhiteSpace 1948..1952 "    "
@@ -650,12 +557,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      Number 1957..1958 "1"
 |     |     |     |     |      Semicolon 1958..1959
 |     |     |     |     |     |      Semicolon 1958..1959 ";"
-|     |     |     |      Error 1959..1960
-|     |     |     |     |      Error 1959..1960
-|     |     |     |     |     |      Error 1959..1960 "\r"
-|     |     |     |      EndLine 1960..1961
-|     |     |     |     |      EndLine 1960..1961
-|     |     |     |     |     |      EndLine 1960..1961 "\n"
+|     |     |     |      EndLine 1959..1961
+|     |     |     |     |      EndLine 1959..1961
+|     |     |     |     |     |      EndLine 1959..1961 "\r\n"
 |     |     |     |      WhiteSpace 1961..1965
 |     |     |     |     |      WhiteSpace 1961..1965
 |     |     |     |     |     |      WhiteSpace 1961..1965 "    "
@@ -715,12 +619,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      Block 1985..2481
 |     |     |     |     |     |     |     |      LCurly 1985..1986
 |     |     |     |     |     |     |     |     |      LCurly 1985..1986 "{"
-|     |     |     |     |     |     |     |      Error 1986..1987
-|     |     |     |     |     |     |     |     |      Error 1986..1987
-|     |     |     |     |     |     |     |     |     |      Error 1986..1987 "\r"
-|     |     |     |     |     |     |     |      EndLine 1987..1988
-|     |     |     |     |     |     |     |     |      EndLine 1987..1988
-|     |     |     |     |     |     |     |     |     |      EndLine 1987..1988 "\n"
+|     |     |     |     |     |     |     |      EndLine 1986..1988
+|     |     |     |     |     |     |     |     |      EndLine 1986..1988
+|     |     |     |     |     |     |     |     |     |      EndLine 1986..1988 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 1988..1996
 |     |     |     |     |     |     |     |     |      WhiteSpace 1988..1996
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 1988..1996 "        "
@@ -781,12 +682,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      Block 2018..2065
 |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2018..2019
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2018..2019 "{"
-|     |     |     |     |     |     |     |     |     |     |     |     |      Error 2019..2020
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2019..2020
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2019..2020 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2020..2021
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2020..2021
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2020..2021 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2019..2021 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2021..2033 "            "
@@ -839,23 +737,17 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2051..2053 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2053..2054
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2053..2054 ";"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2054..2055
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2054..2055
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2054..2055 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2055..2056
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2055..2056
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2055..2056 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2054..2056 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2056..2064 "        "
 |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2064..2065
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2064..2065 "}"
-|     |     |     |     |     |     |     |     |      Error 2065..2066
-|     |     |     |     |     |     |     |     |     |      Error 2065..2066
-|     |     |     |     |     |     |     |     |     |     |      Error 2065..2066 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2066..2067
-|     |     |     |     |     |     |     |     |     |      EndLine 2066..2067
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2066..2067 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2065..2067
+|     |     |     |     |     |     |     |     |     |      EndLine 2065..2067
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2065..2067 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2067..2075 "        "
@@ -891,21 +783,15 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2085..2087 "e2"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2087..2088
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2087..2088 ";"
-|     |     |     |     |     |     |     |     |      Error 2088..2089
-|     |     |     |     |     |     |     |     |     |      Error 2088..2089
-|     |     |     |     |     |     |     |     |     |     |      Error 2088..2089 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2089..2090
-|     |     |     |     |     |     |     |     |     |      EndLine 2089..2090
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2089..2090 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2088..2090
+|     |     |     |     |     |     |     |     |     |      EndLine 2088..2090
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2088..2090 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2090..2094 "    "
-|     |     |     |     |     |     |     |     |      Error 2094..2095
-|     |     |     |     |     |     |     |     |     |      Error 2094..2095
-|     |     |     |     |     |     |     |     |     |     |      Error 2094..2095 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2095..2096
-|     |     |     |     |     |     |     |     |     |      EndLine 2095..2096
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2095..2096 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2094..2096
+|     |     |     |     |     |     |     |     |     |      EndLine 2094..2096
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2094..2096 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2096..2104 "        "
@@ -929,12 +815,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2109..2110 "1"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2110..2111
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2110..2111 ";"
-|     |     |     |     |     |     |     |     |      Error 2111..2112
-|     |     |     |     |     |     |     |     |     |      Error 2111..2112
-|     |     |     |     |     |     |     |     |     |     |      Error 2111..2112 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2112..2113
-|     |     |     |     |     |     |     |     |     |      EndLine 2112..2113
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2112..2113 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2111..2113
+|     |     |     |     |     |     |     |     |     |      EndLine 2111..2113
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2111..2113 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2113..2121 "        "
@@ -994,12 +877,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |      Block 2144..2411
 |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2144..2145
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      LCurly 2144..2145 "{"
-|     |     |     |     |     |     |     |     |     |     |     |     |      Error 2145..2146
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2145..2146
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2145..2146 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2146..2147
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2146..2147
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2146..2147 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2145..2147 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2147..2159 "            "
@@ -1061,30 +941,24 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2183..2184 "1"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2184..2185
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2184..2185 ";"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2185..2186
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2185..2186
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2185..2186 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2186..2187
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2186..2187
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2186..2187 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2185..2187 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2187..2191 "    "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2191..2192
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2191..2192
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2191..2192 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2192..2193
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2192..2193
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2192..2193 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2191..2193 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2193..2205 "            "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2229
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2229
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2229 "// Ensure out is binary\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2229..2230
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2229..2230
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2229..2230 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      CommentLine 2205..2228 "// Ensure out is binary"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2228..2230 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2230..2242 "            "
@@ -1165,21 +1039,15 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2327..2328 "0"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2328..2329
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2328..2329 ";"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2329..2330
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2329..2330
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2329..2330 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2330..2331
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2330..2331
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2330..2331 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2329..2331 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2331..2335 "    "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2335..2336
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2335..2336
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2335..2336 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2336..2337
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2336..2337
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2336..2337 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2335..2337 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2337..2349 "            "
@@ -1223,21 +1091,15 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2366..2368 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2368..2369
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2368..2369 ";"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2369..2370
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2369..2370
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2369..2370 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2370..2371
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2370..2371
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2370..2371 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2369..2371 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2371..2375 "    "
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2375..2376
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2375..2376
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2375..2376 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2376..2377
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2376..2377
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2376..2377 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2375..2377 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2377..2389 "            "
@@ -1267,50 +1129,38 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2397..2399 "e2"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2399..2400
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Semicolon 2399..2400 ";"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2400..2401
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2400..2401
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Error 2400..2401 "\r"
-|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2401..2402
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2401..2402
-|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2401..2402 "\n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      EndLine 2400..2402 "\r\n"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410
 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2402..2410 "        "
 |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2410..2411
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      RCurly 2410..2411 "}"
-|     |     |     |     |     |     |     |     |      Error 2411..2412
-|     |     |     |     |     |     |     |     |     |      Error 2411..2412
-|     |     |     |     |     |     |     |     |     |     |      Error 2411..2412 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2412..2413
-|     |     |     |     |     |     |     |     |     |      EndLine 2412..2413
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2412..2413 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2411..2413
+|     |     |     |     |     |     |     |     |     |      EndLine 2411..2413
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2411..2413 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2413..2417 "    "
-|     |     |     |     |     |     |     |     |      Error 2417..2418
-|     |     |     |     |     |     |     |     |     |      Error 2417..2418
-|     |     |     |     |     |     |     |     |     |     |      Error 2417..2418 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2418..2419
-|     |     |     |     |     |     |     |     |     |      EndLine 2418..2419
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2418..2419 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2417..2419
+|     |     |     |     |     |     |     |     |     |      EndLine 2417..2419
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2417..2419 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2419..2427 "        "
-|     |     |     |     |     |     |     |     |      CommentLine 2427..2446
-|     |     |     |     |     |     |     |     |     |      CommentLine 2427..2446
-|     |     |     |     |     |     |     |     |     |     |      CommentLine 2427..2446 "// Ensure the sum;\r"
-|     |     |     |     |     |     |     |     |      EndLine 2446..2447
-|     |     |     |     |     |     |     |     |     |      EndLine 2446..2447
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2446..2447 "\n"
+|     |     |     |     |     |     |     |     |      CommentLine 2427..2445
+|     |     |     |     |     |     |     |     |     |      CommentLine 2427..2445
+|     |     |     |     |     |     |     |     |     |     |      CommentLine 2427..2445 "// Ensure the sum;"
+|     |     |     |     |     |     |     |     |      EndLine 2445..2447
+|     |     |     |     |     |     |     |     |     |      EndLine 2445..2447
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2445..2447 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2447..2451 "    "
-|     |     |     |     |     |     |     |     |      Error 2451..2452
-|     |     |     |     |     |     |     |     |     |      Error 2451..2452
-|     |     |     |     |     |     |     |     |     |     |      Error 2451..2452 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2452..2453
-|     |     |     |     |     |     |     |     |     |      EndLine 2452..2453
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2452..2453 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2451..2453
+|     |     |     |     |     |     |     |     |     |      EndLine 2451..2453
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2451..2453 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2453..2461 "        "
@@ -1334,23 +1184,17 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2469..2473 "lout"
 |     |     |     |     |     |     |     |     |     |      Semicolon 2473..2474
 |     |     |     |     |     |     |     |     |     |     |      Semicolon 2473..2474 ";"
-|     |     |     |     |     |     |     |     |      Error 2474..2475
-|     |     |     |     |     |     |     |     |     |      Error 2474..2475
-|     |     |     |     |     |     |     |     |     |     |      Error 2474..2475 "\r"
-|     |     |     |     |     |     |     |     |      EndLine 2475..2476
-|     |     |     |     |     |     |     |     |     |      EndLine 2475..2476
-|     |     |     |     |     |     |     |     |     |     |      EndLine 2475..2476 "\n"
+|     |     |     |     |     |     |     |     |      EndLine 2474..2476
+|     |     |     |     |     |     |     |     |     |      EndLine 2474..2476
+|     |     |     |     |     |     |     |     |     |     |      EndLine 2474..2476 "\r\n"
 |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480
 |     |     |     |     |     |     |     |     |     |     |      WhiteSpace 2476..2480 "    "
 |     |     |     |     |     |     |     |      RCurly 2480..2481
 |     |     |     |     |     |     |     |     |      RCurly 2480..2481 "}"
-|     |     |     |      Error 2481..2482
-|     |     |     |     |      Error 2481..2482
-|     |     |     |     |     |      Error 2481..2482 "\r"
-|     |     |     |      EndLine 2482..2483
-|     |     |     |     |      EndLine 2482..2483
-|     |     |     |     |     |      EndLine 2482..2483 "\n"
+|     |     |     |      EndLine 2481..2483
+|     |     |     |     |      EndLine 2481..2483
+|     |     |     |     |     |      EndLine 2481..2483 "\r\n"
 |     |     |      Error 2483..2508
 |     |     |     |      Error 2483..2508
 |     |     |     |     |      Error 2483..2508 "expect RCurly but got EOF"

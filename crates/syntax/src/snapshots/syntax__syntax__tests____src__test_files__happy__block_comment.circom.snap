@@ -3,21 +3,15 @@ source: crates/syntax/src/syntax.rs
 expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
  CircomProgram 0..47
-|      Error 0..1
-|     |      Error 0..1
-|     |     |      Error 0..1 "\r"
-|      EndLine 1..2
-|     |      EndLine 1..2
-|     |     |      EndLine 1..2 "\n"
+|      EndLine 0..2
+|     |      EndLine 0..2
+|     |     |      EndLine 0..2 "\r\n"
 |      BlockComment 2..25
 |     |      BlockComment 2..25
 |     |     |      BlockComment 2..25 "/*\r\ncomment\r\nblocks\r\n*/"
-|      Error 25..26
-|     |      Error 25..26
-|     |     |      Error 25..26 "\r"
-|      EndLine 26..27
-|     |      EndLine 26..27
-|     |     |      EndLine 26..27 "\n"
+|      EndLine 25..27
+|     |      EndLine 25..27
+|     |     |      EndLine 25..27 "\r\n"
 |      Pragma 27..47
 |     |      Pragma 27..33
 |     |     |      Pragma 27..33 "pragma"

@@ -41,21 +41,18 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |      Block 32..349
 |     |      LCurly 32..33
 |     |     |      LCurly 32..33 "{"
-|     |      Error 33..34
-|     |     |      Error 33..34
-|     |     |     |      Error 33..34 "\r"
-|     |      EndLine 34..35
-|     |     |      EndLine 34..35
-|     |     |     |      EndLine 34..35 "\n"
+|     |      EndLine 33..35
+|     |     |      EndLine 33..35
+|     |     |     |      EndLine 33..35 "\r\n"
 |     |      WhiteSpace 35..47
 |     |     |      WhiteSpace 35..47
 |     |     |     |      WhiteSpace 35..47 "            "
-|     |      CommentLine 47..88
-|     |     |      CommentLine 47..88
-|     |     |     |      CommentLine 47..88 "//Declaration of signals and components.\r"
-|     |      EndLine 88..89
-|     |     |      EndLine 88..89
-|     |     |     |      EndLine 88..89 "\n"
+|     |      CommentLine 47..87
+|     |     |      CommentLine 47..87
+|     |     |     |      CommentLine 47..87 "//Declaration of signals and components."
+|     |      EndLine 87..89
+|     |     |      EndLine 87..89
+|     |     |     |      EndLine 87..89 "\r\n"
 |     |      WhiteSpace 89..101
 |     |     |      WhiteSpace 89..101
 |     |     |     |      WhiteSpace 89..101 "            "
@@ -84,12 +81,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      RBracket 118..119 "]"
 |     |     |      Semicolon 119..120
 |     |     |     |      Semicolon 119..120 ";"
-|     |     |      Error 120..121
-|     |     |     |      Error 120..121
-|     |     |     |     |      Error 120..121 "\r"
-|     |     |      EndLine 121..122
-|     |     |     |      EndLine 121..122
-|     |     |     |     |      EndLine 121..122 "\n"
+|     |     |      EndLine 120..122
+|     |     |     |      EndLine 120..122
+|     |     |     |     |      EndLine 120..122 "\r\n"
 |     |     |      WhiteSpace 122..134
 |     |     |     |      WhiteSpace 122..134
 |     |     |     |     |      WhiteSpace 122..134 "            "
@@ -109,12 +103,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      Identifier 148..151 "out"
 |     |     |      Semicolon 151..152
 |     |     |     |      Semicolon 151..152 ";"
-|     |     |      Error 152..153
-|     |     |     |      Error 152..153
-|     |     |     |     |      Error 152..153 "\r"
-|     |     |      EndLine 153..154
-|     |     |     |      EndLine 153..154
-|     |     |     |     |      EndLine 153..154 "\n"
+|     |     |      EndLine 152..154
+|     |     |     |      EndLine 152..154
+|     |     |     |     |      EndLine 152..154 "\r\n"
 |     |     |      WhiteSpace 154..166
 |     |     |     |      WhiteSpace 154..166
 |     |     |     |     |      WhiteSpace 154..166 "            "
@@ -143,30 +134,24 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      RBracket 184..185 "]"
 |     |     |      Semicolon 185..186
 |     |     |     |      Semicolon 185..186 ";"
-|     |     |      Error 186..187
-|     |     |     |      Error 186..187
-|     |     |     |     |      Error 186..187 "\r"
-|     |     |      EndLine 187..188
-|     |     |     |      EndLine 187..188
-|     |     |     |     |      EndLine 187..188 "\n"
+|     |     |      EndLine 186..188
+|     |     |     |      EndLine 186..188
+|     |     |     |     |      EndLine 186..188 "\r\n"
 |     |     |      WhiteSpace 188..201
 |     |     |     |      WhiteSpace 188..201
 |     |     |     |     |      WhiteSpace 188..201 "             "
-|     |     |      Error 201..202
-|     |     |     |      Error 201..202
-|     |     |     |     |      Error 201..202 "\r"
-|     |     |      EndLine 202..203
-|     |     |     |      EndLine 202..203
-|     |     |     |     |      EndLine 202..203 "\n"
+|     |     |      EndLine 201..203
+|     |     |     |      EndLine 201..203
+|     |     |     |     |      EndLine 201..203 "\r\n"
 |     |     |      WhiteSpace 203..215
 |     |     |     |      WhiteSpace 203..215
 |     |     |     |     |      WhiteSpace 203..215 "            "
-|     |     |      CommentLine 215..229
-|     |     |     |      CommentLine 215..229
-|     |     |     |     |      CommentLine 215..229 "//Statements.\r"
-|     |     |      EndLine 229..230
-|     |     |     |      EndLine 229..230
-|     |     |     |     |      EndLine 229..230 "\n"
+|     |     |      CommentLine 215..228
+|     |     |     |      CommentLine 215..228
+|     |     |     |     |      CommentLine 215..228 "//Statements."
+|     |     |      EndLine 228..230
+|     |     |     |      EndLine 228..230
+|     |     |     |     |      EndLine 228..230 "\r\n"
 |     |     |      WhiteSpace 230..242
 |     |     |     |      WhiteSpace 230..242
 |     |     |     |     |      WhiteSpace 230..242 "            "
@@ -241,12 +226,9 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Block 270..328
 |     |     |     |     |     |     |      LCurly 270..271
 |     |     |     |     |     |     |     |      LCurly 270..271 "{"
-|     |     |     |     |     |     |      Error 271..272
-|     |     |     |     |     |     |     |      Error 271..272
-|     |     |     |     |     |     |     |     |      Error 271..272 "\r"
-|     |     |     |     |     |     |      EndLine 272..273
-|     |     |     |     |     |     |     |      EndLine 272..273
-|     |     |     |     |     |     |     |     |      EndLine 272..273 "\n"
+|     |     |     |     |     |     |      EndLine 271..273
+|     |     |     |     |     |     |     |      EndLine 271..273
+|     |     |     |     |     |     |     |     |      EndLine 271..273 "\r\n"
 |     |     |     |     |     |     |      WhiteSpace 273..289
 |     |     |     |     |     |     |     |      WhiteSpace 273..289
 |     |     |     |     |     |     |     |     |      WhiteSpace 273..289 "                "
@@ -285,31 +267,22 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |     |     |     |     |     |      RParen 311..312 ")"
 |     |     |     |     |     |     |     |     |      Semicolon 312..313
 |     |     |     |     |     |     |     |     |     |      Semicolon 312..313 ";"
-|     |     |     |     |     |     |     |      Error 313..314
-|     |     |     |     |     |     |     |     |      Error 313..314
-|     |     |     |     |     |     |     |     |     |      Error 313..314 "\r"
-|     |     |     |     |     |     |     |      EndLine 314..315
-|     |     |     |     |     |     |     |     |      EndLine 314..315
-|     |     |     |     |     |     |     |     |     |      EndLine 314..315 "\n"
+|     |     |     |     |     |     |     |      EndLine 313..315
+|     |     |     |     |     |     |     |     |      EndLine 313..315
+|     |     |     |     |     |     |     |     |     |      EndLine 313..315 "\r\n"
 |     |     |     |     |     |     |     |      WhiteSpace 315..327
 |     |     |     |     |     |     |     |     |      WhiteSpace 315..327
 |     |     |     |     |     |     |     |     |     |      WhiteSpace 315..327 "            "
 |     |     |     |     |     |     |      RCurly 327..328
 |     |     |     |     |     |     |     |      RCurly 327..328 "}"
-|     |     |      Error 328..329
-|     |     |     |      Error 328..329
-|     |     |     |     |      Error 328..329 "\r"
-|     |     |      EndLine 329..330
-|     |     |     |      EndLine 329..330
-|     |     |     |     |      EndLine 329..330 "\n"
+|     |     |      EndLine 328..330
+|     |     |     |      EndLine 328..330
+|     |     |     |     |      EndLine 328..330 "\r\n"
 |     |     |      WhiteSpace 330..346
 |     |     |     |      WhiteSpace 330..346
 |     |     |     |     |      WhiteSpace 330..346 "                "
-|     |     |      Error 346..347
-|     |     |     |      Error 346..347
-|     |     |     |     |      Error 346..347 "\r"
-|     |     |      EndLine 347..348
-|     |     |     |      EndLine 347..348
-|     |     |     |     |      EndLine 347..348 "\n"
+|     |     |      EndLine 346..348
+|     |     |     |      EndLine 346..348
+|     |     |     |     |      EndLine 346..348 "\r\n"
 |     |      RCurly 348..349
 |     |     |      RCurly 348..349 "}"

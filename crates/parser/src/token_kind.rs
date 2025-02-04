@@ -9,7 +9,7 @@ pub enum TokenKind {
     #[error]
     Error = 0,
     // Comments
-    #[regex(r"//[^\n]*")]
+    #[regex(r"//[^\r\n]*")]
     CommentLine,
     #[token("/*")]
     CommentBlockOpen,
@@ -18,7 +18,7 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex("[\n]")]
+    #[regex(r"\r?\n")]
     EndLine,
     // Circom
     #[token("pragma")]
@@ -47,7 +47,6 @@ pub enum TokenKind {
     LBracket,
     #[token("]")]
     RBracket,
-    // Punctuation
     // Punctuation
     #[token(";")]
     Semicolon,
