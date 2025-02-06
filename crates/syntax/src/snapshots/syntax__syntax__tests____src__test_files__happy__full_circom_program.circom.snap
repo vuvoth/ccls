@@ -2,7 +2,7 @@
 source: crates/syntax/src/syntax.rs
 expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
- CircomProgram 0..2449
+ CircomProgram 0..2427
 |      BlockComment 0..764
 |     |      BlockComment 0..764 "/*\r\n    Copyright 2018 0KIMS association.\r\n\r\n    This file is part of circom (Zero Knowledge Circuit Compiler).\r\n\r\n    circom is a free software: you can redistribute it and/or modify it\r\n    under the terms of the GNU General Public License as published by\r\n    the Free Software Foundation, either version 3 of the License, or\r\n    (at your option) any later version.\r\n\r\n    circom is distributed in the hope that it will be useful, but WITHOUT\r\n    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\r\n    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public\r\n    License for more details.\r\n\r\n    You should have received a copy of the GNU General Public License\r\n    along with circom. If not, see <https://www.gnu.org/licenses/>.\r\n*/"
 |      EndLine 764..766
@@ -213,7 +213,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |      EndLine 1737..1739 "\r\n"
 |      EndLine 1739..1741
 |     |      EndLine 1739..1741 "\r\n"
-|      TemplateDef 1741..2449
+|      TemplateDef 1741..2425
 |     |      TemplateKw 1741..1749
 |     |     |      TemplateKw 1741..1749 "template"
 |     |      WhiteSpace 1749..1750
@@ -236,7 +236,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      RParen 1763..1764 ")"
 |     |      WhiteSpace 1764..1765
 |     |     |      WhiteSpace 1764..1765 " "
-|     |      Block 1765..2449
+|     |      Block 1765..2425
 |     |     |      LCurly 1765..1766
 |     |     |     |      LCurly 1765..1766 "{"
 |     |     |      EndLine 1766..1768
@@ -1026,6 +1026,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      RCurly 2421..2422 "}"
 |     |     |     |      EndLine 2422..2424
 |     |     |     |     |      EndLine 2422..2424 "\r\n"
-|     |     |      Error 2424..2449
-|     |     |     |      Error 2424..2449
-|     |     |     |     |      Error 2424..2449 "expect RCurly but got EOF"
+|     |     |      RCurly 2424..2425
+|     |     |     |      RCurly 2424..2425 "}"
+|      EndLine 2425..2427
+|     |      EndLine 2425..2427 "\r\n"
