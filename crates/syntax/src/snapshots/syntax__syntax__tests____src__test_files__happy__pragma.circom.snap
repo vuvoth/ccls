@@ -1,18 +1,16 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate::view_syntax::view_ast(&syntax)"
+expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
  Pragma 0..20
-|      Pragma 0..6
-|     |      Pragma 0..6 "pragma"
+|      PragmaKw 0..6
+|     |      PragmaKw 0..6 "pragma"
 |      WhiteSpace 6..7
-|     |      WhiteSpace 6..7
-|     |     |      WhiteSpace 6..7 " "
+|     |      WhiteSpace 6..7 " "
 |      Circom 7..13
 |     |      Circom 7..13 "circom"
 |      WhiteSpace 13..14
-|     |      WhiteSpace 13..14
-|     |     |      WhiteSpace 13..14 " "
+|     |      WhiteSpace 13..14 " "
 |      Version 14..19
 |     |      Version 14..19 "2.0.0"
 |      Semicolon 19..20

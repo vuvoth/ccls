@@ -9,16 +9,38 @@ pub(super) fn expression(p: &mut Parser) {
 }
 
 /**
+ * grammar: "(param1, param2,..., paramn)"
+ * can be an empty ()
+ */
+pub(super) fn function_params(p: &mut Parser) {
+    let m = p.open();
+    p.expect(LParen);
+
+    while !p.at(RParen) && !p.eof() {
+        expression(p);
+        if p.at(Comma) {
+            p.expect(Comma)
+        } else {
+            break;
+        }
+    }
+
+    p.expect(RParen);
+    // TODO: what kind of it?
+    p.close(m, Tuple);
+}
+
+/**
  * grammar: "(Symbol_1, Symbol_2,..., Symbol_n)"
+ * can be an empty tuple (for function cal: Mul())
  */
 pub(super) fn tuple(p: &mut Parser) {
     let m = p.open();
     p.expect(LParen);
-    p.expect(Identifier);
-    while p.at(Comma) && !p.eof() {
-        p.expect(Comma);
-        p.expect(Identifier);
-    }
+
+    // iden1, iden2, iden3
+    list_identity::parse(p);
+
     p.expect(RParen);
     p.close(m, Tuple);
 }
@@ -37,16 +59,10 @@ pub(super) fn tuple_init(p: &mut Parser) {
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let m_close: Marker;
     match p.current() {
-        Number => {
+        Number | Identifier => {
             let m = p.open();
             p.advance();
-            m_close = p.close(m, Number);
-            Some(m_close)
-        }
-        Identifier => {
-            let m = p.open();
-            p.advance();
-            m_close = p.close(m, Identifier);
+            m_close = p.close(m, ExpressionAtom);
             Some(m_close)
         }
         LParen => {
@@ -85,7 +101,8 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
     // TODO: function call
     if p.at(LParen) {
         let m = p.open_before(lhs);
-        tuple(p);
+        // tuple(p);
+        function_params(p);
         lhs = p.close(m, Call);
     }
 

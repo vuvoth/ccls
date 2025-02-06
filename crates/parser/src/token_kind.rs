@@ -9,7 +9,7 @@ pub enum TokenKind {
     #[error]
     Error = 0,
     // Comments
-    #[regex(r"//[^\n]*")]
+    #[regex(r"//[^\r\n]*")]
     CommentLine,
     #[token("/*")]
     CommentBlockOpen,
@@ -18,11 +18,12 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex("[\n]")]
+    #[regex(r"\r?\n")]
     EndLine,
-    // Circom
-    #[token("pragma")]
+    // Pragma
     Pragma,
+    #[token("pragma")]
+    PragmaKw,
     #[token("circom")]
     Circom,
     #[regex("2.[0-9].[0-9]")]
@@ -47,7 +48,6 @@ pub enum TokenKind {
     LBracket,
     #[token("]")]
     RBracket,
-    // Punctuation
     // Punctuation
     #[token(";")]
     Semicolon,
@@ -122,7 +122,6 @@ pub enum TokenKind {
     ShiftR,
     #[token("<<")]
     ShiftL,
-    // Combined bitwise assignments
     // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
@@ -202,6 +201,7 @@ pub enum TokenKind {
     Call,
     TenaryConditional,
     Condition,
+    ExpressionAtom,
     Expression,
     FunctionDef,
     Statement,
@@ -212,6 +212,7 @@ pub enum TokenKind {
     FunctionName,
     ParameterList,
     SignalDecl,
+    VarIdentifier,
     VarDecl,
     InputSignalDecl,
     OutputSignalDecl,
@@ -293,6 +294,12 @@ impl TokenKind {
             // associativity: right to left [ a = b = c --> a = (b = c) ] 
             // assignment operators
             Self::Assign
+            // signal assigment operators
+            | Self::EqualSignal
+            | Self::LAssignSignal
+            | Self::LAssignContraintSignal
+            | Self::RAssignSignal
+            | Self::RAssignConstraintSignal
             // bitwise asignment operators
             | Self::BitOrAssign
             | Self::BitXorAssign
@@ -344,6 +351,47 @@ impl TokenKind {
 
     pub fn is_declaration_kw(self) -> bool {
         matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
+    }
+
+    pub fn is_assign_token(self) -> bool {
+        matches!(
+            self,
+            Self::Assign
+            // signal assigment operators
+            | Self::EqualSignal
+            | Self::LAssignSignal
+            | Self::LAssignContraintSignal
+            | Self::RAssignSignal
+            | Self::RAssignConstraintSignal
+            // bitwise asignment operators
+            | Self::BitOrAssign
+            | Self::BitXorAssign
+            | Self::BitAndAssign
+            | Self::ShiftLAssign
+            | Self::ShiftRAssign
+            // arithmetic asignament operators
+            | Self::AddAssign
+            | Self::SubAssign
+            | Self::MulAssign
+            | Self::DivAssign
+            | Self::IntDivAssign
+            | Self::ModAssign
+            | Self::PowerAssign
+            // unit inc/dec
+            | Self::UnitInc
+            | Self::UnitDec
+        )
+    }
+
+    pub fn is_inline_assign_signal(self) -> bool {
+        matches!(
+            self,
+            Self::Assign | Self::RAssignSignal | Self::RAssignConstraintSignal
+        )
+    }
+
+    pub fn is_var_assign(self) -> bool {
+        matches!(self, Self::Assign)
     }
 
     pub fn is_trivial(self) -> bool {

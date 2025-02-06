@@ -1,670 +1,526 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate::view_syntax::view_ast(&syntax)"
+expression: "crate :: view_syntax :: view_ast(& syntax)"
 ---
- Block 0..1021
+ Block 0..533
 |      LCurly 0..1
 |     |      LCurly 0..1 "{"
-|      EndLine 1..2
-|     |      EndLine 1..2
-|     |     |      EndLine 1..2 "\n"
-|      WhiteSpace 2..3
-|     |      WhiteSpace 2..3
-|     |     |      WhiteSpace 2..3 " "
-|      CommentLine 3..28
-|     |      CommentLine 3..28
-|     |     |      CommentLine 3..28 "//Declaration of signals."
-|      EndLine 28..29
-|     |      EndLine 28..29
-|     |     |      EndLine 28..29 "\n"
-|      WhiteSpace 29..41
-|     |      WhiteSpace 29..41
-|     |     |      WhiteSpace 29..41 "            "
-|      StatementList 41..1020
-|     |      InputSignalDecl 41..56
-|     |     |      SignalHeader 41..54
-|     |     |     |      SignalKw 41..47
-|     |     |     |     |      SignalKw 41..47 "signal"
-|     |     |     |      WhiteSpace 47..48
-|     |     |     |     |      WhiteSpace 47..48
-|     |     |     |     |     |      WhiteSpace 47..48 " "
-|     |     |     |      InputKw 48..53
-|     |     |     |     |      InputKw 48..53 "input"
-|     |     |     |      WhiteSpace 53..54
-|     |     |     |     |      WhiteSpace 53..54
-|     |     |     |     |     |      WhiteSpace 53..54 " "
-|     |     |      Identifier 54..56
-|     |     |     |      Identifier 54..56 "in"
-|     |      Error 56..89
-|     |     |      Error 56..89
-|     |     |     |      Error 56..89 "expect Semicolon but got LBracket"
-|     |      Statement 89..125
-|     |     |      Error 89..90
-|     |     |     |      Expression 89..90
-|     |     |     |     |      Error 89..90
-|     |     |     |     |     |      LBracket 89..90
-|     |     |     |     |     |     |      LBracket 89..90 "["
-|     |     |      Error 90..125
-|     |     |     |      Error 90..125
-|     |     |     |     |      Error 90..125 "expect Semicolon but got Identifier"
-|     |      Statement 125..159
-|     |     |      Error 125..126
-|     |     |     |      Expression 125..126
-|     |     |     |     |      ComponentIdentifier 125..126
-|     |     |     |     |     |      Identifier 125..126
-|     |     |     |     |     |     |      Identifier 125..126 "N"
-|     |     |      Error 126..159
-|     |     |     |      Error 126..159
-|     |     |     |     |      Error 126..159 "expect Semicolon but got RBracket"
-|     |      Statement 159..161
-|     |     |      Error 159..160
-|     |     |     |      Expression 159..160
-|     |     |     |     |      Error 159..160
-|     |     |     |     |     |      RBracket 159..160
-|     |     |     |     |     |     |      RBracket 159..160 "]"
-|     |     |      Semicolon 160..161
-|     |     |     |      Semicolon 160..161 ";"
-|     |      EndLine 161..162
-|     |     |      EndLine 161..162
-|     |     |     |      EndLine 161..162 "\n"
-|     |      WhiteSpace 162..174
-|     |     |      WhiteSpace 162..174
-|     |     |     |      WhiteSpace 162..174 "            "
-|     |      OutputSignalDecl 174..191
-|     |     |      SignalHeader 174..188
-|     |     |     |      SignalKw 174..180
-|     |     |     |     |      SignalKw 174..180 "signal"
-|     |     |     |      WhiteSpace 180..181
-|     |     |     |     |      WhiteSpace 180..181
-|     |     |     |     |     |      WhiteSpace 180..181 " "
-|     |     |     |      OutputKw 181..187
-|     |     |     |     |      OutputKw 181..187 "output"
-|     |     |     |      WhiteSpace 187..188
-|     |     |     |     |      WhiteSpace 187..188
-|     |     |     |     |     |      WhiteSpace 187..188 " "
-|     |     |      Identifier 188..191
-|     |     |     |      Identifier 188..191 "out"
-|     |      Semicolon 191..192
-|     |     |      Semicolon 191..192 ";"
-|     |      EndLine 192..193
-|     |     |      EndLine 192..193
-|     |     |     |      EndLine 192..193 "\n"
-|     |      WhiteSpace 193..205
-|     |     |      WhiteSpace 193..205
-|     |     |     |      WhiteSpace 193..205 "            "
-|     |      ComponentDecl 205..343
-|     |     |      ComponentKw 205..214
-|     |     |     |      ComponentKw 205..214 "component"
-|     |     |      WhiteSpace 214..215
-|     |     |     |      WhiteSpace 214..215
-|     |     |     |     |      WhiteSpace 214..215 " "
-|     |     |      ComponentIdentifier 215..219
-|     |     |     |      Identifier 215..219
-|     |     |     |     |      Identifier 215..219 "comp"
-|     |     |      Error 219..249
-|     |     |     |      Error 219..249
-|     |     |     |     |      Error 219..249 "expect Assign but got LBracket"
-|     |     |      TemplateName 249..283
-|     |     |     |      Error 249..283
-|     |     |     |     |      Error 249..283
-|     |     |     |     |     |      Error 249..283 "expect Identifier but got LBracket"
-|     |     |      Error 283..313
-|     |     |     |      Error 283..313
-|     |     |     |     |      Error 283..313 "expect LParen but got LBracket"
-|     |     |      Error 313..343
-|     |     |     |      Error 313..343
-|     |     |     |     |      Error 313..343 "expect RParen but got LBracket"
-|     |      Error 343..376
-|     |     |      Error 343..376
-|     |     |     |      Error 343..376 "expect Semicolon but got LBracket"
-|     |      Statement 376..412
-|     |     |      Error 376..377
-|     |     |     |      Expression 376..377
-|     |     |     |     |      Error 376..377
-|     |     |     |     |     |      LBracket 376..377
-|     |     |     |     |     |     |      LBracket 376..377 "["
-|     |     |      Error 377..412
-|     |     |     |      Error 377..412
-|     |     |     |     |      Error 377..412 "expect Semicolon but got Identifier"
-|     |      Statement 412..441
-|     |     |      Error 412..413
-|     |     |     |      Expression 412..413
-|     |     |     |     |      ComponentIdentifier 412..413
-|     |     |     |     |     |      Identifier 412..413
-|     |     |     |     |     |     |      Identifier 412..413 "N"
-|     |     |      Error 413..441
-|     |     |     |      Error 413..441
-|     |     |     |     |      Error 413..441 "expect Semicolon but got Sub"
-|     |      Statement 441..476
-|     |     |      Error 441..443
-|     |     |     |      Expression 441..443
-|     |     |     |     |      Sub 441..443
-|     |     |     |     |     |      Sub 441..442
-|     |     |     |     |     |     |      Sub 441..442 "-"
-|     |     |     |     |     |      Number 442..443
-|     |     |     |     |     |     |      Number 442..443
-|     |     |     |     |     |     |     |      Number 442..443 "1"
-|     |     |      Error 443..476
-|     |     |     |      Error 443..476
-|     |     |     |     |      Error 443..476 "expect Semicolon but got RBracket"
-|     |      Statement 476..478
-|     |     |      Error 476..477
-|     |     |     |      Expression 476..477
-|     |     |     |     |      Error 476..477
-|     |     |     |     |     |      RBracket 476..477
-|     |     |     |     |     |     |      RBracket 476..477 "]"
-|     |     |      Semicolon 477..478
-|     |     |     |      Semicolon 477..478 ";"
-|     |      EndLine 478..479
-|     |     |      EndLine 478..479
-|     |     |     |      EndLine 478..479 "\n"
-|     |      EndLine 479..480
-|     |     |      EndLine 479..480
-|     |     |     |      EndLine 479..480 "\n"
-|     |      WhiteSpace 480..492
-|     |     |      WhiteSpace 480..492
-|     |     |     |      WhiteSpace 480..492 "            "
-|     |      CommentLine 492..505
-|     |     |      CommentLine 492..505
-|     |     |     |      CommentLine 492..505 "//Statements."
-|     |      EndLine 505..506
-|     |     |      EndLine 505..506
-|     |     |     |      EndLine 505..506 "\n"
-|     |      WhiteSpace 506..518
-|     |     |      WhiteSpace 506..518
-|     |     |     |      WhiteSpace 506..518 "            "
-|     |      Statement 518..606
-|     |     |      ForLoop 518..606
-|     |     |     |      ForKw 518..521
-|     |     |     |     |      ForKw 518..521 "for"
-|     |     |     |      LParen 521..522
-|     |     |     |     |      LParen 521..522 "("
-|     |     |     |      VarDecl 522..531
-|     |     |     |     |      VarKw 522..525
-|     |     |     |     |     |      VarKw 522..525 "var"
-|     |     |     |     |      WhiteSpace 525..526
-|     |     |     |     |     |      WhiteSpace 525..526
-|     |     |     |     |     |     |      WhiteSpace 525..526 " "
-|     |     |     |     |      Identifier 526..527
-|     |     |     |     |     |      Identifier 526..527 "i"
-|     |     |     |     |      WhiteSpace 527..528
-|     |     |     |     |     |      WhiteSpace 527..528
-|     |     |     |     |     |     |      WhiteSpace 527..528 " "
-|     |     |     |     |      Assign 528..529
-|     |     |     |     |     |      Assign 528..529 "="
-|     |     |     |     |      WhiteSpace 529..530
-|     |     |     |     |     |      WhiteSpace 529..530
-|     |     |     |     |     |     |      WhiteSpace 529..530 " "
-|     |     |     |     |      Expression 530..531
-|     |     |     |     |     |      Number 530..531
-|     |     |     |     |     |     |      Number 530..531
-|     |     |     |     |     |     |     |      Number 530..531 "0"
-|     |     |     |      Semicolon 531..532
-|     |     |     |     |      Semicolon 531..532 ";"
-|     |     |     |      WhiteSpace 532..533
-|     |     |     |     |      WhiteSpace 532..533
-|     |     |     |     |     |      WhiteSpace 532..533 " "
-|     |     |     |      Expression 533..540
-|     |     |     |     |      LessThan 533..540
-|     |     |     |     |     |      Identifier 533..534
-|     |     |     |     |     |     |      Identifier 533..534
-|     |     |     |     |     |     |     |      Identifier 533..534 "i"
-|     |     |     |     |     |      WhiteSpace 534..535
-|     |     |     |     |     |     |      WhiteSpace 534..535
-|     |     |     |     |     |     |     |      WhiteSpace 534..535 " "
-|     |     |     |     |     |      LessThan 535..536
-|     |     |     |     |     |     |      LessThan 535..536 "<"
-|     |     |     |     |     |      WhiteSpace 536..537
-|     |     |     |     |     |     |      WhiteSpace 536..537
-|     |     |     |     |     |     |     |      WhiteSpace 536..537 " "
-|     |     |     |     |     |      Sub 537..540
-|     |     |     |     |     |     |      Identifier 537..538
-|     |     |     |     |     |     |     |      Identifier 537..538
-|     |     |     |     |     |     |     |     |      Identifier 537..538 "N"
-|     |     |     |     |     |     |      Sub 538..539
-|     |     |     |     |     |     |     |      Sub 538..539 "-"
-|     |     |     |     |     |     |      Number 539..540
-|     |     |     |     |     |     |     |      Number 539..540
-|     |     |     |     |     |     |     |     |      Number 539..540 "1"
-|     |     |     |      Semicolon 540..541
-|     |     |     |     |      Semicolon 540..541 ";"
-|     |     |     |      WhiteSpace 541..542
-|     |     |     |     |      WhiteSpace 541..542
-|     |     |     |     |     |      WhiteSpace 541..542 " "
-|     |     |     |      Error 542..543
-|     |     |     |     |      Expression 542..543
-|     |     |     |     |     |      ComponentIdentifier 542..543
-|     |     |     |     |     |     |      Identifier 542..543
-|     |     |     |     |     |     |     |      Identifier 542..543 "i"
-|     |     |     |      Error 543..572
-|     |     |     |     |      Error 543..572
-|     |     |     |     |     |      Error 543..572 "expect RParen but got UnitInc"
-|     |     |     |      Error 572..575
-|     |     |     |     |      Expression 572..575
-|     |     |     |     |     |      UnitInc 572..575
-|     |     |     |     |     |     |      UnitInc 572..574
-|     |     |     |     |     |     |     |      UnitInc 572..574 "++"
-|     |     |     |     |     |     |      Error 574..575
-|     |     |     |     |     |     |     |      RParen 574..575
-|     |     |     |     |     |     |     |     |      RParen 574..575 ")"
-|     |     |     |      Error 575..606
-|     |     |     |     |      Error 575..606
-|     |     |     |     |     |      Error 575..606 "expect Semicolon but got LCurly"
-|     |      Statement 606..694
-|     |     |      Block 606..694
-|     |     |     |      LCurly 606..607
-|     |     |     |     |      LCurly 606..607 "{"
-|     |     |     |      EndLine 607..608
-|     |     |     |     |      EndLine 607..608
-|     |     |     |     |     |      EndLine 607..608 "\n"
-|     |     |     |      WhiteSpace 608..624
-|     |     |     |     |      WhiteSpace 608..624
-|     |     |     |     |     |      WhiteSpace 608..624 "                "
-|     |     |     |      StatementList 624..693
-|     |     |     |     |      Statement 624..680
-|     |     |     |     |     |      AssignStatement 624..679
-|     |     |     |     |     |     |      Expression 624..632
-|     |     |     |     |     |     |     |      ComponentIdentifier 624..628
-|     |     |     |     |     |     |     |     |      Identifier 624..628
-|     |     |     |     |     |     |     |     |     |      Identifier 624..628 "comp"
-|     |     |     |     |     |     |     |      LBracket 628..629
-|     |     |     |     |     |     |     |     |      LBracket 628..629 "["
-|     |     |     |     |     |     |     |      Expression 629..630
-|     |     |     |     |     |     |     |     |      Identifier 629..630
-|     |     |     |     |     |     |     |     |     |      Identifier 629..630
-|     |     |     |     |     |     |     |     |     |     |      Identifier 629..630 "i"
-|     |     |     |     |     |     |     |      RBracket 630..631
-|     |     |     |     |     |     |     |     |      RBracket 630..631 "]"
-|     |     |     |     |     |     |     |      WhiteSpace 631..632
-|     |     |     |     |     |     |     |     |      WhiteSpace 631..632
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 631..632 " "
-|     |     |     |     |     |     |      Assign 632..633
-|     |     |     |     |     |     |     |      Assign 632..633 "="
-|     |     |     |     |     |     |      WhiteSpace 633..634
-|     |     |     |     |     |     |     |      WhiteSpace 633..634
-|     |     |     |     |     |     |     |     |      WhiteSpace 633..634 " "
-|     |     |     |     |     |     |      Expression 634..679
-|     |     |     |     |     |     |     |      Call 634..679
-|     |     |     |     |     |     |     |     |      Identifier 634..645
-|     |     |     |     |     |     |     |     |     |      Identifier 634..645
-|     |     |     |     |     |     |     |     |     |     |      Identifier 634..645 "Multiplier2"
-|     |     |     |     |     |     |     |     |      Tuple 645..679
-|     |     |     |     |     |     |     |     |     |      LParen 645..646
-|     |     |     |     |     |     |     |     |     |     |      LParen 645..646 "("
-|     |     |     |     |     |     |     |     |     |      Error 646..678
-|     |     |     |     |     |     |     |     |     |     |      Error 646..678
-|     |     |     |     |     |     |     |     |     |     |     |      Error 646..678 "expect Identifier but got RParen"
-|     |     |     |     |     |     |     |     |     |      RParen 678..679
-|     |     |     |     |     |     |     |     |     |     |      RParen 678..679 ")"
-|     |     |     |     |     |      Semicolon 679..680
-|     |     |     |     |     |     |      Semicolon 679..680 ";"
-|     |     |     |     |      EndLine 680..681
-|     |     |     |     |     |      EndLine 680..681
-|     |     |     |     |     |     |      EndLine 680..681 "\n"
-|     |     |     |     |      WhiteSpace 681..693
-|     |     |     |     |     |      WhiteSpace 681..693
-|     |     |     |     |     |     |      WhiteSpace 681..693 "            "
-|     |     |     |      RCurly 693..694
-|     |     |     |     |      RCurly 693..694 "}"
-|     |      EndLine 694..695
-|     |     |      EndLine 694..695
-|     |     |     |      EndLine 694..695 "\n"
-|     |      WhiteSpace 695..707
-|     |     |      WhiteSpace 695..707
-|     |     |     |      WhiteSpace 695..707 "            "
-|     |      Statement 707..729
-|     |     |      AssignStatement 707..728
-|     |     |     |      ComponentCall 707..718
-|     |     |     |     |      ComponentIdentifier 707..711
-|     |     |     |     |     |      Identifier 707..711
-|     |     |     |     |     |     |      Identifier 707..711 "comp"
-|     |     |     |     |      LBracket 711..712
-|     |     |     |     |     |      LBracket 711..712 "["
-|     |     |     |     |      Expression 712..713
-|     |     |     |     |     |      Number 712..713
-|     |     |     |     |     |     |      Number 712..713
-|     |     |     |     |     |     |     |      Number 712..713 "0"
-|     |     |     |     |      RBracket 713..714
-|     |     |     |     |     |      RBracket 713..714 "]"
-|     |     |     |     |      Dot 714..715
-|     |     |     |     |     |      Dot 714..715 "."
-|     |     |     |     |      Identifier 715..718
-|     |     |     |     |     |      Identifier 715..718 "in1"
-|     |     |     |      WhiteSpace 718..719
-|     |     |     |     |      WhiteSpace 718..719
-|     |     |     |     |     |      WhiteSpace 718..719 " "
-|     |     |     |      RAssignConstraintSignal 719..722
-|     |     |     |     |      RAssignConstraintSignal 719..722 "<=="
-|     |     |     |      WhiteSpace 722..723
-|     |     |     |     |      WhiteSpace 722..723
-|     |     |     |     |     |      WhiteSpace 722..723 " "
-|     |     |     |      Expression 723..728
-|     |     |     |     |      ArrayQuery 723..728
-|     |     |     |     |     |      Identifier 723..725
-|     |     |     |     |     |     |      Identifier 723..725
-|     |     |     |     |     |     |     |      Identifier 723..725 "in"
-|     |     |     |     |     |      LBracket 725..726
-|     |     |     |     |     |     |      LBracket 725..726 "["
-|     |     |     |     |     |      Number 726..727
-|     |     |     |     |     |     |      Number 726..727
-|     |     |     |     |     |     |     |      Number 726..727 "0"
-|     |     |     |     |     |      RBracket 727..728
-|     |     |     |     |     |     |      RBracket 727..728 "]"
-|     |     |      Semicolon 728..729
-|     |     |     |      Semicolon 728..729 ";"
-|     |      EndLine 729..730
-|     |     |      EndLine 729..730
-|     |     |     |      EndLine 729..730 "\n"
-|     |      WhiteSpace 730..742
-|     |     |      WhiteSpace 730..742
-|     |     |     |      WhiteSpace 730..742 "            "
-|     |      Statement 742..764
-|     |     |      AssignStatement 742..763
-|     |     |     |      ComponentCall 742..753
-|     |     |     |     |      ComponentIdentifier 742..746
-|     |     |     |     |     |      Identifier 742..746
-|     |     |     |     |     |     |      Identifier 742..746 "comp"
-|     |     |     |     |      LBracket 746..747
-|     |     |     |     |     |      LBracket 746..747 "["
-|     |     |     |     |      Expression 747..748
-|     |     |     |     |     |      Number 747..748
-|     |     |     |     |     |     |      Number 747..748
-|     |     |     |     |     |     |     |      Number 747..748 "0"
-|     |     |     |     |      RBracket 748..749
-|     |     |     |     |     |      RBracket 748..749 "]"
-|     |     |     |     |      Dot 749..750
-|     |     |     |     |     |      Dot 749..750 "."
-|     |     |     |     |      Identifier 750..753
-|     |     |     |     |     |      Identifier 750..753 "in2"
-|     |     |     |      WhiteSpace 753..754
-|     |     |     |     |      WhiteSpace 753..754
-|     |     |     |     |     |      WhiteSpace 753..754 " "
-|     |     |     |      RAssignConstraintSignal 754..757
-|     |     |     |     |      RAssignConstraintSignal 754..757 "<=="
-|     |     |     |      WhiteSpace 757..758
-|     |     |     |     |      WhiteSpace 757..758
-|     |     |     |     |     |      WhiteSpace 757..758 " "
-|     |     |     |      Expression 758..763
-|     |     |     |     |      ArrayQuery 758..763
-|     |     |     |     |     |      Identifier 758..760
-|     |     |     |     |     |     |      Identifier 758..760
-|     |     |     |     |     |     |     |      Identifier 758..760 "in"
-|     |     |     |     |     |      LBracket 760..761
-|     |     |     |     |     |     |      LBracket 760..761 "["
-|     |     |     |     |     |      Number 761..762
-|     |     |     |     |     |     |      Number 761..762
-|     |     |     |     |     |     |     |      Number 761..762 "1"
-|     |     |     |     |     |      RBracket 762..763
-|     |     |     |     |     |     |      RBracket 762..763 "]"
-|     |     |      Semicolon 763..764
-|     |     |     |      Semicolon 763..764 ";"
-|     |      EndLine 764..765
-|     |     |      EndLine 764..765
-|     |     |     |      EndLine 764..765 "\n"
-|     |      WhiteSpace 765..777
-|     |     |      WhiteSpace 765..777
-|     |     |     |      WhiteSpace 765..777 "            "
-|     |      Statement 777..865
-|     |     |      ForLoop 777..865
-|     |     |     |      ForKw 777..780
-|     |     |     |     |      ForKw 777..780 "for"
-|     |     |     |      LParen 780..781
-|     |     |     |     |      LParen 780..781 "("
-|     |     |     |      VarDecl 781..790
-|     |     |     |     |      VarKw 781..784
-|     |     |     |     |     |      VarKw 781..784 "var"
-|     |     |     |     |      WhiteSpace 784..785
-|     |     |     |     |     |      WhiteSpace 784..785
-|     |     |     |     |     |     |      WhiteSpace 784..785 " "
-|     |     |     |     |      Identifier 785..786
-|     |     |     |     |     |      Identifier 785..786 "i"
-|     |     |     |     |      WhiteSpace 786..787
-|     |     |     |     |     |      WhiteSpace 786..787
-|     |     |     |     |     |     |      WhiteSpace 786..787 " "
-|     |     |     |     |      Assign 787..788
-|     |     |     |     |     |      Assign 787..788 "="
-|     |     |     |     |      WhiteSpace 788..789
-|     |     |     |     |     |      WhiteSpace 788..789
-|     |     |     |     |     |     |      WhiteSpace 788..789 " "
-|     |     |     |     |      Expression 789..790
-|     |     |     |     |     |      Number 789..790
-|     |     |     |     |     |     |      Number 789..790
-|     |     |     |     |     |     |     |      Number 789..790 "0"
-|     |     |     |      Semicolon 790..791
-|     |     |     |     |      Semicolon 790..791 ";"
-|     |     |     |      WhiteSpace 791..792
-|     |     |     |     |      WhiteSpace 791..792
-|     |     |     |     |     |      WhiteSpace 791..792 " "
-|     |     |     |      Expression 792..799
-|     |     |     |     |      LessThan 792..799
-|     |     |     |     |     |      Identifier 792..793
-|     |     |     |     |     |     |      Identifier 792..793
-|     |     |     |     |     |     |     |      Identifier 792..793 "i"
-|     |     |     |     |     |      WhiteSpace 793..794
-|     |     |     |     |     |     |      WhiteSpace 793..794
-|     |     |     |     |     |     |     |      WhiteSpace 793..794 " "
-|     |     |     |     |     |      LessThan 794..795
-|     |     |     |     |     |     |      LessThan 794..795 "<"
-|     |     |     |     |     |      WhiteSpace 795..796
-|     |     |     |     |     |     |      WhiteSpace 795..796
-|     |     |     |     |     |     |     |      WhiteSpace 795..796 " "
-|     |     |     |     |     |      Sub 796..799
-|     |     |     |     |     |     |      Identifier 796..797
-|     |     |     |     |     |     |     |      Identifier 796..797
-|     |     |     |     |     |     |     |     |      Identifier 796..797 "N"
-|     |     |     |     |     |     |      Sub 797..798
-|     |     |     |     |     |     |     |      Sub 797..798 "-"
-|     |     |     |     |     |     |      Number 798..799
-|     |     |     |     |     |     |     |      Number 798..799
-|     |     |     |     |     |     |     |     |      Number 798..799 "2"
-|     |     |     |      Semicolon 799..800
-|     |     |     |     |      Semicolon 799..800 ";"
-|     |     |     |      WhiteSpace 800..801
-|     |     |     |     |      WhiteSpace 800..801
-|     |     |     |     |     |      WhiteSpace 800..801 " "
-|     |     |     |      Error 801..802
-|     |     |     |     |      Expression 801..802
-|     |     |     |     |     |      ComponentIdentifier 801..802
-|     |     |     |     |     |     |      Identifier 801..802
-|     |     |     |     |     |     |     |      Identifier 801..802 "i"
-|     |     |     |      Error 802..831
-|     |     |     |     |      Error 802..831
-|     |     |     |     |     |      Error 802..831 "expect RParen but got UnitInc"
-|     |     |     |      Error 831..834
-|     |     |     |     |      Expression 831..834
-|     |     |     |     |     |      UnitInc 831..834
-|     |     |     |     |     |     |      UnitInc 831..833
-|     |     |     |     |     |     |     |      UnitInc 831..833 "++"
-|     |     |     |     |     |     |      Error 833..834
-|     |     |     |     |     |     |     |      RParen 833..834
-|     |     |     |     |     |     |     |     |      RParen 833..834 ")"
-|     |     |     |      Error 834..865
-|     |     |     |     |      Error 834..865
-|     |     |     |     |     |      Error 834..865 "expect Semicolon but got LCurly"
-|     |      Statement 865..971
-|     |     |      Block 865..971
-|     |     |     |      LCurly 865..866
-|     |     |     |     |      LCurly 865..866 "{"
-|     |     |     |      EndLine 866..867
-|     |     |     |     |      EndLine 866..867
-|     |     |     |     |     |      EndLine 866..867 "\n"
-|     |     |     |      WhiteSpace 867..883
-|     |     |     |     |      WhiteSpace 867..883
-|     |     |     |     |     |      WhiteSpace 867..883 "                "
-|     |     |     |      StatementList 883..970
-|     |     |     |     |      Statement 883..913
-|     |     |     |     |     |      AssignStatement 883..912
-|     |     |     |     |     |     |      ComponentCall 883..896
-|     |     |     |     |     |     |     |      ComponentIdentifier 883..887
-|     |     |     |     |     |     |     |     |      Identifier 883..887
-|     |     |     |     |     |     |     |     |     |      Identifier 883..887 "comp"
-|     |     |     |     |     |     |     |      LBracket 887..888
-|     |     |     |     |     |     |     |     |      LBracket 887..888 "["
-|     |     |     |     |     |     |     |      Expression 888..891
-|     |     |     |     |     |     |     |     |      Add 888..891
-|     |     |     |     |     |     |     |     |     |      Identifier 888..889
-|     |     |     |     |     |     |     |     |     |     |      Identifier 888..889
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 888..889 "i"
-|     |     |     |     |     |     |     |     |     |      Add 889..890
-|     |     |     |     |     |     |     |     |     |     |      Add 889..890 "+"
-|     |     |     |     |     |     |     |     |     |      Number 890..891
-|     |     |     |     |     |     |     |     |     |     |      Number 890..891
-|     |     |     |     |     |     |     |     |     |     |     |      Number 890..891 "1"
-|     |     |     |     |     |     |     |      RBracket 891..892
-|     |     |     |     |     |     |     |     |      RBracket 891..892 "]"
-|     |     |     |     |     |     |     |      Dot 892..893
-|     |     |     |     |     |     |     |     |      Dot 892..893 "."
-|     |     |     |     |     |     |     |      Identifier 893..896
-|     |     |     |     |     |     |     |     |      Identifier 893..896 "in1"
-|     |     |     |     |     |     |      WhiteSpace 896..897
-|     |     |     |     |     |     |     |      WhiteSpace 896..897
-|     |     |     |     |     |     |     |     |      WhiteSpace 896..897 " "
-|     |     |     |     |     |     |      RAssignConstraintSignal 897..900
-|     |     |     |     |     |     |     |      RAssignConstraintSignal 897..900 "<=="
-|     |     |     |     |     |     |      WhiteSpace 900..901
-|     |     |     |     |     |     |     |      WhiteSpace 900..901
-|     |     |     |     |     |     |     |     |      WhiteSpace 900..901 " "
-|     |     |     |     |     |     |      Expression 901..912
-|     |     |     |     |     |     |     |      ComponentCall 901..912
-|     |     |     |     |     |     |     |     |      ArrayQuery 901..908
-|     |     |     |     |     |     |     |     |     |      Identifier 901..905
-|     |     |     |     |     |     |     |     |     |     |      Identifier 901..905
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 901..905 "comp"
-|     |     |     |     |     |     |     |     |     |      LBracket 905..906
-|     |     |     |     |     |     |     |     |     |     |      LBracket 905..906 "["
-|     |     |     |     |     |     |     |     |     |      Identifier 906..907
-|     |     |     |     |     |     |     |     |     |     |      Identifier 906..907
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 906..907 "i"
-|     |     |     |     |     |     |     |     |     |      RBracket 907..908
-|     |     |     |     |     |     |     |     |     |     |      RBracket 907..908 "]"
-|     |     |     |     |     |     |     |     |      Dot 908..909
-|     |     |     |     |     |     |     |     |     |      Dot 908..909 "."
-|     |     |     |     |     |     |     |     |      Identifier 909..912
-|     |     |     |     |     |     |     |     |     |      Identifier 909..912 "out"
-|     |     |     |     |     |      Semicolon 912..913
-|     |     |     |     |     |     |      Semicolon 912..913 ";"
-|     |     |     |     |      EndLine 913..914
-|     |     |     |     |     |      EndLine 913..914
-|     |     |     |     |     |     |      EndLine 913..914 "\n"
-|     |     |     |     |      WhiteSpace 914..930
-|     |     |     |     |     |      WhiteSpace 914..930
-|     |     |     |     |     |     |      WhiteSpace 914..930 "                "
-|     |     |     |     |      Statement 930..956
-|     |     |     |     |     |      AssignStatement 930..955
-|     |     |     |     |     |     |      ComponentCall 930..943
-|     |     |     |     |     |     |     |      ComponentIdentifier 930..934
-|     |     |     |     |     |     |     |     |      Identifier 930..934
-|     |     |     |     |     |     |     |     |     |      Identifier 930..934 "comp"
-|     |     |     |     |     |     |     |      LBracket 934..935
-|     |     |     |     |     |     |     |     |      LBracket 934..935 "["
-|     |     |     |     |     |     |     |      Expression 935..938
-|     |     |     |     |     |     |     |     |      Add 935..938
-|     |     |     |     |     |     |     |     |     |      Identifier 935..936
-|     |     |     |     |     |     |     |     |     |     |      Identifier 935..936
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 935..936 "i"
-|     |     |     |     |     |     |     |     |     |      Add 936..937
-|     |     |     |     |     |     |     |     |     |     |      Add 936..937 "+"
-|     |     |     |     |     |     |     |     |     |      Number 937..938
-|     |     |     |     |     |     |     |     |     |     |      Number 937..938
-|     |     |     |     |     |     |     |     |     |     |     |      Number 937..938 "1"
-|     |     |     |     |     |     |     |      RBracket 938..939
-|     |     |     |     |     |     |     |     |      RBracket 938..939 "]"
-|     |     |     |     |     |     |     |      Dot 939..940
-|     |     |     |     |     |     |     |     |      Dot 939..940 "."
-|     |     |     |     |     |     |     |      Identifier 940..943
-|     |     |     |     |     |     |     |     |      Identifier 940..943 "in2"
-|     |     |     |     |     |     |      WhiteSpace 943..944
-|     |     |     |     |     |     |     |      WhiteSpace 943..944
-|     |     |     |     |     |     |     |     |      WhiteSpace 943..944 " "
-|     |     |     |     |     |     |      RAssignConstraintSignal 944..947
-|     |     |     |     |     |     |     |      RAssignConstraintSignal 944..947 "<=="
-|     |     |     |     |     |     |      WhiteSpace 947..948
-|     |     |     |     |     |     |     |      WhiteSpace 947..948
-|     |     |     |     |     |     |     |     |      WhiteSpace 947..948 " "
-|     |     |     |     |     |     |      Expression 948..955
-|     |     |     |     |     |     |     |      ArrayQuery 948..955
-|     |     |     |     |     |     |     |     |      Identifier 948..950
-|     |     |     |     |     |     |     |     |     |      Identifier 948..950
-|     |     |     |     |     |     |     |     |     |     |      Identifier 948..950 "in"
-|     |     |     |     |     |     |     |     |      LBracket 950..951
-|     |     |     |     |     |     |     |     |     |      LBracket 950..951 "["
-|     |     |     |     |     |     |     |     |      Add 951..954
-|     |     |     |     |     |     |     |     |     |      Identifier 951..952
-|     |     |     |     |     |     |     |     |     |     |      Identifier 951..952
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 951..952 "i"
-|     |     |     |     |     |     |     |     |     |      Add 952..953
-|     |     |     |     |     |     |     |     |     |     |      Add 952..953 "+"
-|     |     |     |     |     |     |     |     |     |      Number 953..954
-|     |     |     |     |     |     |     |     |     |     |      Number 953..954
-|     |     |     |     |     |     |     |     |     |     |     |      Number 953..954 "2"
-|     |     |     |     |     |     |     |     |      RBracket 954..955
-|     |     |     |     |     |     |     |     |     |      RBracket 954..955 "]"
-|     |     |     |     |     |      Semicolon 955..956
-|     |     |     |     |     |     |      Semicolon 955..956 ";"
-|     |     |     |     |      EndLine 956..957
-|     |     |     |     |     |      EndLine 956..957
-|     |     |     |     |     |     |      EndLine 956..957 "\n"
-|     |     |     |     |      EndLine 957..958
-|     |     |     |     |     |      EndLine 957..958
-|     |     |     |     |     |     |      EndLine 957..958 "\n"
-|     |     |     |     |      WhiteSpace 958..970
-|     |     |     |     |     |      WhiteSpace 958..970
-|     |     |     |     |     |     |      WhiteSpace 958..970 "            "
-|     |     |     |      RCurly 970..971
-|     |     |     |     |      RCurly 970..971 "}"
-|     |      EndLine 971..972
-|     |     |      EndLine 971..972
-|     |     |     |      EndLine 971..972 "\n"
-|     |      WhiteSpace 972..984
-|     |     |      WhiteSpace 972..984
-|     |     |     |      WhiteSpace 972..984 "            "
-|     |      Statement 984..1006
-|     |     |      AssignStatement 984..1005
-|     |     |     |      Expression 984..988
-|     |     |     |     |      ComponentIdentifier 984..987
-|     |     |     |     |     |      Identifier 984..987
-|     |     |     |     |     |     |      Identifier 984..987 "out"
-|     |     |     |     |      WhiteSpace 987..988
-|     |     |     |     |     |      WhiteSpace 987..988
-|     |     |     |     |     |     |      WhiteSpace 987..988 " "
-|     |     |     |      RAssignConstraintSignal 988..991
-|     |     |     |     |      RAssignConstraintSignal 988..991 "<=="
-|     |     |     |      WhiteSpace 991..992
-|     |     |     |     |      WhiteSpace 991..992
-|     |     |     |     |     |      WhiteSpace 991..992 " "
-|     |     |     |      Expression 992..1005
-|     |     |     |     |      ComponentCall 992..1005
-|     |     |     |     |     |      ArrayQuery 992..1001
-|     |     |     |     |     |     |      Identifier 992..996
-|     |     |     |     |     |     |     |      Identifier 992..996
-|     |     |     |     |     |     |     |     |      Identifier 992..996 "comp"
-|     |     |     |     |     |     |      LBracket 996..997
-|     |     |     |     |     |     |     |      LBracket 996..997 "["
-|     |     |     |     |     |     |      Sub 997..1000
-|     |     |     |     |     |     |     |      Identifier 997..998
-|     |     |     |     |     |     |     |     |      Identifier 997..998
-|     |     |     |     |     |     |     |     |     |      Identifier 997..998 "N"
-|     |     |     |     |     |     |     |      Sub 998..999
-|     |     |     |     |     |     |     |     |      Sub 998..999 "-"
-|     |     |     |     |     |     |     |      Number 999..1000
-|     |     |     |     |     |     |     |     |      Number 999..1000
-|     |     |     |     |     |     |     |     |     |      Number 999..1000 "2"
-|     |     |     |     |     |     |      RBracket 1000..1001
-|     |     |     |     |     |     |     |      RBracket 1000..1001 "]"
-|     |     |     |     |     |      Dot 1001..1002
-|     |     |     |     |     |     |      Dot 1001..1002 "."
-|     |     |     |     |     |      Identifier 1002..1005
-|     |     |     |     |     |     |      Identifier 1002..1005 "out"
-|     |     |      Semicolon 1005..1006
-|     |     |     |      Semicolon 1005..1006 ";"
-|     |      WhiteSpace 1006..1007
-|     |     |      WhiteSpace 1006..1007
-|     |     |     |      WhiteSpace 1006..1007 " "
-|     |      EndLine 1007..1008
-|     |     |      EndLine 1007..1008
-|     |     |     |      EndLine 1007..1008 "\n"
-|     |      WhiteSpace 1008..1020
-|     |     |      WhiteSpace 1008..1020
-|     |     |     |      WhiteSpace 1008..1020 "            "
-|      RCurly 1020..1021
-|     |      RCurly 1020..1021 "}"
+|      EndLine 1..3
+|     |      EndLine 1..3 "\r\n"
+|      WhiteSpace 3..4
+|     |      WhiteSpace 3..4 " "
+|      CommentLine 4..29
+|     |      CommentLine 4..29 "//Declaration of signals."
+|      EndLine 29..31
+|     |      EndLine 29..31 "\r\n"
+|      WhiteSpace 31..43
+|     |      WhiteSpace 31..43 "            "
+|      StatementList 43..532
+|     |      InputSignalDecl 43..61
+|     |     |      SignalHeader 43..56
+|     |     |     |      SignalKw 43..49
+|     |     |     |     |      SignalKw 43..49 "signal"
+|     |     |     |      WhiteSpace 49..50
+|     |     |     |     |      WhiteSpace 49..50 " "
+|     |     |     |      InputKw 50..55
+|     |     |     |     |      InputKw 50..55 "input"
+|     |     |     |      WhiteSpace 55..56
+|     |     |     |     |      WhiteSpace 55..56 " "
+|     |     |      SignalIdentifier 56..61
+|     |     |     |      Identifier 56..58
+|     |     |     |     |      Identifier 56..58 "in"
+|     |     |     |      LBracket 58..59
+|     |     |     |     |      LBracket 58..59 "["
+|     |     |     |      Expression 59..60
+|     |     |     |     |      ExpressionAtom 59..60
+|     |     |     |     |     |      Identifier 59..60
+|     |     |     |     |     |     |      Identifier 59..60 "N"
+|     |     |     |      RBracket 60..61
+|     |     |     |     |      RBracket 60..61 "]"
+|     |      Semicolon 61..62
+|     |     |      Semicolon 61..62 ";"
+|     |      EndLine 62..64
+|     |     |      EndLine 62..64 "\r\n"
+|     |      WhiteSpace 64..76
+|     |     |      WhiteSpace 64..76 "            "
+|     |      OutputSignalDecl 76..93
+|     |     |      SignalHeader 76..90
+|     |     |     |      SignalKw 76..82
+|     |     |     |     |      SignalKw 76..82 "signal"
+|     |     |     |      WhiteSpace 82..83
+|     |     |     |     |      WhiteSpace 82..83 " "
+|     |     |     |      OutputKw 83..89
+|     |     |     |     |      OutputKw 83..89 "output"
+|     |     |     |      WhiteSpace 89..90
+|     |     |     |     |      WhiteSpace 89..90 " "
+|     |     |      SignalIdentifier 90..93
+|     |     |     |      Identifier 90..93
+|     |     |     |     |      Identifier 90..93 "out"
+|     |      Semicolon 93..94
+|     |     |      Semicolon 93..94 ";"
+|     |      EndLine 94..96
+|     |     |      EndLine 94..96 "\r\n"
+|     |      WhiteSpace 96..108
+|     |     |      WhiteSpace 96..108 "            "
+|     |      ComponentDecl 108..127
+|     |     |      ComponentKw 108..117
+|     |     |     |      ComponentKw 108..117 "component"
+|     |     |      WhiteSpace 117..118
+|     |     |     |      WhiteSpace 117..118 " "
+|     |     |      ComponentIdentifier 118..127
+|     |     |     |      Identifier 118..122
+|     |     |     |     |      Identifier 118..122 "comp"
+|     |     |     |      LBracket 122..123
+|     |     |     |     |      LBracket 122..123 "["
+|     |     |     |      Expression 123..126
+|     |     |     |     |      Sub 123..126
+|     |     |     |     |     |      ExpressionAtom 123..124
+|     |     |     |     |     |     |      Identifier 123..124
+|     |     |     |     |     |     |     |      Identifier 123..124 "N"
+|     |     |     |     |     |      Sub 124..125
+|     |     |     |     |     |     |      Sub 124..125 "-"
+|     |     |     |     |     |      ExpressionAtom 125..126
+|     |     |     |     |     |     |      Number 125..126
+|     |     |     |     |     |     |     |      Number 125..126 "1"
+|     |     |     |      RBracket 126..127
+|     |     |     |     |      RBracket 126..127 "]"
+|     |      Semicolon 127..128
+|     |     |      Semicolon 127..128 ";"
+|     |      EndLine 128..130
+|     |     |      EndLine 128..130 "\r\n"
+|     |      EndLine 130..132
+|     |     |      EndLine 130..132 "\r\n"
+|     |      WhiteSpace 132..144
+|     |     |      WhiteSpace 132..144 "            "
+|     |      CommentLine 144..157
+|     |     |      CommentLine 144..157 "//Statements."
+|     |      EndLine 157..159
+|     |     |      EndLine 157..159 "\r\n"
+|     |      WhiteSpace 159..171
+|     |     |      WhiteSpace 159..171 "            "
+|     |      Statement 171..257
+|     |     |      ForLoop 171..257
+|     |     |     |      ForKw 171..174
+|     |     |     |     |      ForKw 171..174 "for"
+|     |     |     |      LParen 174..175
+|     |     |     |     |      LParen 174..175 "("
+|     |     |     |      VarDecl 175..184
+|     |     |     |     |      VarKw 175..178
+|     |     |     |     |     |      VarKw 175..178 "var"
+|     |     |     |     |      WhiteSpace 178..179
+|     |     |     |     |     |      WhiteSpace 178..179 " "
+|     |     |     |     |      VarIdentifier 179..181
+|     |     |     |     |     |      Identifier 179..180
+|     |     |     |     |     |     |      Identifier 179..180 "i"
+|     |     |     |     |     |      WhiteSpace 180..181
+|     |     |     |     |     |     |      WhiteSpace 180..181 " "
+|     |     |     |     |      Assign 181..182
+|     |     |     |     |     |      Assign 181..182 "="
+|     |     |     |     |      WhiteSpace 182..183
+|     |     |     |     |     |      WhiteSpace 182..183 " "
+|     |     |     |     |      Expression 183..184
+|     |     |     |     |     |      ExpressionAtom 183..184
+|     |     |     |     |     |     |      Number 183..184
+|     |     |     |     |     |     |     |      Number 183..184 "0"
+|     |     |     |      Semicolon 184..185
+|     |     |     |     |      Semicolon 184..185 ";"
+|     |     |     |      WhiteSpace 185..186
+|     |     |     |     |      WhiteSpace 185..186 " "
+|     |     |     |      Expression 186..193
+|     |     |     |     |      LessThan 186..193
+|     |     |     |     |     |      ExpressionAtom 186..187
+|     |     |     |     |     |     |      Identifier 186..187
+|     |     |     |     |     |     |     |      Identifier 186..187 "i"
+|     |     |     |     |     |      WhiteSpace 187..188
+|     |     |     |     |     |     |      WhiteSpace 187..188 " "
+|     |     |     |     |     |      LessThan 188..189
+|     |     |     |     |     |     |      LessThan 188..189 "<"
+|     |     |     |     |     |      WhiteSpace 189..190
+|     |     |     |     |     |     |      WhiteSpace 189..190 " "
+|     |     |     |     |     |      Sub 190..193
+|     |     |     |     |     |     |      ExpressionAtom 190..191
+|     |     |     |     |     |     |     |      Identifier 190..191
+|     |     |     |     |     |     |     |     |      Identifier 190..191 "N"
+|     |     |     |     |     |     |      Sub 191..192
+|     |     |     |     |     |     |     |      Sub 191..192 "-"
+|     |     |     |     |     |     |      ExpressionAtom 192..193
+|     |     |     |     |     |     |     |      Number 192..193
+|     |     |     |     |     |     |     |     |      Number 192..193 "1"
+|     |     |     |      Semicolon 193..194
+|     |     |     |     |      Semicolon 193..194 ";"
+|     |     |     |      WhiteSpace 194..195
+|     |     |     |     |      WhiteSpace 194..195 " "
+|     |     |     |      AssignStatement 195..198
+|     |     |     |     |      Expression 195..196
+|     |     |     |     |     |      ComponentIdentifier 195..196
+|     |     |     |     |     |     |      Identifier 195..196
+|     |     |     |     |     |     |     |      Identifier 195..196 "i"
+|     |     |     |     |      UnitInc 196..198
+|     |     |     |     |     |      UnitInc 196..198 "++"
+|     |     |     |      RParen 198..199
+|     |     |     |     |      RParen 198..199 ")"
+|     |     |     |      Statement 199..257
+|     |     |     |     |      Block 199..257
+|     |     |     |     |     |      LCurly 199..200
+|     |     |     |     |     |     |      LCurly 199..200 "{"
+|     |     |     |     |     |      EndLine 200..202
+|     |     |     |     |     |     |      EndLine 200..202 "\r\n"
+|     |     |     |     |     |      WhiteSpace 202..218
+|     |     |     |     |     |     |      WhiteSpace 202..218 "                "
+|     |     |     |     |     |      StatementList 218..256
+|     |     |     |     |     |     |      Statement 218..242
+|     |     |     |     |     |     |     |      AssignStatement 218..241
+|     |     |     |     |     |     |     |     |      Expression 218..226
+|     |     |     |     |     |     |     |     |     |      ComponentIdentifier 218..222
+|     |     |     |     |     |     |     |     |     |     |      Identifier 218..222
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 218..222 "comp"
+|     |     |     |     |     |     |     |     |     |      LBracket 222..223
+|     |     |     |     |     |     |     |     |     |     |      LBracket 222..223 "["
+|     |     |     |     |     |     |     |     |     |      Expression 223..224
+|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 223..224
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 223..224
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 223..224 "i"
+|     |     |     |     |     |     |     |     |     |      RBracket 224..225
+|     |     |     |     |     |     |     |     |     |     |      RBracket 224..225 "]"
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 225..226
+|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 225..226 " "
+|     |     |     |     |     |     |     |     |      Assign 226..227
+|     |     |     |     |     |     |     |     |     |      Assign 226..227 "="
+|     |     |     |     |     |     |     |     |      WhiteSpace 227..228
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 227..228 " "
+|     |     |     |     |     |     |     |     |      Expression 228..241
+|     |     |     |     |     |     |     |     |     |      Call 228..241
+|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 228..239
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 228..239
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 228..239 "Multiplier2"
+|     |     |     |     |     |     |     |     |     |     |      Tuple 239..241
+|     |     |     |     |     |     |     |     |     |     |     |      LParen 239..240
+|     |     |     |     |     |     |     |     |     |     |     |     |      LParen 239..240 "("
+|     |     |     |     |     |     |     |     |     |     |     |      RParen 240..241
+|     |     |     |     |     |     |     |     |     |     |     |     |      RParen 240..241 ")"
+|     |     |     |     |     |     |     |      Semicolon 241..242
+|     |     |     |     |     |     |     |     |      Semicolon 241..242 ";"
+|     |     |     |     |     |     |      EndLine 242..244
+|     |     |     |     |     |     |     |      EndLine 242..244 "\r\n"
+|     |     |     |     |     |     |      WhiteSpace 244..256
+|     |     |     |     |     |     |     |      WhiteSpace 244..256 "            "
+|     |     |     |     |     |      RCurly 256..257
+|     |     |     |     |     |     |      RCurly 256..257 "}"
+|     |      EndLine 257..259
+|     |     |      EndLine 257..259 "\r\n"
+|     |      WhiteSpace 259..271
+|     |     |      WhiteSpace 259..271 "            "
+|     |      Statement 271..293
+|     |     |      AssignStatement 271..292
+|     |     |     |      ComponentCall 271..282
+|     |     |     |     |      ComponentIdentifier 271..275
+|     |     |     |     |     |      Identifier 271..275
+|     |     |     |     |     |     |      Identifier 271..275 "comp"
+|     |     |     |     |      LBracket 275..276
+|     |     |     |     |     |      LBracket 275..276 "["
+|     |     |     |     |      Expression 276..277
+|     |     |     |     |     |      ExpressionAtom 276..277
+|     |     |     |     |     |     |      Number 276..277
+|     |     |     |     |     |     |     |      Number 276..277 "0"
+|     |     |     |     |      RBracket 277..278
+|     |     |     |     |     |      RBracket 277..278 "]"
+|     |     |     |     |      Dot 278..279
+|     |     |     |     |     |      Dot 278..279 "."
+|     |     |     |     |      Identifier 279..282
+|     |     |     |     |     |      Identifier 279..282 "in1"
+|     |     |     |      WhiteSpace 282..283
+|     |     |     |     |      WhiteSpace 282..283 " "
+|     |     |     |      RAssignConstraintSignal 283..286
+|     |     |     |     |      RAssignConstraintSignal 283..286 "<=="
+|     |     |     |      WhiteSpace 286..287
+|     |     |     |     |      WhiteSpace 286..287 " "
+|     |     |     |      Expression 287..292
+|     |     |     |     |      ArrayQuery 287..292
+|     |     |     |     |     |      ExpressionAtom 287..289
+|     |     |     |     |     |     |      Identifier 287..289
+|     |     |     |     |     |     |     |      Identifier 287..289 "in"
+|     |     |     |     |     |      LBracket 289..290
+|     |     |     |     |     |     |      LBracket 289..290 "["
+|     |     |     |     |     |      ExpressionAtom 290..291
+|     |     |     |     |     |     |      Number 290..291
+|     |     |     |     |     |     |     |      Number 290..291 "0"
+|     |     |     |     |     |      RBracket 291..292
+|     |     |     |     |     |     |      RBracket 291..292 "]"
+|     |     |      Semicolon 292..293
+|     |     |     |      Semicolon 292..293 ";"
+|     |      EndLine 293..295
+|     |     |      EndLine 293..295 "\r\n"
+|     |      WhiteSpace 295..307
+|     |     |      WhiteSpace 295..307 "            "
+|     |      Statement 307..329
+|     |     |      AssignStatement 307..328
+|     |     |     |      ComponentCall 307..318
+|     |     |     |     |      ComponentIdentifier 307..311
+|     |     |     |     |     |      Identifier 307..311
+|     |     |     |     |     |     |      Identifier 307..311 "comp"
+|     |     |     |     |      LBracket 311..312
+|     |     |     |     |     |      LBracket 311..312 "["
+|     |     |     |     |      Expression 312..313
+|     |     |     |     |     |      ExpressionAtom 312..313
+|     |     |     |     |     |     |      Number 312..313
+|     |     |     |     |     |     |     |      Number 312..313 "0"
+|     |     |     |     |      RBracket 313..314
+|     |     |     |     |     |      RBracket 313..314 "]"
+|     |     |     |     |      Dot 314..315
+|     |     |     |     |     |      Dot 314..315 "."
+|     |     |     |     |      Identifier 315..318
+|     |     |     |     |     |      Identifier 315..318 "in2"
+|     |     |     |      WhiteSpace 318..319
+|     |     |     |     |      WhiteSpace 318..319 " "
+|     |     |     |      RAssignConstraintSignal 319..322
+|     |     |     |     |      RAssignConstraintSignal 319..322 "<=="
+|     |     |     |      WhiteSpace 322..323
+|     |     |     |     |      WhiteSpace 322..323 " "
+|     |     |     |      Expression 323..328
+|     |     |     |     |      ArrayQuery 323..328
+|     |     |     |     |     |      ExpressionAtom 323..325
+|     |     |     |     |     |     |      Identifier 323..325
+|     |     |     |     |     |     |     |      Identifier 323..325 "in"
+|     |     |     |     |     |      LBracket 325..326
+|     |     |     |     |     |     |      LBracket 325..326 "["
+|     |     |     |     |     |      ExpressionAtom 326..327
+|     |     |     |     |     |     |      Number 326..327
+|     |     |     |     |     |     |     |      Number 326..327 "1"
+|     |     |     |     |     |      RBracket 327..328
+|     |     |     |     |     |     |      RBracket 327..328 "]"
+|     |     |      Semicolon 328..329
+|     |     |     |      Semicolon 328..329 ";"
+|     |      EndLine 329..331
+|     |     |      EndLine 329..331 "\r\n"
+|     |      WhiteSpace 331..343
+|     |     |      WhiteSpace 331..343 "            "
+|     |      Statement 343..481
+|     |     |      ForLoop 343..481
+|     |     |     |      ForKw 343..346
+|     |     |     |     |      ForKw 343..346 "for"
+|     |     |     |      LParen 346..347
+|     |     |     |     |      LParen 346..347 "("
+|     |     |     |      VarDecl 347..356
+|     |     |     |     |      VarKw 347..350
+|     |     |     |     |     |      VarKw 347..350 "var"
+|     |     |     |     |      WhiteSpace 350..351
+|     |     |     |     |     |      WhiteSpace 350..351 " "
+|     |     |     |     |      VarIdentifier 351..353
+|     |     |     |     |     |      Identifier 351..352
+|     |     |     |     |     |     |      Identifier 351..352 "i"
+|     |     |     |     |     |      WhiteSpace 352..353
+|     |     |     |     |     |     |      WhiteSpace 352..353 " "
+|     |     |     |     |      Assign 353..354
+|     |     |     |     |     |      Assign 353..354 "="
+|     |     |     |     |      WhiteSpace 354..355
+|     |     |     |     |     |      WhiteSpace 354..355 " "
+|     |     |     |     |      Expression 355..356
+|     |     |     |     |     |      ExpressionAtom 355..356
+|     |     |     |     |     |     |      Number 355..356
+|     |     |     |     |     |     |     |      Number 355..356 "0"
+|     |     |     |      Semicolon 356..357
+|     |     |     |     |      Semicolon 356..357 ";"
+|     |     |     |      WhiteSpace 357..358
+|     |     |     |     |      WhiteSpace 357..358 " "
+|     |     |     |      Expression 358..365
+|     |     |     |     |      LessThan 358..365
+|     |     |     |     |     |      ExpressionAtom 358..359
+|     |     |     |     |     |     |      Identifier 358..359
+|     |     |     |     |     |     |     |      Identifier 358..359 "i"
+|     |     |     |     |     |      WhiteSpace 359..360
+|     |     |     |     |     |     |      WhiteSpace 359..360 " "
+|     |     |     |     |     |      LessThan 360..361
+|     |     |     |     |     |     |      LessThan 360..361 "<"
+|     |     |     |     |     |      WhiteSpace 361..362
+|     |     |     |     |     |     |      WhiteSpace 361..362 " "
+|     |     |     |     |     |      Sub 362..365
+|     |     |     |     |     |     |      ExpressionAtom 362..363
+|     |     |     |     |     |     |     |      Identifier 362..363
+|     |     |     |     |     |     |     |     |      Identifier 362..363 "N"
+|     |     |     |     |     |     |      Sub 363..364
+|     |     |     |     |     |     |     |      Sub 363..364 "-"
+|     |     |     |     |     |     |      ExpressionAtom 364..365
+|     |     |     |     |     |     |     |      Number 364..365
+|     |     |     |     |     |     |     |     |      Number 364..365 "2"
+|     |     |     |      Semicolon 365..366
+|     |     |     |     |      Semicolon 365..366 ";"
+|     |     |     |      WhiteSpace 366..367
+|     |     |     |     |      WhiteSpace 366..367 " "
+|     |     |     |      AssignStatement 367..370
+|     |     |     |     |      Expression 367..368
+|     |     |     |     |     |      ComponentIdentifier 367..368
+|     |     |     |     |     |     |      Identifier 367..368
+|     |     |     |     |     |     |     |      Identifier 367..368 "i"
+|     |     |     |     |      UnitInc 368..370
+|     |     |     |     |     |      UnitInc 368..370 "++"
+|     |     |     |      RParen 370..371
+|     |     |     |     |      RParen 370..371 ")"
+|     |     |     |      Statement 371..481
+|     |     |     |     |      Block 371..481
+|     |     |     |     |     |      LCurly 371..372
+|     |     |     |     |     |     |      LCurly 371..372 "{"
+|     |     |     |     |     |      EndLine 372..374
+|     |     |     |     |     |     |      EndLine 372..374 "\r\n"
+|     |     |     |     |     |      WhiteSpace 374..390
+|     |     |     |     |     |     |      WhiteSpace 374..390 "                "
+|     |     |     |     |     |      StatementList 390..480
+|     |     |     |     |     |     |      Statement 390..420
+|     |     |     |     |     |     |     |      AssignStatement 390..419
+|     |     |     |     |     |     |     |     |      ComponentCall 390..403
+|     |     |     |     |     |     |     |     |     |      ComponentIdentifier 390..394
+|     |     |     |     |     |     |     |     |     |     |      Identifier 390..394
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 390..394 "comp"
+|     |     |     |     |     |     |     |     |     |      LBracket 394..395
+|     |     |     |     |     |     |     |     |     |     |      LBracket 394..395 "["
+|     |     |     |     |     |     |     |     |     |      Expression 395..398
+|     |     |     |     |     |     |     |     |     |     |      Add 395..398
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 395..396
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 395..396
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 395..396 "i"
+|     |     |     |     |     |     |     |     |     |     |     |      Add 396..397
+|     |     |     |     |     |     |     |     |     |     |     |     |      Add 396..397 "+"
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 397..398
+|     |     |     |     |     |     |     |     |     |     |     |     |      Number 397..398
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 397..398 "1"
+|     |     |     |     |     |     |     |     |     |      RBracket 398..399
+|     |     |     |     |     |     |     |     |     |     |      RBracket 398..399 "]"
+|     |     |     |     |     |     |     |     |     |      Dot 399..400
+|     |     |     |     |     |     |     |     |     |     |      Dot 399..400 "."
+|     |     |     |     |     |     |     |     |     |      Identifier 400..403
+|     |     |     |     |     |     |     |     |     |     |      Identifier 400..403 "in1"
+|     |     |     |     |     |     |     |     |      WhiteSpace 403..404
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 403..404 " "
+|     |     |     |     |     |     |     |     |      RAssignConstraintSignal 404..407
+|     |     |     |     |     |     |     |     |     |      RAssignConstraintSignal 404..407 "<=="
+|     |     |     |     |     |     |     |     |      WhiteSpace 407..408
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 407..408 " "
+|     |     |     |     |     |     |     |     |      Expression 408..419
+|     |     |     |     |     |     |     |     |     |      ComponentCall 408..419
+|     |     |     |     |     |     |     |     |     |     |      ArrayQuery 408..415
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 408..412
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 408..412
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 408..412 "comp"
+|     |     |     |     |     |     |     |     |     |     |     |      LBracket 412..413
+|     |     |     |     |     |     |     |     |     |     |     |     |      LBracket 412..413 "["
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 413..414
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 413..414
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 413..414 "i"
+|     |     |     |     |     |     |     |     |     |     |     |      RBracket 414..415
+|     |     |     |     |     |     |     |     |     |     |     |     |      RBracket 414..415 "]"
+|     |     |     |     |     |     |     |     |     |     |      Dot 415..416
+|     |     |     |     |     |     |     |     |     |     |     |      Dot 415..416 "."
+|     |     |     |     |     |     |     |     |     |     |      Identifier 416..419
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 416..419 "out"
+|     |     |     |     |     |     |     |      Semicolon 419..420
+|     |     |     |     |     |     |     |     |      Semicolon 419..420 ";"
+|     |     |     |     |     |     |      EndLine 420..422
+|     |     |     |     |     |     |     |      EndLine 420..422 "\r\n"
+|     |     |     |     |     |     |      WhiteSpace 422..438
+|     |     |     |     |     |     |     |      WhiteSpace 422..438 "                "
+|     |     |     |     |     |     |      Statement 438..464
+|     |     |     |     |     |     |     |      AssignStatement 438..463
+|     |     |     |     |     |     |     |     |      ComponentCall 438..451
+|     |     |     |     |     |     |     |     |     |      ComponentIdentifier 438..442
+|     |     |     |     |     |     |     |     |     |     |      Identifier 438..442
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 438..442 "comp"
+|     |     |     |     |     |     |     |     |     |      LBracket 442..443
+|     |     |     |     |     |     |     |     |     |     |      LBracket 442..443 "["
+|     |     |     |     |     |     |     |     |     |      Expression 443..446
+|     |     |     |     |     |     |     |     |     |     |      Add 443..446
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 443..444
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 443..444
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 443..444 "i"
+|     |     |     |     |     |     |     |     |     |     |     |      Add 444..445
+|     |     |     |     |     |     |     |     |     |     |     |     |      Add 444..445 "+"
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 445..446
+|     |     |     |     |     |     |     |     |     |     |     |     |      Number 445..446
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 445..446 "1"
+|     |     |     |     |     |     |     |     |     |      RBracket 446..447
+|     |     |     |     |     |     |     |     |     |     |      RBracket 446..447 "]"
+|     |     |     |     |     |     |     |     |     |      Dot 447..448
+|     |     |     |     |     |     |     |     |     |     |      Dot 447..448 "."
+|     |     |     |     |     |     |     |     |     |      Identifier 448..451
+|     |     |     |     |     |     |     |     |     |     |      Identifier 448..451 "in2"
+|     |     |     |     |     |     |     |     |      WhiteSpace 451..452
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 451..452 " "
+|     |     |     |     |     |     |     |     |      RAssignConstraintSignal 452..455
+|     |     |     |     |     |     |     |     |     |      RAssignConstraintSignal 452..455 "<=="
+|     |     |     |     |     |     |     |     |      WhiteSpace 455..456
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 455..456 " "
+|     |     |     |     |     |     |     |     |      Expression 456..463
+|     |     |     |     |     |     |     |     |     |      ArrayQuery 456..463
+|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 456..458
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 456..458
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 456..458 "in"
+|     |     |     |     |     |     |     |     |     |     |      LBracket 458..459
+|     |     |     |     |     |     |     |     |     |     |     |      LBracket 458..459 "["
+|     |     |     |     |     |     |     |     |     |     |      Add 459..462
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 459..460
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 459..460
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 459..460 "i"
+|     |     |     |     |     |     |     |     |     |     |     |      Add 460..461
+|     |     |     |     |     |     |     |     |     |     |     |     |      Add 460..461 "+"
+|     |     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 461..462
+|     |     |     |     |     |     |     |     |     |     |     |     |      Number 461..462
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 461..462 "2"
+|     |     |     |     |     |     |     |     |     |     |      RBracket 462..463
+|     |     |     |     |     |     |     |     |     |     |     |      RBracket 462..463 "]"
+|     |     |     |     |     |     |     |      Semicolon 463..464
+|     |     |     |     |     |     |     |     |      Semicolon 463..464 ";"
+|     |     |     |     |     |     |      EndLine 464..466
+|     |     |     |     |     |     |     |      EndLine 464..466 "\r\n"
+|     |     |     |     |     |     |      EndLine 466..468
+|     |     |     |     |     |     |     |      EndLine 466..468 "\r\n"
+|     |     |     |     |     |     |      WhiteSpace 468..480
+|     |     |     |     |     |     |     |      WhiteSpace 468..480 "            "
+|     |     |     |     |     |      RCurly 480..481
+|     |     |     |     |     |     |      RCurly 480..481 "}"
+|     |      EndLine 481..483
+|     |     |      EndLine 481..483 "\r\n"
+|     |      WhiteSpace 483..495
+|     |     |      WhiteSpace 483..495 "            "
+|     |      Statement 495..517
+|     |     |      AssignStatement 495..516
+|     |     |     |      Expression 495..499
+|     |     |     |     |      ComponentIdentifier 495..498
+|     |     |     |     |     |      Identifier 495..498
+|     |     |     |     |     |     |      Identifier 495..498 "out"
+|     |     |     |     |      WhiteSpace 498..499
+|     |     |     |     |     |      WhiteSpace 498..499 " "
+|     |     |     |      RAssignConstraintSignal 499..502
+|     |     |     |     |      RAssignConstraintSignal 499..502 "<=="
+|     |     |     |      WhiteSpace 502..503
+|     |     |     |     |      WhiteSpace 502..503 " "
+|     |     |     |      Expression 503..516
+|     |     |     |     |      ComponentCall 503..516
+|     |     |     |     |     |      ArrayQuery 503..512
+|     |     |     |     |     |     |      ExpressionAtom 503..507
+|     |     |     |     |     |     |     |      Identifier 503..507
+|     |     |     |     |     |     |     |     |      Identifier 503..507 "comp"
+|     |     |     |     |     |     |      LBracket 507..508
+|     |     |     |     |     |     |     |      LBracket 507..508 "["
+|     |     |     |     |     |     |      Sub 508..511
+|     |     |     |     |     |     |     |      ExpressionAtom 508..509
+|     |     |     |     |     |     |     |     |      Identifier 508..509
+|     |     |     |     |     |     |     |     |     |      Identifier 508..509 "N"
+|     |     |     |     |     |     |     |      Sub 509..510
+|     |     |     |     |     |     |     |     |      Sub 509..510 "-"
+|     |     |     |     |     |     |     |      ExpressionAtom 510..511
+|     |     |     |     |     |     |     |     |      Number 510..511
+|     |     |     |     |     |     |     |     |     |      Number 510..511 "2"
+|     |     |     |     |     |     |      RBracket 511..512
+|     |     |     |     |     |     |     |      RBracket 511..512 "]"
+|     |     |     |     |     |      Dot 512..513
+|     |     |     |     |     |     |      Dot 512..513 "."
+|     |     |     |     |     |      Identifier 513..516
+|     |     |     |     |     |     |      Identifier 513..516 "out"
+|     |     |      Semicolon 516..517
+|     |     |     |      Semicolon 516..517 ";"
+|     |      WhiteSpace 517..518
+|     |     |      WhiteSpace 517..518 " "
+|     |      EndLine 518..520
+|     |     |      EndLine 518..520 "\r\n"
+|     |      WhiteSpace 520..532
+|     |     |      WhiteSpace 520..532 "            "
+|      RCurly 532..533
+|     |      RCurly 532..533 "}"

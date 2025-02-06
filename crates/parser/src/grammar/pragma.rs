@@ -8,7 +8,7 @@ use super::*;
 
 pub fn pragma(p: &mut Parser) {
     let m = p.open();
-    p.expect(Pragma);
+    p.expect(PragmaKw);
     p.expect(Circom);
     p.expect(Version);
     p.expect(Semicolon);

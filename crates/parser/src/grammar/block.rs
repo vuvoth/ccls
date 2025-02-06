@@ -11,11 +11,13 @@ use super::*;
 pub fn block(p: &mut Parser) {
     p.inc_rcurly();
 
+    // TODO: why do not use expect for { and }
     if !p.at(LCurly) {
         p.advance_with_error("Miss {");
     } else {
         let m = p.open();
         p.expect(LCurly);
+
         let stmt_marker = p.open();
         while !p.at(RCurly) && !p.eof() {
             let kind = p.current();
