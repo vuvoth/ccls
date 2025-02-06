@@ -162,7 +162,7 @@ fn expression_atom(p: &mut Parser) -> Option<Marker> {
         Number | Identifier => {
             let open_marker = p.open();
             p.advance();
-            let m_close = p.close(open_marker, kind);
+            let m_close = p.close(open_marker, ExpressionAtom);
             Some(m_close)
         }
         LParen => {

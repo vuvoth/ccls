@@ -5,7 +5,7 @@ expression: input
 kind:
   - EndLine
   - WhiteSpace
-  - Pragma
+  - PragmaKw
   - WhiteSpace
   - Version
   - Semicolon

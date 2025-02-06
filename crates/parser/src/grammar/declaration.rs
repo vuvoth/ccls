@@ -1,19 +1,18 @@
 use super::{
     expression::expression,
     list::{tuple_expression, tuple_identifier},
+    *,
 };
-use crate::{parser::Parser, token_kind::TokenKind::*};
+use crate::parser::Parser;
 
 // [N][M-1]
 fn array(p: &mut Parser) -> bool {
     let is_array = p.at(LBracket);
 
     while p.at(LBracket) {
-        let array_marker = p.open();
         p.expect(LBracket);
         expression(p);
         p.expect(RBracket);
-        p.close(array_marker, ArrayQuery);
     }
 
     is_array
@@ -55,11 +54,14 @@ var_init does not include `var` keyword
 eg: tmp = 10;
 */
 pub(crate) fn var_init(p: &mut Parser) {
+    let var_identifier_open_marker = p.open();
+
     // name of variable
     p.expect(Identifier);
-
     // eg: [N - 1][M]
     array(p);
+
+    p.close(var_identifier_open_marker, VarIdentifier);
 
     // assign for variable
     // eg: = 10
@@ -71,11 +73,12 @@ pub(crate) fn var_init(p: &mut Parser) {
 
 // eg: in[N - 1] <== c.in;
 pub(crate) fn signal_init(p: &mut Parser, assign_able: bool) {
+    let signal_identifier_open_marker = p.open();
     // name of signal
     p.expect(Identifier);
-
     // eg: [N][M-1]
     array(p);
+    p.close(signal_identifier_open_marker, SignalIdentifier);
 
     // assign for  intermediate and outputs signals
     // eg: <== Multiplier2().out
@@ -166,9 +169,12 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
 
-    // TODO: why do we need `ComponentIdentifier` kind here?
     let m_c = p.open();
     p.expect(Identifier);
+
+    // support array component
+    // eg: comp[N - 1][10]
+    let _ = array(p);
     p.close(m_c, ComponentIdentifier);
 
     // support array component

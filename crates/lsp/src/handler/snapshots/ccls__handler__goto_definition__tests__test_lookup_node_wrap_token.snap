@@ -1,0 +1,13 @@
+---
+source: crates/lsp/src/handler/goto_definition.rs
+expression: string_syntax_node
+---
+template X() {
+            signal x[100];
+            signal input x expect Semicolon but got Assign= expect Semicolon but got Number10;
+           component x = Multiplier2();
+           component y = X();
+           component y = Multiplier2();
+           component z = Multiplier2();
+              
+        }

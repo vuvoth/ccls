@@ -260,7 +260,7 @@ impl SemanticDB {
 
         if let Some(statements) = ast_template.statements() {
             for signal in statements.find_children::<AstInputSignalDecl>() {
-                if let Some(name) = signal.name() {
+                if let Some(name) = signal.signal_identifier().unwrap().name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -274,7 +274,7 @@ impl SemanticDB {
                 }
             }
             for signal in statements.find_children::<AstOutputSignalDecl>() {
-                if let Some(name) = signal.name() {
+                if let Some(name) = signal.signal_identifier().unwrap().name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -289,7 +289,7 @@ impl SemanticDB {
             }
 
             for signal in statements.find_children::<AstSignalDecl>() {
-                if let Some(name) = signal.name() {
+                if let Some(name) = signal.signal_identifier().unwrap().name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -304,7 +304,7 @@ impl SemanticDB {
             }
 
             for var in statements.find_children::<AstVarDecl>() {
-                if let Some(name) = var.name() {
+                if let Some(name) = var.var_identifier().unwrap().name() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((

@@ -9,7 +9,7 @@ pub enum TokenKind {
     #[error]
     Error = 0,
     // Comments
-    #[regex(r"//[^\n]*")]
+    #[regex(r"//[^\r\n]*")]
     CommentLine,
     #[token("/*")]
     CommentBlockOpen,
@@ -18,11 +18,12 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex("[\n]")]
+    #[regex(r"\r?\n")]
     EndLine,
-    // Circom
-    #[token("pragma")]
+    // Pragma
     Pragma,
+    #[token("pragma")]
+    PragmaKw,
     #[token("circom")]
     Circom,
     #[regex("2.[0-9].[0-9]")]
@@ -47,7 +48,6 @@ pub enum TokenKind {
     LBracket,
     #[token("]")]
     RBracket,
-    // Punctuation
     // Punctuation
     #[token(";")]
     Semicolon,
@@ -122,7 +122,6 @@ pub enum TokenKind {
     ShiftR,
     #[token("<<")]
     ShiftL,
-    // Combined bitwise assignments
     // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
@@ -214,18 +213,21 @@ pub enum TokenKind {
     SignalIdentifier,
     // Variable
     VarDecl,
+    VarIdentifier,
     // Component
     ComponentDecl,
     ComponentCall,
     ComponentIdentifier,
     SignalOfComponent,
+    // Expression
+    ExpressionAtom,
+    Expression,
     // Complex token kind
     Block,
     ParameterList,
     Call,
     TenaryConditional,
     Condition,
-    Expression,
     Statement,
     StatementList,
     ArrayQuery,

@@ -36,13 +36,9 @@ impl<'a> Parser<'a> {
                 return kind;
             }
 
-            self.events.push(Event::Open { kind });
-
             self.fuel.set(256);
             self.events.push(Event::TokenPosition(self.pos));
             self.skip();
-
-            self.events.push(Event::Close);
         }
     }
 
