@@ -134,7 +134,7 @@ pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
                     let open_marker = p.open_before(lhs);
                     // consume token ++/-- and do nothing
                     p.advance();
-                    p.close(open_marker, Expression);
+                    p.close(open_marker, kind);
                 }
                 _ => {
                     // not a postfix token

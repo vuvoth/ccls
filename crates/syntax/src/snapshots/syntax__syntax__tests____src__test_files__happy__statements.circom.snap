@@ -1,0 +1,483 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: "crate :: view_syntax :: view_ast(& syntax)"
+---
+ Block 0..425
+|      LCurly 0..1
+|     |      LCurly 0..1 "{"
+|      EndLine 1..2
+|     |      EndLine 1..2 "\n"
+|      WhiteSpace 2..6
+|     |      WhiteSpace 2..6 "    "
+|      CommentLine 6..21
+|     |      CommentLine 6..21 "// if ... else "
+|      EndLine 21..22
+|     |      EndLine 21..22 "\n"
+|      WhiteSpace 22..26
+|     |      WhiteSpace 22..26 "    "
+|      StatementList 26..424
+|     |      IfStatement 26..121
+|     |     |      IfKw 26..28
+|     |     |     |      IfKw 26..28 "if"
+|     |     |      LParen 28..29
+|     |     |     |      LParen 28..29 "("
+|     |     |      Expression 29..35
+|     |     |     |      Equal 29..35
+|     |     |     |     |      ExpressionAtom 29..30
+|     |     |     |     |     |      Identifier 29..30
+|     |     |     |     |     |     |      Identifier 29..30 "n"
+|     |     |     |     |      WhiteSpace 30..31
+|     |     |     |     |     |      WhiteSpace 30..31 " "
+|     |     |     |     |      Equal 31..33
+|     |     |     |     |     |      Equal 31..33 "=="
+|     |     |     |     |      WhiteSpace 33..34
+|     |     |     |     |     |      WhiteSpace 33..34 " "
+|     |     |     |     |      ExpressionAtom 34..35
+|     |     |     |     |     |      Number 34..35
+|     |     |     |     |     |     |      Number 34..35 "2"
+|     |     |      RParen 35..36
+|     |     |     |      RParen 35..36 ")"
+|     |     |      WhiteSpace 36..37
+|     |     |     |      WhiteSpace 36..37 " "
+|     |     |      Block 37..89
+|     |     |     |      LCurly 37..38
+|     |     |     |     |      LCurly 37..38 "{"
+|     |     |     |      EndLine 38..39
+|     |     |     |     |      EndLine 38..39 "\n"
+|     |     |     |      WhiteSpace 39..47
+|     |     |     |     |      WhiteSpace 39..47 "        "
+|     |     |     |      StatementList 47..88
+|     |     |     |     |      AssignStatement 47..56
+|     |     |     |     |     |      Expression 47..51
+|     |     |     |     |     |     |      ExpressionAtom 47..50
+|     |     |     |     |     |     |     |      Identifier 47..50
+|     |     |     |     |     |     |     |     |      Identifier 47..50 "aux"
+|     |     |     |     |     |     |      WhiteSpace 50..51
+|     |     |     |     |     |     |     |      WhiteSpace 50..51 " "
+|     |     |     |     |     |      RAssignConstraintSignal 51..54
+|     |     |     |     |     |     |      RAssignConstraintSignal 51..54 "<=="
+|     |     |     |     |     |      WhiteSpace 54..55
+|     |     |     |     |     |     |      WhiteSpace 54..55 " "
+|     |     |     |     |     |      Expression 55..56
+|     |     |     |     |     |     |      ExpressionAtom 55..56
+|     |     |     |     |     |     |     |      Number 55..56
+|     |     |     |     |     |     |     |     |      Number 55..56 "2"
+|     |     |     |     |      Semicolon 56..57
+|     |     |     |     |     |      Semicolon 56..57 ";"
+|     |     |     |     |      EndLine 57..58
+|     |     |     |     |     |      EndLine 57..58 "\n"
+|     |     |     |     |      WhiteSpace 58..66
+|     |     |     |     |     |      WhiteSpace 58..66 "        "
+|     |     |     |     |      AssignStatement 66..82
+|     |     |     |     |     |      Expression 66..70
+|     |     |     |     |     |     |      ExpressionAtom 66..69
+|     |     |     |     |     |     |     |      Identifier 66..69
+|     |     |     |     |     |     |     |     |      Identifier 66..69 "out"
+|     |     |     |     |     |     |      WhiteSpace 69..70
+|     |     |     |     |     |     |     |      WhiteSpace 69..70 " "
+|     |     |     |     |     |      RAssignConstraintSignal 70..73
+|     |     |     |     |     |     |      RAssignConstraintSignal 70..73 "<=="
+|     |     |     |     |     |      WhiteSpace 73..74
+|     |     |     |     |     |     |      WhiteSpace 73..74 " "
+|     |     |     |     |     |      Expression 74..82
+|     |     |     |     |     |     |      Call 74..82
+|     |     |     |     |     |     |     |      Call 74..77
+|     |     |     |     |     |     |     |     |      ExpressionAtom 74..75
+|     |     |     |     |     |     |     |     |     |      Identifier 74..75
+|     |     |     |     |     |     |     |     |     |     |      Identifier 74..75 "B"
+|     |     |     |     |     |     |     |     |      LParen 75..76
+|     |     |     |     |     |     |     |     |     |      LParen 75..76 "("
+|     |     |     |     |     |     |     |     |      RParen 76..77
+|     |     |     |     |     |     |     |     |     |      RParen 76..77 ")"
+|     |     |     |     |     |     |     |      LParen 77..78
+|     |     |     |     |     |     |     |     |      LParen 77..78 "("
+|     |     |     |     |     |     |     |      Expression 78..81
+|     |     |     |     |     |     |     |     |      ExpressionAtom 78..81
+|     |     |     |     |     |     |     |     |     |      Identifier 78..81
+|     |     |     |     |     |     |     |     |     |     |      Identifier 78..81 "aux"
+|     |     |     |     |     |     |     |      RParen 81..82
+|     |     |     |     |     |     |     |     |      RParen 81..82 ")"
+|     |     |     |     |      Semicolon 82..83
+|     |     |     |     |     |      Semicolon 82..83 ";"
+|     |     |     |     |      EndLine 83..84
+|     |     |     |     |     |      EndLine 83..84 "\n"
+|     |     |     |     |      WhiteSpace 84..88
+|     |     |     |     |     |      WhiteSpace 84..88 "    "
+|     |     |     |      RCurly 88..89
+|     |     |     |     |      RCurly 88..89 "}"
+|     |     |      WhiteSpace 89..90
+|     |     |     |      WhiteSpace 89..90 " "
+|     |     |      ElseKw 90..94
+|     |     |     |      ElseKw 90..94 "else"
+|     |     |      WhiteSpace 94..95
+|     |     |     |      WhiteSpace 94..95 " "
+|     |     |      Block 95..121
+|     |     |     |      LCurly 95..96
+|     |     |     |     |      LCurly 95..96 "{"
+|     |     |     |      EndLine 96..97
+|     |     |     |     |      EndLine 96..97 "\n"
+|     |     |     |      WhiteSpace 97..105
+|     |     |     |     |      WhiteSpace 97..105 "        "
+|     |     |     |      StatementList 105..120
+|     |     |     |     |      AssignStatement 105..114
+|     |     |     |     |     |      Expression 105..109
+|     |     |     |     |     |     |      ExpressionAtom 105..108
+|     |     |     |     |     |     |     |      Identifier 105..108
+|     |     |     |     |     |     |     |     |      Identifier 105..108 "out"
+|     |     |     |     |     |     |      WhiteSpace 108..109
+|     |     |     |     |     |     |     |      WhiteSpace 108..109 " "
+|     |     |     |     |     |      RAssignConstraintSignal 109..112
+|     |     |     |     |     |     |      RAssignConstraintSignal 109..112 "<=="
+|     |     |     |     |     |      WhiteSpace 112..113
+|     |     |     |     |     |     |      WhiteSpace 112..113 " "
+|     |     |     |     |     |      Expression 113..114
+|     |     |     |     |     |     |      ExpressionAtom 113..114
+|     |     |     |     |     |     |     |      Number 113..114
+|     |     |     |     |     |     |     |     |      Number 113..114 "5"
+|     |     |     |     |      Semicolon 114..115
+|     |     |     |     |     |      Semicolon 114..115 ";"
+|     |     |     |     |      EndLine 115..116
+|     |     |     |     |     |      EndLine 115..116 "\n"
+|     |     |     |     |      WhiteSpace 116..120
+|     |     |     |     |     |      WhiteSpace 116..120 "    "
+|     |     |     |      RCurly 120..121
+|     |     |     |     |      RCurly 120..121 "}"
+|     |      EndLine 121..122
+|     |     |      EndLine 121..122 "\n"
+|     |      EndLine 122..123
+|     |     |      EndLine 122..123 "\n"
+|     |      WhiteSpace 123..127
+|     |     |      WhiteSpace 123..127 "    "
+|     |      CommentLine 127..133
+|     |     |      CommentLine 127..133 "// for"
+|     |      EndLine 133..134
+|     |     |      EndLine 133..134 "\n"
+|     |      WhiteSpace 134..138
+|     |     |      WhiteSpace 134..138 "    "
+|     |      ForLoop 138..206
+|     |     |      ForKw 138..141
+|     |     |     |      ForKw 138..141 "for"
+|     |     |      LParen 141..142
+|     |     |     |      LParen 141..142 "("
+|     |     |      VarDecl 142..151
+|     |     |     |      VarKw 142..145
+|     |     |     |     |      VarKw 142..145 "var"
+|     |     |     |      WhiteSpace 145..146
+|     |     |     |     |      WhiteSpace 145..146 " "
+|     |     |     |      VarIdentifier 146..148
+|     |     |     |     |      Identifier 146..147
+|     |     |     |     |     |      Identifier 146..147 "i"
+|     |     |     |     |      WhiteSpace 147..148
+|     |     |     |     |     |      WhiteSpace 147..148 " "
+|     |     |     |      Assign 148..149
+|     |     |     |     |      Assign 148..149 "="
+|     |     |     |      WhiteSpace 149..150
+|     |     |     |     |      WhiteSpace 149..150 " "
+|     |     |     |      Expression 150..151
+|     |     |     |     |      ExpressionAtom 150..151
+|     |     |     |     |     |      Number 150..151
+|     |     |     |     |     |     |      Number 150..151 "0"
+|     |     |      Semicolon 151..152
+|     |     |     |      Semicolon 151..152 ";"
+|     |     |      WhiteSpace 152..153
+|     |     |     |      WhiteSpace 152..153 " "
+|     |     |      Expression 153..160
+|     |     |     |      LessThan 153..160
+|     |     |     |     |      ExpressionAtom 153..154
+|     |     |     |     |     |      Identifier 153..154
+|     |     |     |     |     |     |      Identifier 153..154 "i"
+|     |     |     |     |      WhiteSpace 154..155
+|     |     |     |     |     |      WhiteSpace 154..155 " "
+|     |     |     |     |      LessThan 155..156
+|     |     |     |     |     |      LessThan 155..156 "<"
+|     |     |     |     |      WhiteSpace 156..157
+|     |     |     |     |     |      WhiteSpace 156..157 " "
+|     |     |     |     |      Sub 157..160
+|     |     |     |     |     |      ExpressionAtom 157..158
+|     |     |     |     |     |     |      Identifier 157..158
+|     |     |     |     |     |     |     |      Identifier 157..158 "N"
+|     |     |     |     |     |      Sub 158..159
+|     |     |     |     |     |     |      Sub 158..159 "-"
+|     |     |     |     |     |      ExpressionAtom 159..160
+|     |     |     |     |     |     |      Number 159..160
+|     |     |     |     |     |     |     |      Number 159..160 "1"
+|     |     |      Semicolon 160..161
+|     |     |     |      Semicolon 160..161 ";"
+|     |     |      WhiteSpace 161..162
+|     |     |     |      WhiteSpace 161..162 " "
+|     |     |      AssignStatement 162..165
+|     |     |     |      Expression 162..165
+|     |     |     |     |      UnitInc 162..165
+|     |     |     |     |     |      ExpressionAtom 162..163
+|     |     |     |     |     |     |      Identifier 162..163
+|     |     |     |     |     |     |     |      Identifier 162..163 "i"
+|     |     |     |     |     |      UnitInc 163..165
+|     |     |     |     |     |     |      UnitInc 163..165 "++"
+|     |     |      RParen 165..166
+|     |     |     |      RParen 165..166 ")"
+|     |     |      Block 166..206
+|     |     |     |      LCurly 166..167
+|     |     |     |     |      LCurly 166..167 "{"
+|     |     |     |      EndLine 167..168
+|     |     |     |     |      EndLine 167..168 "\n"
+|     |     |     |      WhiteSpace 168..176
+|     |     |     |     |      WhiteSpace 168..176 "        "
+|     |     |     |      StatementList 176..205
+|     |     |     |     |      AssignStatement 176..199
+|     |     |     |     |     |      Expression 176..184
+|     |     |     |     |     |     |      ArrayQuery 176..183
+|     |     |     |     |     |     |     |      ExpressionAtom 176..180
+|     |     |     |     |     |     |     |     |      Identifier 176..180
+|     |     |     |     |     |     |     |     |     |      Identifier 176..180 "comp"
+|     |     |     |     |     |     |     |      LBracket 180..181
+|     |     |     |     |     |     |     |     |      LBracket 180..181 "["
+|     |     |     |     |     |     |     |      Expression 181..182
+|     |     |     |     |     |     |     |     |      ExpressionAtom 181..182
+|     |     |     |     |     |     |     |     |     |      Identifier 181..182
+|     |     |     |     |     |     |     |     |     |     |      Identifier 181..182 "i"
+|     |     |     |     |     |     |     |      RBracket 182..183
+|     |     |     |     |     |     |     |     |      RBracket 182..183 "]"
+|     |     |     |     |     |     |      WhiteSpace 183..184
+|     |     |     |     |     |     |     |      WhiteSpace 183..184 " "
+|     |     |     |     |     |      Assign 184..185
+|     |     |     |     |     |     |      Assign 184..185 "="
+|     |     |     |     |     |      WhiteSpace 185..186
+|     |     |     |     |     |     |      WhiteSpace 185..186 " "
+|     |     |     |     |     |      Expression 186..199
+|     |     |     |     |     |     |      Call 186..199
+|     |     |     |     |     |     |     |      ExpressionAtom 186..197
+|     |     |     |     |     |     |     |     |      Identifier 186..197
+|     |     |     |     |     |     |     |     |     |      Identifier 186..197 "Multiplier2"
+|     |     |     |     |     |     |     |      LParen 197..198
+|     |     |     |     |     |     |     |     |      LParen 197..198 "("
+|     |     |     |     |     |     |     |      RParen 198..199
+|     |     |     |     |     |     |     |     |      RParen 198..199 ")"
+|     |     |     |     |      Semicolon 199..200
+|     |     |     |     |     |      Semicolon 199..200 ";"
+|     |     |     |     |      EndLine 200..201
+|     |     |     |     |     |      EndLine 200..201 "\n"
+|     |     |     |     |      WhiteSpace 201..205
+|     |     |     |     |     |      WhiteSpace 201..205 "    "
+|     |     |     |      RCurly 205..206
+|     |     |     |     |      RCurly 205..206 "}"
+|     |      EndLine 206..207
+|     |     |      EndLine 206..207 "\n"
+|     |      EndLine 207..208
+|     |     |      EndLine 207..208 "\n"
+|     |      WhiteSpace 208..212
+|     |     |      WhiteSpace 208..212 "    "
+|     |      CommentLine 212..220
+|     |     |      CommentLine 212..220 "// while"
+|     |      EndLine 220..221
+|     |     |      EndLine 220..221 "\n"
+|     |      WhiteSpace 221..225
+|     |     |      WhiteSpace 221..225 "    "
+|     |      WhileLoop 225..275
+|     |     |      WhileKw 225..230
+|     |     |     |      WhileKw 225..230 "while"
+|     |     |      WhiteSpace 230..231
+|     |     |     |      WhiteSpace 230..231 " "
+|     |     |      LParen 231..232
+|     |     |     |      LParen 231..232 "("
+|     |     |      Expression 232..237
+|     |     |     |      LessThan 232..237
+|     |     |     |     |      Sub 232..235
+|     |     |     |     |     |      ExpressionAtom 232..233
+|     |     |     |     |     |     |      Identifier 232..233
+|     |     |     |     |     |     |     |      Identifier 232..233 "n"
+|     |     |     |     |     |      Sub 233..234
+|     |     |     |     |     |     |      Sub 233..234 "-"
+|     |     |     |     |     |      ExpressionAtom 234..235
+|     |     |     |     |     |     |      Number 234..235
+|     |     |     |     |     |     |     |      Number 234..235 "1"
+|     |     |     |     |      LessThan 235..236
+|     |     |     |     |     |      LessThan 235..236 "<"
+|     |     |     |     |      ExpressionAtom 236..237
+|     |     |     |     |     |      Identifier 236..237
+|     |     |     |     |     |     |      Identifier 236..237 "a"
+|     |     |      RParen 237..238
+|     |     |     |      RParen 237..238 ")"
+|     |     |      WhiteSpace 238..239
+|     |     |     |      WhiteSpace 238..239 " "
+|     |     |      Block 239..275
+|     |     |     |      LCurly 239..240
+|     |     |     |     |      LCurly 239..240 "{"
+|     |     |     |      EndLine 240..241
+|     |     |     |     |      EndLine 240..241 "\n"
+|     |     |     |      WhiteSpace 241..249
+|     |     |     |     |      WhiteSpace 241..249 "        "
+|     |     |     |      StatementList 249..274
+|     |     |     |     |      AssignStatement 249..252
+|     |     |     |     |     |      Expression 249..252
+|     |     |     |     |     |     |      UnitInc 249..252
+|     |     |     |     |     |     |     |      ExpressionAtom 249..250
+|     |     |     |     |     |     |     |     |      Identifier 249..250
+|     |     |     |     |     |     |     |     |     |      Identifier 249..250 "r"
+|     |     |     |     |     |     |     |      UnitInc 250..252
+|     |     |     |     |     |     |     |     |      UnitInc 250..252 "++"
+|     |     |     |     |      Semicolon 252..253
+|     |     |     |     |     |      Semicolon 252..253 ";"
+|     |     |     |     |      EndLine 253..254
+|     |     |     |     |     |      EndLine 253..254 "\n"
+|     |     |     |     |      WhiteSpace 254..262
+|     |     |     |     |     |      WhiteSpace 254..262 "        "
+|     |     |     |     |      AssignStatement 262..268
+|     |     |     |     |     |      Expression 262..264
+|     |     |     |     |     |     |      ExpressionAtom 262..263
+|     |     |     |     |     |     |     |      Identifier 262..263
+|     |     |     |     |     |     |     |     |      Identifier 262..263 "n"
+|     |     |     |     |     |     |      WhiteSpace 263..264
+|     |     |     |     |     |     |     |      WhiteSpace 263..264 " "
+|     |     |     |     |     |      MulAssign 264..266
+|     |     |     |     |     |     |      MulAssign 264..266 "*="
+|     |     |     |     |     |      WhiteSpace 266..267
+|     |     |     |     |     |     |      WhiteSpace 266..267 " "
+|     |     |     |     |     |      Expression 267..268
+|     |     |     |     |     |     |      ExpressionAtom 267..268
+|     |     |     |     |     |     |     |      Number 267..268
+|     |     |     |     |     |     |     |     |      Number 267..268 "2"
+|     |     |     |     |      Semicolon 268..269
+|     |     |     |     |     |      Semicolon 268..269 ";"
+|     |     |     |     |      EndLine 269..270
+|     |     |     |     |     |      EndLine 269..270 "\n"
+|     |     |     |     |      WhiteSpace 270..274
+|     |     |     |     |     |      WhiteSpace 270..274 "    "
+|     |     |     |      RCurly 274..275
+|     |     |     |     |      RCurly 274..275 "}"
+|     |      EndLine 275..276
+|     |     |      EndLine 275..276 "\n"
+|     |      EndLine 276..277
+|     |     |      EndLine 276..277 "\n"
+|     |      WhiteSpace 277..281
+|     |     |      WhiteSpace 277..281 "    "
+|     |      CommentLine 281..290
+|     |     |      CommentLine 281..290 "// return"
+|     |      EndLine 290..291
+|     |     |      EndLine 290..291 "\n"
+|     |      WhiteSpace 291..295
+|     |     |      WhiteSpace 291..295 "    "
+|     |      ReturnStatement 295..303
+|     |     |      ReturnKw 295..301
+|     |     |     |      ReturnKw 295..301 "return"
+|     |     |      WhiteSpace 301..302
+|     |     |     |      WhiteSpace 301..302 " "
+|     |     |      Expression 302..303
+|     |     |     |      ExpressionAtom 302..303
+|     |     |     |     |      Identifier 302..303
+|     |     |     |     |     |      Identifier 302..303 "r"
+|     |      Semicolon 303..304
+|     |     |      Semicolon 303..304 ";"
+|     |      EndLine 304..305
+|     |     |      EndLine 304..305 "\n"
+|     |      EndLine 305..306
+|     |     |      EndLine 305..306 "\n"
+|     |      WhiteSpace 306..310
+|     |     |      WhiteSpace 306..310 "    "
+|     |      CommentLine 310..316
+|     |     |      CommentLine 310..316 "// log"
+|     |      EndLine 316..317
+|     |     |      EndLine 316..317 "\n"
+|     |      WhiteSpace 317..321
+|     |     |      WhiteSpace 317..321 "    "
+|     |      LogStatement 321..342
+|     |     |      LogKw 321..324
+|     |     |     |      LogKw 321..324 "log"
+|     |     |      LParen 324..325
+|     |     |     |      LParen 324..325 "("
+|     |     |      CircomString 325..331
+|     |     |     |      CircomString 325..331 "\"hash\""
+|     |     |      Comma 331..332
+|     |     |     |      Comma 331..332 ","
+|     |     |      WhiteSpace 332..333
+|     |     |     |      WhiteSpace 332..333 " "
+|     |     |      Expression 333..341
+|     |     |     |      ComponentCall 333..341
+|     |     |     |     |      ExpressionAtom 333..337
+|     |     |     |     |     |      Identifier 333..337
+|     |     |     |     |     |     |      Identifier 333..337 "hash"
+|     |     |     |     |      Dot 337..338
+|     |     |     |     |     |      Dot 337..338 "."
+|     |     |     |     |      Identifier 338..341
+|     |     |     |     |     |      Identifier 338..341 "out"
+|     |     |      RParen 341..342
+|     |     |     |      RParen 341..342 ")"
+|     |      Semicolon 342..343
+|     |     |      Semicolon 342..343 ";"
+|     |      EndLine 343..344
+|     |     |      EndLine 343..344 "\n"
+|     |      EndLine 344..345
+|     |     |      EndLine 344..345 "\n"
+|     |      WhiteSpace 345..349
+|     |     |      WhiteSpace 345..349 "    "
+|     |      CommentLine 349..358
+|     |     |      CommentLine 349..358 "// assert"
+|     |      EndLine 358..359
+|     |     |      EndLine 358..359 "\n"
+|     |      WhiteSpace 359..363
+|     |     |      WhiteSpace 359..363 "    "
+|     |      AssertStatement 363..376
+|     |     |      AssertKw 363..369
+|     |     |     |      AssertKw 363..369 "assert"
+|     |     |      LParen 369..370
+|     |     |     |      LParen 369..370 "("
+|     |     |      Expression 370..375
+|     |     |     |      GreaterThan 370..375
+|     |     |     |     |      ExpressionAtom 370..371
+|     |     |     |     |     |      Identifier 370..371
+|     |     |     |     |     |     |      Identifier 370..371 "a"
+|     |     |     |     |      WhiteSpace 371..372
+|     |     |     |     |     |      WhiteSpace 371..372 " "
+|     |     |     |     |      GreaterThan 372..373
+|     |     |     |     |     |      GreaterThan 372..373 ">"
+|     |     |     |     |      WhiteSpace 373..374
+|     |     |     |     |     |      WhiteSpace 373..374 " "
+|     |     |     |     |      ExpressionAtom 374..375
+|     |     |     |     |     |      Number 374..375
+|     |     |     |     |     |     |      Number 374..375 "2"
+|     |     |      RParen 375..376
+|     |     |     |      RParen 375..376 ")"
+|     |      Semicolon 376..377
+|     |     |      Semicolon 376..377 ";"
+|     |      EndLine 377..378
+|     |     |      EndLine 377..378 "\n"
+|     |      EndLine 378..379
+|     |     |      EndLine 378..379 "\n"
+|     |      WhiteSpace 379..383
+|     |     |      WhiteSpace 379..383 "    "
+|     |      CommentLine 383..406
+|     |     |      CommentLine 383..406 "// assignment statement"
+|     |      EndLine 406..407
+|     |     |      EndLine 406..407 "\n"
+|     |      WhiteSpace 407..411
+|     |     |      WhiteSpace 407..411 "    "
+|     |      AssignStatement 411..422
+|     |     |      Expression 411..413
+|     |     |     |      ExpressionAtom 411..412
+|     |     |     |     |      Identifier 411..412
+|     |     |     |     |     |      Identifier 411..412 "c"
+|     |     |     |      WhiteSpace 412..413
+|     |     |     |     |      WhiteSpace 412..413 " "
+|     |     |      RAssignConstraintSignal 413..416
+|     |     |     |      RAssignConstraintSignal 413..416 "<=="
+|     |     |      WhiteSpace 416..417
+|     |     |     |      WhiteSpace 416..417 " "
+|     |     |      Expression 417..422
+|     |     |     |      Mul 417..422
+|     |     |     |     |      ExpressionAtom 417..418
+|     |     |     |     |     |      Identifier 417..418
+|     |     |     |     |     |     |      Identifier 417..418 "a"
+|     |     |     |     |      WhiteSpace 418..419
+|     |     |     |     |     |      WhiteSpace 418..419 " "
+|     |     |     |     |      Mul 419..420
+|     |     |     |     |     |      Mul 419..420 "*"
+|     |     |     |     |      WhiteSpace 420..421
+|     |     |     |     |     |      WhiteSpace 420..421 " "
+|     |     |     |     |      ExpressionAtom 421..422
+|     |     |     |     |     |      Identifier 421..422
+|     |     |     |     |     |     |      Identifier 421..422 "b"
+|     |      Semicolon 422..423
+|     |     |      Semicolon 422..423 ";"
+|     |      EndLine 423..424
+|     |     |      EndLine 423..424 "\n"
+|      RCurly 424..425
+|     |      RCurly 424..425 "}"
