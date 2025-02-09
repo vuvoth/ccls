@@ -1,3 +1,5 @@
+use list::tuple_identifier;
+
 use crate::grammar::*;
 
 // fucntion name()
@@ -10,11 +12,9 @@ pub fn function_parse(p: &mut Parser) {
     p.expect(Identifier);
     p.close(fn_name_marker, FunctionName);
 
-    p.expect(LParen);
-    let arg_marker = p.open();
-    list_identity::parse(p);
-    p.close(arg_marker, ParameterList);
-    p.expect(RParen);
+    let parameter_marker = p.open();
+    tuple_identifier(p);
+    p.close(parameter_marker, ParameterList);
 
     block::block(p);
 

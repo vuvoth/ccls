@@ -44,9 +44,15 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
     }
 }
 
+/// state of all (circom) source file
 pub struct GlobalState {
+    /// file id - ast from that file content
     pub ast_map: DashMap<String, AstCircomProgram>,
+
+    /// file id - file content (+ end lines)
     pub file_map: DashMap<String, FileDB>,
+
+    /// file id - database (template in4, function in4...)
     pub db: SemanticDB,
 }
 
@@ -71,6 +77,7 @@ impl GlobalState {
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
+        // look up token in current file
         let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
         let mut result = lookup_definition(root, ast, semantic_data, token);
 
@@ -78,6 +85,9 @@ impl GlobalState {
             return result;
         }
 
+        // if can not find that token in current file,
+        // and if token in a component call / declaration
+        // continue looking up in libs
         let p = root.get_path();
 
         if lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
@@ -98,17 +108,26 @@ impl GlobalState {
                 }
             }
         }
+
         result
     }
 
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
+        // path to the element we want to get definition
+        // TODO eg: file/line/start column..end column
         let uri = params.text_document_position_params.text_document.uri;
 
+        // abtract syntax tree for the element from that uri
+        // TODO eg:
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
+        // the file contains the element from that uri
+        // TODO eg:
         let file = self.file_map.get(&uri.to_string()).unwrap();
 
         let mut locations = Vec::new();
 
+        // extract token from ast at position (file, params position)
+        // TODO eg:
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
@@ -126,6 +145,11 @@ impl GlobalState {
         }
     }
 
+    /// update a file of (circom) source code
+    /// parse new code --> syntax tree
+    /// remove old data of that file in semantic database
+    /// add new data (circom_program_semantic) + related libs into database
+    /// update corresponding file-map and ast-map in global-state
     pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
         let text = &text_document.text;
         let url = &text_document.uri.to_string();

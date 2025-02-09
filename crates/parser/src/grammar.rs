@@ -6,7 +6,7 @@ mod declaration;
 mod expression;
 mod function;
 mod include;
-mod list_identity;
+mod list;
 mod main_component;
 mod pragma;
 mod statement;

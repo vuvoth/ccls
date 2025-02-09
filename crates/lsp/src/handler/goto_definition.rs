@@ -16,6 +16,7 @@ use syntax::syntax_node::SyntaxToken;
 
 use crate::database::{FileDB, SemanticData, TokenId};
 
+// find the first ancestor with given kind of a syntax token
 pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Option<SyntaxNode> {
     let mut p = token.parent();
     while let Some(t) = p {
@@ -27,6 +28,7 @@ pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Optio
     None
 }
 
+// return an Identifier/CircomString token at a position
 pub fn lookup_token_at_postion(
     file: &FileDB,
     ast: &AstCircomProgram,
@@ -47,6 +49,7 @@ pub fn lookup_token_at_postion(
     })
 }
 
+// find all template name (in component declaration) which are used inside a template
 pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<AstTemplateName> {
     if let Some(statements) = template.statements() {
         for component in statements.find_children::<AstComponentDecl>() {
@@ -60,6 +63,8 @@ pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<A
     None
 }
 
+// if token in an include statement
+// add lib path (location of source code of that library) into result
 pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
     if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
         if let Some(ast_include) = AstInclude::cast(include_lib) {
@@ -86,6 +91,7 @@ pub fn lookup_definition(
     token: &SyntaxToken,
 ) -> Vec<Location> {
     let template_list = ast.template_list();
+    // TODO: extract function list
 
     let mut res = Vec::new();
 
@@ -93,15 +99,19 @@ pub fn lookup_definition(
         return jump_to_lib(file, token);
     }
 
+    // signal from other template
+    // eg: in1, in2 from component call mul(in1, in2)
     let mut signal_outside = false;
 
     if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
         // find template called.
         if let Some(ast_component_call) = AstComponentCall::cast(component_call) {
             if let Some(signal) = ast_component_call.signal() {
+                // if target token is the parameter of a component call
+                // TODO: go to params in template!!! (failed)
                 if signal.syntax().text() == token.text() {
                     signal_outside = true;
-                    // lookup template of componenet
+                    // lookup template of component
                     if let Some(current_template) =
                         lookup_node_wrap_token(TokenKind::TemplateDef, token)
                     {
@@ -131,6 +141,8 @@ pub fn lookup_definition(
     }
 
     if !signal_outside {
+        // look up token in template information
+        // (template name, signal/variable/component in template)
         for template in template_list {
             let template_name = template.name().unwrap();
             if template_name.name().unwrap().syntax().text() == token.text() {
@@ -160,6 +172,9 @@ pub fn lookup_definition(
                 res.extend(component_decl);
             }
         }
+
+        // TODO: look up token in function information
+        // (function name, signal/variable/component in function)
     }
 
     res.into_iter()
@@ -195,7 +210,6 @@ mod tests {
     fn goto_decl_test() {
         let file_path = "/src/test_files/handler/templates.circom";
         let source = get_source_from_path(file_path);
-
         let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);

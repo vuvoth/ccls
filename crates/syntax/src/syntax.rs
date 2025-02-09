@@ -109,6 +109,11 @@ mod tests {
     }
 
     #[test]
+    fn statements_happy_test() {
+        test_syntax!("/src/test_files/happy/statements.circom", Scope::Block);
+    }
+
+    #[test]
     fn comment_happy_test() {
         test_syntax!(
             "/src/test_files/happy/block_comment.circom",

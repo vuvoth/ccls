@@ -70,8 +70,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn close(&mut self, marker_open: Marker, kind: TokenKind) -> Marker {
-        match marker_open {
+    pub fn close(&mut self, open_marker: Marker, kind: TokenKind) -> Marker {
+        match open_marker {
             Marker::Open(index) => {
                 self.events[index] = Event::Open { kind };
                 self.events.push(Event::Close);

@@ -41,7 +41,6 @@ pub fn block(p: &mut Parser) {
         p.close(stmt_marker, StatementList);
 
         p.expect(RCurly);
-
         p.close(m, Block);
 
         p.dec_rcurly();
