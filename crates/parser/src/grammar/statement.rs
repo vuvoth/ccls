@@ -3,12 +3,12 @@ use crate::token_kind::TokenKind;
 use super::{block::block, expression::expression, *};
 
 pub(super) fn statement(p: &mut Parser) {
-    let m = p.open();
+    // let open_marker = p.open();
     match p.current() {
         IfKw => if_statement(p),
         _ => statement_no_condition(p),
     }
-    p.close(m, Statement);
+    // p.close(open_marker, Statement);
 }
 
 /*
@@ -18,17 +18,22 @@ else
     <statement>
 */
 fn if_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
+
+    // if (<condition>) <statement>
     p.expect(IfKw);
     p.expect(LParen);
-    expression::expression(p);
+    expression(p);
     p.expect(RParen);
     statement(p);
+
+    // else <statement>
     if p.at(ElseKw) {
         p.expect(ElseKw);
         statement(p);
     }
-    p.close(m, IfKw);
+
+    p.close(open_marker, IfStatement);
 }
 
 /**
@@ -64,7 +69,7 @@ for (<declaration>/<assignment>; <expression>; <assignment>)
     <statement>
 */
 fn for_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
 
     // for (
     p.expect(ForKw);
@@ -89,8 +94,8 @@ fn for_statement(p: &mut Parser) {
 
     // for (i = 1; i < N; i++) { <statements> }
     statement(p);
-    // statement_no_condition(p);
-    p.close(m, ForLoop);
+
+    p.close(open_marker, ForLoop);
 }
 
 /*
@@ -98,103 +103,86 @@ while (<expression>)
     <statement>
 */
 fn while_statement(p: &mut Parser) {
+    let open_marker = p.open();
+
     p.expect(WhileKw);
     p.expect(LParen);
     expression(p);
     p.expect(RParen);
     statement(p);
+
+    p.close(open_marker, WhileLoop);
 }
 
 /*
 assert(<expression>)
 */
 fn assert_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
+
     p.expect(AssertKw);
     p.expect(LParen);
     expression(p);
     p.expect(RParen);
-    p.close(m, AssertKw);
+
+    p.close(open_marker, AssertStatement);
 }
 
 /*
-log()
+log(<pattern1>, <pattern2>, ... <patternn>)
 */
 fn log_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
+
     p.expect(LogKw);
     p.expect(LParen);
+
+    // list circom string/expression
     while !p.eof() {
-        if p.at(RParen) {
-            break;
-        }
         match p.current() {
+            RParen => break,
             CircomString => p.advance(),
             _ => expression(p),
         }
-        if !p.at(Comma) {
+
+        if !p.eat(Comma) {
             break;
-        } else {
-            p.advance();
         }
     }
+
     p.expect(RParen);
-    p.close(m, LogKw);
+
+    p.close(open_marker, LogStatement);
 }
 
 /*
 return <expression>
 */
 fn return_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
     p.expect(ReturnKw);
     expression(p);
-    p.close(m, ReturnKw);
+    p.close(open_marker, ReturnStatement);
 }
 
 /*
-
+<left-expression> <assignment-token> <right-expression>
+optional: <assignment-token> <right-expression>
+eg: out[1] <== in[0] + in[2]
 */
 fn assignment_statement(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
 
-    if p.at(Identifier) {
-        let m_id = p.open();
-        // abc
-        let m_name = p.open();
-        p.expect(Identifier);
-        p.close(m_name, ComponentIdentifier);
-
-        // abc[N - 1]
-        if p.at(LBracket) {
-            p.expect(LBracket);
-            expression(p);
-            p.expect(RBracket);
-        }
-
-        if p.at(Dot) {
-            // abc[N - 1].def OR abc.def --> component call
-            p.expect(Dot);
-            p.expect(Identifier);
-            p.close(m_id, ComponentCall);
-        } else {
-            // abc[N - 1] OR abc --> expression
-            p.close(m_id, Expression);
-        }
-    } else {
-        // assignment without identifier
-        expression(p);
-    }
+    // left expression
+    expression(p);
 
     // assign part
     if p.at_assign_token() {
-        let is_self_assign = p.at_any(&[TokenKind::UnitDec, TokenKind::UnitInc]);
         p.advance();
-        if is_self_assign == false {
-            expression(p);
-        }
-        p.close(m, AssignStatement);
-    } else {
-        p.close(m, Error);
+
+        // right expression
+        expression(p);
     }
+
+    p.close(open_marker, AssignStatement);
 }

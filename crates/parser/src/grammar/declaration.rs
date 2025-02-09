@@ -1,7 +1,9 @@
 use super::{
-    expression::{expression, tuple, tuple_init},
+    expression::expression,
+    list::{tuple_expression, tuple_identifier},
     *,
 };
+use crate::parser::Parser;
 
 // [N][M-1]
 fn array(p: &mut Parser) -> bool {
@@ -17,6 +19,21 @@ fn array(p: &mut Parser) -> bool {
 }
 
 /*
+* eg: a, a[N], a[N][M - 1],...
+*/
+pub(crate) fn complex_identifier(p: &mut Parser) {
+    let open_marker = p.open();
+
+    // name
+    p.expect(Identifier);
+
+    // eg: [N - 1][M]
+    array(p);
+
+    p.close(open_marker, ComplexIdentifier);
+}
+
+/*
 "signal" --> None
 "signal input" --> Some(true)
 "signal output" --> Some(false)
@@ -25,15 +42,13 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     let m = p.open();
     p.expect(SignalKw);
 
-    let res = if p.at(InputKw) {
-        Some(true)
-    } else if p.at(OutputKw) {
-        Some(false)
-    } else {
-        None
+    let result = match p.current() {
+        InputKw => Some(true),
+        OutputKw => Some(false),
+        _ => None,
     };
 
-    if res.is_some() {
+    if result.is_some() {
         p.advance();
     }
 
@@ -46,15 +61,17 @@ fn signal_header(p: &mut Parser) -> Option<bool> {
     }
 
     p.close(m, SignalHeader);
-    res
+    result
 }
 
+/*
+var_init does not include `var` keyword
+eg: tmp = 10;
+*/
 pub(crate) fn var_init(p: &mut Parser) {
-    // name of variable
-    p.expect(Identifier);
-
-    // eg: [N - 1][M]
-    array(p);
+    // var identifier
+    // eg: a[N]
+    complex_identifier(p);
 
     // assign for variable
     // eg: = 10
@@ -66,11 +83,9 @@ pub(crate) fn var_init(p: &mut Parser) {
 
 // eg: in[N - 1] <== c.in;
 pub(crate) fn signal_init(p: &mut Parser, assign_able: bool) {
-    // name of signal
-    p.expect(Identifier);
-
-    // eg: [N][M-1]
-    array(p);
+    // signal identifier
+    // eg: in[N]
+    complex_identifier(p);
 
     // assign for  intermediate and outputs signals
     // eg: <== Multiplier2().out
@@ -91,9 +106,10 @@ pub(super) fn var_declaration(p: &mut Parser) {
     // tuple of variables
     // eg: var (in1, in2, in3) = (1, 2, 3);
     if p.at(LParen) {
-        tuple(p);
+        tuple_identifier(p);
         if p.at_var_assign() {
-            tuple_init(p);
+            p.advance();
+            expression(p);
         }
     } else {
         // list of variables
@@ -128,10 +144,11 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     // tuple of signal
     // eg: signal (in1, in2, in3) <== tuple_value;
     if p.at(LParen) {
-        tuple(p);
+        tuple_identifier(p);
         // can not assign for input signal
         if assign_able && p.at_inline_assign_signal() {
-            tuple_init(p);
+            p.advance();
+            expression(p);
         }
     } else {
         // list of signals
@@ -159,17 +176,13 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
 
-    // TODO: why do we need `ComponentIdentifier` kind here?
-    let m_c = p.open();
-    p.expect(Identifier);
-    p.close(m_c, ComponentIdentifier);
-
-    // support array component
+    // component identifier
     // eg: comp[N - 1][10]
-    let is_array = array(p);
+    complex_identifier(p);
 
     // do not assign for array components
-    if !is_array && p.at(Assign) {
+    // but we will not catch this error
+    if p.at(Assign) {
         p.expect(Assign);
 
         // TODO: support `parallel` tag
@@ -181,7 +194,9 @@ pub(super) fn component_declaration(p: &mut Parser) {
         p.close(m_c, TemplateName);
 
         // template params
-        tuple(p);
+        let parameter_marker = p.open();
+        tuple_expression(p);
+        p.close(parameter_marker, Call);
     }
 
     p.close(m, ComponentDecl);

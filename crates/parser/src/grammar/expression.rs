@@ -1,181 +1,182 @@
+use list::tuple_expression;
+
 use crate::parser::Marker;
 
 use super::*;
 
 pub(super) fn expression(p: &mut Parser) {
-    let m = p.open();
+    let open_marker = p.open();
     circom_expression(p);
-    p.close(m, Expression);
+    p.close(open_marker, Expression);
 }
 
 /**
- * grammar: "(param1, param2,..., paramn)"
- * can be an empty ()
+ * TODO: why parse a stament inside expression module???
+ * manage 2 cases: normal expression (a++, a-b,...), tenary_conditional_statement (a ? b : c)
+ * circom_expression = expr ? expr: expr |
+ *                     expr                          
  */
-pub(super) fn function_params(p: &mut Parser) {
-    let m = p.open();
-    p.expect(LParen);
+fn circom_expression(p: &mut Parser) {
+    if let Some(lhs) = expression_rec(p, 0) {
+        let current_kind = p.current();
 
-    while !p.at(RParen) && !p.eof() {
-        expression(p);
-        if p.at(Comma) {
-            p.expect(Comma)
-        } else {
-            break;
+        if matches!(current_kind, MarkQuestion) {
+            tenary_conditional_statement(p, lhs);
         }
     }
-
-    p.expect(RParen);
-    // TODO: what kind of it?
-    p.close(m, Tuple);
 }
 
 /**
- * grammar: "(Symbol_1, Symbol_2,..., Symbol_n)"
- * can be an empty tuple (for function cal: Mul())
- */
-pub(super) fn tuple(p: &mut Parser) {
-    let m = p.open();
-    p.expect(LParen);
+ * grammar: <condition> ? <expression-1> : <expression-2>
+* <condition> is also an expression,
+* whose open and close events are already in the Parser event list
+* lhs is that open event
+*/
+pub fn tenary_conditional_statement(p: &mut Parser, lhs: Marker) {
+    // <condition>
+    let open_marker = p.open_before(lhs);
+    p.close(open_marker, Condition);
 
-    // iden1, iden2, iden3
-    list_identity::parse(p);
+    // <condition> ?
+    p.expect(MarkQuestion);
 
-    p.expect(RParen);
-    p.close(m, Tuple);
-}
+    // <condition> ? <expression-1>
+    let first_expression = p.open();
+    expression_rec(p, 0);
+    p.close(first_expression, Expression);
 
-/**
- * grammar:
- *      "= | <== | <--" expression
- */
-pub(super) fn tuple_init(p: &mut Parser) {
-    let m = p.open();
-    p.expect_any(&[Assign, RAssignSignal, RAssignConstraintSignal]);
-    expression(p);
-    p.close(m, TupleInit);
-}
+    // <condition> ? <expression-1> :
+    p.expect(Colon);
 
-fn expression_atom(p: &mut Parser) -> Option<Marker> {
-    let m_close: Marker;
-    match p.current() {
-        Number => {
-            let m = p.open();
-            p.advance();
-            m_close = p.close(m, Number);
-            Some(m_close)
-        }
-        Identifier => {
-            let m = p.open();
-            p.advance();
-            m_close = p.close(m, Identifier);
-            Some(m_close)
-        }
-        LParen => {
-            let m = p.open();
-            p.expect(LParen);
-            expression_rec(p, 0);
-            p.expect(RParen);
-            m_close = p.close(m, Tuple);
-            Some(m_close)
-        }
-        _ => {
-            p.advance_with_error("Invalid Token");
-            None
-        }
-    }
+    // <condition> ? <expression-1> : <expression-2>
+    let last_expression = p.open();
+    expression_rec(p, 0);
+    p.close(last_expression, Expression);
+
+    p.close(open_marker, TenaryConditional);
 }
 
 /**
  * return marker which bound the expression
  */
 pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
-    let parse_able: Option<Marker> = if let Some(pp) = p.current().prefix() {
-        let kind = p.current();
-        let m = p.open();
-        p.advance();
-        expression_rec(p, pp);
-        Some(p.close(m, kind))
-    } else {
-        expression_atom(p)
+    // consume all first prefix tokens (++a, --a, -a, +a, !a)
+    // next, consume first atom (identifier/number/tuple)
+    let parse_able: Option<Marker> = {
+        if let Some(pp) = p.current().prefix() {
+            let kind = p.current();
+            let open_marker = p.open();
+            // consume prefix token (++, --, -, +, !)
+            p.advance();
+            // continue with the next tokens
+            expression_rec(p, pp);
+            Some(p.close(open_marker, kind))
+        } else {
+            expression_atom(p)
+        }
     };
 
     parse_able?;
 
     let mut lhs = parse_able.unwrap();
 
-    // TODO: function call
-    if p.at(LParen) {
-        let m = p.open_before(lhs);
-        // tuple(p);
-        function_params(p);
-        lhs = p.close(m, Call);
-    }
-
     while !p.eof() {
-        let current_kind = p.current();
-        if let Some((lp, rp)) = current_kind.infix() {
+        let kind = p.current();
+
+        if let Some((lp, rp)) = kind.infix() {
+            // infix case: <a> + <b>
+            // <a> is already consume in parse_able
+
+            // TODO: what does it mean???
             if rp <= pb {
                 return None;
             }
 
-            let m = p.open_before(lhs);
-            p.advance();
-            expression_rec(p, lp);
-            lhs = p.close(m, current_kind);
+            // open event that wrap the first parameter (<a>)
+            let open_marker = p.open_before(lhs);
 
-            continue;
-        }
-        if let Some(pp) = current_kind.postfix() {
+            // consume the infix token
+            p.advance();
+
+            // extract the second parameter
+            expression_rec(p, lp);
+
+            lhs = p.close(open_marker, kind);
+        } else if let Some(pp) = kind.postfix() {
             if pp <= pb {
                 return None;
             }
-            let m = p.open_before(lhs);
-            p.advance();
-            if matches!(current_kind, LBracket) {
-                expression_rec(p, 0);
-                p.expect(RBracket);
-            } else {
-                p.expect(Identifier);
-            }
-            lhs = if matches!(current_kind, Dot) {
-                p.close(m, ComponentCall)
-            } else {
-                p.close(m, ArrayQuery)
-            };
 
-            continue;
+            match kind {
+                LParen => {
+                    // function call
+                    let open_marker = p.open_before(lhs);
+                    tuple_expression(p);
+                    lhs = p.close(open_marker, Call);
+                }
+                LBracket => {
+                    // array subscript: abc[N - 1]
+                    let open_marker = p.open_before(lhs);
+                    p.expect(LBracket);
+                    expression(p);
+                    p.expect(RBracket);
+                    p.close(open_marker, ArrayQuery);
+                }
+                Dot => {
+                    // attribute access
+                    // abc[N - 1].def OR abc.def --> component call
+                    let open_marker = p.open_before(lhs);
+                    p.expect(Dot);
+                    p.expect(Identifier);
+                    p.close(open_marker, ComponentCall);
+                }
+                UnitDec | UnitInc => {
+                    let open_marker = p.open_before(lhs);
+                    // consume token ++/-- and do nothing
+                    p.advance();
+                    p.close(open_marker, kind);
+                }
+                _ => {
+                    // not a postfix token
+                    p.advance_with_error(&format!("Expect a postfix token, but found {:?}", kind));
+                    break;
+                }
+            };
+        } else {
+            break;
         }
-        break;
     }
+
+    // return the outer open marker
     Some(lhs)
 }
 
 /**
- * circom_expression = expr ? expr: expr |
- *                     expr                          
+ * the unit element in expression
+ * eg: a, b, 5, 100, (<expression>)
  */
-fn circom_expression(p: &mut Parser) {
-    if let Some(mut lhs) = expression_rec(p, 0) {
-        let current_kind = p.current();
-        if matches!(current_kind, MarkQuestion) {
-            let m = p.open_before(lhs);
-            lhs = p.close(m, Condition);
+fn expression_atom(p: &mut Parser) -> Option<Marker> {
+    let kind = p.current();
 
-            let m = p.open_before(lhs);
+    match kind {
+        Number | Identifier => {
+            let open_marker = p.open();
             p.advance();
-
-            let first_expression = p.open();
+            let m_close = p.close(open_marker, ExpressionAtom);
+            Some(m_close)
+        }
+        LParen => {
+            // (<expression>)
+            let open_marker = p.open();
+            p.expect(LParen);
             expression_rec(p, 0);
-            p.close(first_expression, Expression);
-
-            p.expect(Colon);
-
-            let last_expression = p.open();
-            expression_rec(p, 0);
-            p.close(last_expression, Expression);
-
-            p.close(m, TenaryConditional);
+            p.expect(RParen);
+            let m_close = p.close(open_marker, Expression);
+            Some(m_close)
+        }
+        _ => {
+            p.advance_with_error("Invalid Token");
+            None
         }
     }
 }

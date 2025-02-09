@@ -9,7 +9,7 @@ pub enum TokenKind {
     #[error]
     Error = 0,
     // Comments
-    #[regex(r"//[^\n]*")]
+    #[regex(r"//[^\r\n]*")]
     CommentLine,
     #[token("/*")]
     CommentBlockOpen,
@@ -18,11 +18,12 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex("[\n]")]
+    #[regex(r"\r?\n")]
     EndLine,
-    // Circom
-    #[token("pragma")]
+    // Pragma
     Pragma,
+    #[token("pragma")]
+    PragmaKw,
     #[token("circom")]
     Circom,
     #[regex("2.[0-9].[0-9]")]
@@ -47,7 +48,6 @@ pub enum TokenKind {
     LBracket,
     #[token("]")]
     RBracket,
-    // Punctuation
     // Punctuation
     #[token(";")]
     Semicolon,
@@ -123,7 +123,6 @@ pub enum TokenKind {
     #[token("<<")]
     ShiftL,
     // Combined bitwise assignments
-    // Combined bitwise assignments
     #[token("&=")]
     BitAndAssign,
     #[token("|=")]
@@ -190,34 +189,49 @@ pub enum TokenKind {
     ReturnKw,
     #[token("assert")]
     AssertKw,
-    // Complex token kind
-    ForLoop,
+    // Statements
+    IfStatement,
+    AssertStatement,
+    LogStatement,
+    ReturnStatement,
     AssignStatement,
+    ForLoop,
+    WhileLoop,
+    // Program
     CircomProgram,
-    SignalOfComponent,
+    // Function
+    FunctionDef,
+    FunctionName,
+    // Template
+    TemplateDef,
+    TemplateName,
+    // ComplexIdentifier, which will replace:
+    // ___ SignalIdentifier,
+    // ___ VarIdentifier,
+    // ___ ComponentIdentifier,
+    ComplexIdentifier,
+    // Signal
+    SignalDecl,
+    InputSignalDecl,
+    OutputSignalDecl,
     SignalHeader,
+    // Variable
+    VarDecl,
+    // Component
+    ComponentDecl,
+    ComponentCall,
+    SignalOfComponent,
+    // Expression
+    ExpressionAtom,
+    Expression,
+    // Complex token kind
     Block,
-    Tuple,
-    TupleInit,
+    ParameterList,
     Call,
     TenaryConditional,
     Condition,
-    Expression,
-    FunctionDef,
     Statement,
     StatementList,
-    ComponentDecl,
-    TemplateDef,
-    TemplateName,
-    FunctionName,
-    ParameterList,
-    SignalDecl,
-    VarDecl,
-    InputSignalDecl,
-    OutputSignalDecl,
-    ComponentCall,
-    ComponentIdentifier,
-    SignalIdentifier,
     ArrayQuery,
     ParserError,
     BlockComment,
@@ -277,8 +291,7 @@ impl TokenKind {
             | Self::GreaterThan
             | Self::LessThanAndEqual
             | Self::GreaterThanAndEqual => Some((79, 80)),
-            Self::Equal
-            | Self::NotEqual => Some((74, 75)),
+            Self::Equal | Self::NotEqual => Some((74, 75)),
             // other bitwise operators
             Self::BitAnd => Some((69, 70)),
             Self::BitXor => Some((64, 65)), // exclusive or
@@ -288,9 +301,12 @@ impl TokenKind {
             Self::BoolOr => Some((49, 50)),
             // ----------
             // TODO: how about conditional operation ( ? : )
-            // associativity: right to left [ a ? b : c --> ??? ] 
+            // associativity: right to left [ a ? b : c --> ??? ]
+
             // ----------
-            // associativity: right to left [ a = b = c --> a = (b = c) ] 
+            // associativity: right to left [ a = b = c --> a = (b = c) ]
+            // DO NOT CONSIDER ASSIGMENT OPERATORS AS INFIX TOKENS
+            /*
             // assignment operators
             Self::Assign
             // signal assigment operators
@@ -313,6 +329,7 @@ impl TokenKind {
             | Self::IntDivAssign
             | Self::ModAssign
             | Self::PowerAssign => Some((44, 45)),
+            */
             // TODO: how about comma (expression separator)
             Self::Comma => Some((39, 40)),
             // not an infix operator
@@ -375,10 +392,9 @@ impl TokenKind {
             | Self::DivAssign
             | Self::IntDivAssign
             | Self::ModAssign
-            | Self::PowerAssign
-            // unit inc/dec
-            | Self::UnitInc
-            | Self::UnitDec
+            | Self::PowerAssign // unit inc/dec
+                                // | Self::UnitInc
+                                // | Self::UnitDec
         )
     }
 

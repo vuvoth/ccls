@@ -1,9 +1,6 @@
-use crate::syntax_node::{SyntaxNode, SyntaxToken};
+use crate::syntax_node::SyntaxNode;
 
-pub use rowan::{
-    api::Preorder, Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
-    TokenAtOffset, WalkEvent,
-};
+pub use rowan::{NodeOrToken, WalkEvent};
 
 fn level_str(level: u32) -> String {
     let mut ans = String::from("");

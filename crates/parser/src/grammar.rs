@@ -6,7 +6,7 @@ mod declaration;
 mod expression;
 mod function;
 mod include;
-mod list_identity;
+mod list;
 mod main_component;
 mod pragma;
 mod statement;
@@ -36,7 +36,7 @@ pub mod entry {
 
         while !p.eof() {
             match p.current() {
-                Pragma => pragma::pragma(p),
+                PragmaKw => pragma::pragma(p),
                 TemplateKw => template::template(p),
                 IncludeKw => include::include(p),
                 ComponentKw => main_component::main_component(p),

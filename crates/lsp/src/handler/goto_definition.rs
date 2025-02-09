@@ -242,70 +242,42 @@ mod tests {
 
     use super::lookup_token_at_postion;
 
+    fn get_source_from_path(file_path: &str) -> String {
+        let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let full_path = format!("{}{}", crate_path, file_path);
+        let source = std::fs::read_to_string(&full_path).expect(&full_path);
+
+        source
+    }
+
     #[test]
     fn goto_decl_test() {
-        let source = r#"
-        pragma circom 2.0.0;
-
-        template X() {
-            signal x[100];
-            signal input x = 10;
-           component x = Multiplier2();
-           component y = X();
-           component y = Multiplier2();
-           component z = Multiplier2();
-              
-        }
-template M() {
-           component h = X();
-           component k = Multiplier2(); 
-           test
-        }
-template Multiplier2 () {  
-           template m = M();
-           // hello world
-           signal input a;  
-           signal input b;  
-              signal output c;  
-           component y = X();
-           
-           mintlkrekerjke;
-           component e = Y();
-           component z = Y();
-           component h = Y();
-           signal output d;
-           c <== a * b; 
-        }
-template Y() {
-           component y = X();
-           component a = X();
-           
-        }        
-        "#
-        .to_string();
-
+        let file_path = "/src/test_files/handler/templates.circom";
+        let source = get_source_from_path(file_path);
         let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
         let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
 
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
-            println!("program: {}", program_ast.syntax().text().to_string());
-
             let inputs = program_ast.template_list()[0]
                 .func_body()
                 .unwrap()
                 .statement_list()
                 .unwrap()
                 .find_children::<AstInputSignalDecl>();
-            let signal_name = inputs[0].name().unwrap();
+            let signal_name = inputs[0].signal_identifier().unwrap().name().unwrap();
 
             let tmp = signal_name.syntax().text_range().start();
 
             if let Some(token) = lookup_token_at_postion(&file, &program_ast, file.position(tmp)) {
-                println!(
-                    "{:#?}",
-                    lookup_node_wrap_token(TokenKind::TemplateDef, &token)
-                );
+                let wrap_token = lookup_node_wrap_token(TokenKind::TemplateDef, &token);
+
+                let string_syntax_node = match wrap_token {
+                    None => "None".to_string(),
+                    Some(syntax_node) => format!("{}", syntax_node),
+                };
+
+                insta::assert_snapshot!("test_lookup_node_wrap_token", string_syntax_node);
             }
         }
     }
@@ -314,7 +286,9 @@ template Y() {
     fn url_test() {
         let url = Url::from_file_path(Path::new("/hello/abc.tx"));
         let binding = url.unwrap();
-        let p = binding.path();
-        println!("{:?}", Path::new(p).parent());
+        let path = binding.path();
+        let parent = Path::new(path).parent().unwrap().to_str().unwrap();
+
+        assert_eq!("/hello", parent);
     }
 }
