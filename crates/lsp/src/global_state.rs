@@ -46,13 +46,13 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 
 /// state of all (circom) source file
 pub struct GlobalState {
-    /// file id - ast from that file content
+    /// key: file id (from file url) - value: ast of its content (source code)
     pub ast_map: DashMap<String, AstCircomProgram>,
 
-    /// file id - file content (+ end lines)
+    /// key: file id (from file url) - value: file content (+ end lines)
     pub file_map: DashMap<String, FileDB>,
 
-    /// file id - database (template in4, function in4...)
+    /// key: file id (from file url) - value: database (template in4, function in4...)
     pub db: SemanticDB,
 }
 
@@ -82,6 +82,7 @@ impl GlobalState {
         let mut result = lookup_definition(root, ast, semantic_data, token);
 
         if token.kind() == TokenKind::CircomString {
+            eprintln!("___ definition inside current file");
             return result;
         }
 
@@ -113,30 +114,89 @@ impl GlobalState {
     }
 
     pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
-        // path to the element we want to get definition
-        // TODO eg: file/line/start column..end column
+        // path to the file that contains the element we want to get definition
+        // eg: file:///mnt/d/language-server/test-circom/program2.circom
         let uri = params.text_document_position_params.text_document.uri;
 
-        // abtract syntax tree for the element from that uri
-        // TODO eg:
+        // reference to the abtract syntax tree for the file from that uri
+        // eg: Ref { k: 0x56136e3ce100, v: 0x56136e3ce118 }
+        // ast.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
+        // ast.value() = AstCircomProgram { syntax: CircomProgram@0..2707 }
         let ast = self.ast_map.get(&uri.to_string()).unwrap();
-        // the file contains the element from that uri
-        // TODO eg:
+
+        // information of the file contains the element we want to get definition
+        // eg: Ref { k: 0x56136e3bf5a0, v: 0x56136e3bf5b8 }
+        // file.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
+        // file.value() =
+        // FileDB {
+        //     file_id: FileId(17547606022754654883),
+        //     file_path: Url {
+        //         scheme: "file",
+        //         cannot_be_a_base: false,
+        //         username: "",
+        //         password: None,
+        //         host: None,
+        //         port: None,
+        //         path: "/mnt/d/language-server/test-circom/program2.circom",
+        //         query: None,
+        //         fragment: None
+        //     },
+        //     end_line_vec: [2, 44, ..., 2701]
+        // }
         let file = self.file_map.get(&uri.to_string()).unwrap();
 
         let mut locations = Vec::new();
 
         // extract token from ast at position (file, params position)
-        // TODO eg:
+        // eg: token = Identifier@2205..2207 "e2"
         if let Some(token) =
             lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
         {
             locations = self.lookup_definition(&file, &ast, &token);
+            // locations of declarations of that element
+            // it may returns more than 1 location if exist same name declarations
+            // eg:
+            // [
+            //     Location {
+            //         uri: Url {
+            //             scheme: "file",
+            //             cannot_be_a_base: false,
+            //             username: "",
+            //             password: None,
+            //             host: None,
+            //             port: None,
+            //             path: "/mnt/d/language-server/test-circom/program2.circom",
+            //             query: None,
+            //             fragment: None
+            //         },
+            //         range: Range {
+            //             start: Position { line: 75, character: 8 },
+            //             end: Position { line: 75, character: 14 }
+            //         }
+            //     }
+            // ]
         };
 
         let result: Option<GotoDefinitionResponse> = Some(GotoDefinitionResponse::Array(locations));
 
         let result = serde_json::to_value(result).unwrap();
+        // serialize result into JSON format
+        // eg:
+        // Array [
+        //     Object {
+        //         "range": Object {
+        //             "end": Object {
+        //                 "character": Number(14),
+        //                 "line": Number(75)
+        //             },
+        //             "start": Object {
+        //                 "character": Number(8),
+        //                 "line": Number(75)
+        //             }
+        //         },
+        //         "uri": String("file:///mnt/d/language-server/test-circom/program2.circom")
+        //     }
+        // ]
 
         Response {
             id,

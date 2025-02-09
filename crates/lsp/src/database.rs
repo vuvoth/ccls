@@ -11,8 +11,8 @@ use lsp_types::{Position, Range, Url};
 use rowan::{ast::AstNode, TextSize};
 use syntax::{
     abstract_syntax_tree::{
-        AstCircomProgram, AstComponentDecl, AstInputSignalDecl, AstOutputSignalDecl, AstSignalDecl,
-        AstTemplateDef, AstVarDecl,
+        AstCircomProgram, AstComponentDecl, AstFunctionDef, AstInputSignalDecl,
+        AstOutputSignalDecl, AstSignalDecl, AstTemplateDef, AstVarDecl,
     },
     syntax_node::{SyntaxNode, SyntaxToken},
 };
@@ -160,8 +160,10 @@ impl SemanticLocations {
     }
 }
 
+// template
 #[derive(Debug, Clone)]
 pub struct TemplateDataSemantic {
+    pub param: SemanticLocations,
     pub signal: SemanticLocations,
     pub variable: SemanticLocations,
     pub component: SemanticLocations,
@@ -170,7 +172,27 @@ pub struct TemplateDataSemantic {
 impl TemplateDataSemantic {
     fn new() -> Self {
         Self {
+            param: SemanticLocations::new(),
             signal: SemanticLocations::new(),
+            variable: SemanticLocations::new(),
+            component: SemanticLocations::new(),
+        }
+    }
+}
+
+// function
+#[derive(Debug, Clone)]
+pub struct FunctionDataSemantic {
+    pub param: SemanticLocations,
+    // TODO: Functions cannot declare signals or generate constraints
+    pub variable: SemanticLocations,
+    pub component: SemanticLocations,
+}
+
+impl FunctionDataSemantic {
+    fn new() -> Self {
+        Self {
+            param: SemanticLocations::new(),
             variable: SemanticLocations::new(),
             component: SemanticLocations::new(),
         }
@@ -181,16 +203,30 @@ impl TemplateDataSemantic {
 pub struct SemanticData {
     pub template: SemanticLocations,
     pub template_data_semantic: HashMap<Id, TemplateDataSemantic>,
+
+    pub function: SemanticLocations,
+    pub function_data_semantic: HashMap<Id, FunctionDataSemantic>,
 }
 
 pub enum TemplateDataInfo {
+    Param((Id, Range)),
     Signal((Id, Range)),
     Variable((Id, Range)),
     Component((Id, Range)),
 }
+
+pub enum FunctionDataInfo {
+    Param((Id, Range)),
+    Variable((Id, Range)),
+    Component((Id, Range)),
+}
+
 pub enum SemanticInfo {
     Template((Id, Range)),
     TemplateData((Id, TemplateDataInfo)),
+
+    Function((Id, Range)),
+    FunctionData((Id, FunctionDataInfo)),
 }
 
 #[derive(Debug, Clone)]
@@ -215,6 +251,8 @@ impl SemanticDB {
         let semantic = self.semantic.entry(file_id).or_insert(SemanticData {
             template: SemanticLocations::new(),
             template_data_semantic: HashMap::new(),
+            function: SemanticLocations::new(),
+            function_data_semantic: HashMap::new(),
         });
 
         match semantic_info {
@@ -233,6 +271,24 @@ impl SemanticDB {
                     }
                     TemplateDataInfo::Variable((id, r)) => template_semantic.variable.insert(id, r),
                     TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
+                    TemplateDataInfo::Param((id, r)) => template_semantic.param.insert(id, r),
+                }
+            }
+            SemanticInfo::Function((id, range)) => {
+                semantic.function.insert(id, range);
+            }
+            SemanticInfo::FunctionData((function_id, function_data_info)) => {
+                let function_semantic = semantic
+                    .function_data_semantic
+                    .entry(function_id)
+                    .or_insert(FunctionDataSemantic::new());
+
+                match function_data_info {
+                    FunctionDataInfo::Component((id, r)) => {
+                        function_semantic.component.insert(id, r)
+                    }
+                    FunctionDataInfo::Variable((id, r)) => function_semantic.variable.insert(id, r),
+                    FunctionDataInfo::Param((id, r)) => function_semantic.param.insert(id, r),
                 }
             }
         }
@@ -253,10 +309,36 @@ impl SemanticDB {
                 self.template_semantic(file_db, &template);
             }
         }
+
+        for function in abstract_syntax_tree.function_list() {
+            if let Some(name) = function.function_name() {
+                let function_id = name.syntax().token_id();
+                self.insert(
+                    file_db.file_id,
+                    SemanticInfo::Function((function_id, file_db.range(function.syntax()))),
+                );
+                self.function_semantic(file_db, &function);
+            }
+        }
     }
 
     pub fn template_semantic(&mut self, file_db: &FileDB, ast_template: &AstTemplateDef) {
         let template_id = ast_template.syntax().token_id();
+
+        if let Some(params) = ast_template.parameter_list() {
+            for param_name in params.parameters() {
+                self.insert(
+                    file_db.file_id,
+                    SemanticInfo::TemplateData((
+                        template_id,
+                        TemplateDataInfo::Param((
+                            param_name.syntax().token_id(),
+                            file_db.range(param_name.syntax()),
+                        )),
+                    )),
+                );
+            }
+        };
 
         if let Some(statements) = ast_template.statements() {
             for signal in statements.find_children::<AstInputSignalDecl>() {
@@ -336,10 +418,80 @@ impl SemanticDB {
             }
         }
     }
+
+    pub fn function_semantic(&mut self, file_db: &FileDB, ast_function: &AstFunctionDef) {
+        let function_id = ast_function.syntax().token_id();
+
+        if let Some(params) = ast_function.parameter_list() {
+            for param_name in params.parameters() {
+                self.insert(
+                    file_db.file_id,
+                    SemanticInfo::FunctionData((
+                        function_id,
+                        FunctionDataInfo::Param((
+                            param_name.syntax().token_id(),
+                            file_db.range(param_name.syntax()),
+                        )),
+                    )),
+                );
+            }
+        };
+
+        if let Some(statements) = ast_function.statements() {
+            // function does not contains signal decalrations --> skip signals
+
+            for var in statements.find_children::<AstVarDecl>() {
+                if let Some(name) = var.var_identifier().unwrap().name() {
+                    self.insert(
+                        file_db.file_id,
+                        SemanticInfo::FunctionData((
+                            function_id,
+                            FunctionDataInfo::Variable((
+                                name.syntax().token_id(),
+                                file_db.range(var.syntax()),
+                            )),
+                        )),
+                    );
+                }
+            }
+
+            for component in statements.find_children::<AstComponentDecl>() {
+                if let Some(component_var) = component.component_identifier() {
+                    if let Some(name) = component_var.name() {
+                        self.insert(
+                            file_db.file_id,
+                            SemanticInfo::FunctionData((
+                                function_id,
+                                FunctionDataInfo::Component((
+                                    name.syntax().token_id(),
+                                    file_db.range(component.syntax()),
+                                )),
+                            )),
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl SemanticData {
-    pub fn lookup_signal(&self, template_id: Id, signal: &SyntaxToken) -> Option<&Vec<Range>> {
+    pub fn lookup_template_param(
+        &self,
+        template_id: Id,
+        signal: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
+            return semantic_template.param.0.get(&signal.token_id());
+        }
+        None
+    }
+
+    pub fn lookup_template_signal(
+        &self,
+        template_id: Id,
+        signal: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
         if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
             return semantic_template.signal.0.get(&signal.token_id());
         }
@@ -347,20 +499,58 @@ impl SemanticData {
     }
 
     // TODO: remove duplicate code here.
-    pub fn lookup_variable(&self, template_id: Id, variable: &SyntaxToken) -> Option<&Vec<Range>> {
+    pub fn lookup_template_variable(
+        &self,
+        template_id: Id,
+        variable: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
         if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
             return semantic_template.variable.0.get(&variable.token_id());
         }
         None
     }
 
-    pub fn lookup_component(
+    pub fn lookup_template_component(
         &self,
         template_id: Id,
         component: &SyntaxToken,
     ) -> Option<&Vec<Range>> {
         if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
             return semantic_template.component.0.get(&component.token_id());
+        }
+        None
+    }
+
+    // ------------- function
+    pub fn lookup_function_param(
+        &self,
+        function_id: Id,
+        signal: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
+            return semantic_function.param.0.get(&signal.token_id());
+        }
+        None
+    }
+
+    pub fn lookup_function_variable(
+        &self,
+        function_id: Id,
+        variable: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
+            return semantic_function.variable.0.get(&variable.token_id());
+        }
+        None
+    }
+
+    pub fn lookup_function_component(
+        &self,
+        function_id: Id,
+        component: &SyntaxToken,
+    ) -> Option<&Vec<Range>> {
+        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
+            return semantic_function.component.0.get(&component.token_id());
         }
         None
     }
