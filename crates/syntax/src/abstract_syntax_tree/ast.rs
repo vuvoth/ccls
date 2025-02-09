@@ -14,43 +14,29 @@ ast_node!(AstSignalHeader, SignalHeader);
 ast_node!(AstInputSignalDecl, InputSignalDecl);
 ast_node!(AstOutputSignalDecl, OutputSignalDecl);
 ast_node!(AstSignalDecl, SignalDecl);
-ast_node!(AstSignalIdentifier, SignalIdentifier);
 
 impl AstInputSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
+    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
 }
 
 impl AstOutputSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
+    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
 }
 
 impl AstSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstSignalIdentifier> {
-        support::child(self.syntax())
-    }
-}
-
-impl AstSignalIdentifier {
-    pub fn name(&self) -> Option<AstIdentifier> {
+    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
 }
 
 ast_node!(AstVarDecl, VarDecl);
-ast_node!(AstVarIdentifier, VarIdentifier);
 
 impl AstVarDecl {
-    pub fn var_identifier(&self) -> Option<AstVarIdentifier> {
-        support::child(self.syntax())
-    }
-}
-
-impl AstVarIdentifier {
-    pub fn name(&self) -> Option<AstIdentifier> {
+    pub fn var_identifier(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
 }
@@ -64,7 +50,7 @@ impl AstComponentDecl {
     pub fn template(&self) -> Option<AstTemplateName> {
         support::child(self.syntax())
     }
-    pub fn component_identifier(&self) -> Option<AstComponentIdentifier> {
+    pub fn component_identifier(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
 }
@@ -106,6 +92,14 @@ impl AstParameterList {
             .children()
             .filter_map(AstIdentifier::cast)
             .collect()
+    }
+}
+
+ast_node!(AstComplexIdentifier, ComplexIdentifier);
+
+impl AstComplexIdentifier {
+    pub fn name(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
     }
 }
 
@@ -180,18 +174,10 @@ impl AstCircomProgram {
 ast_node!(AstComponentCall, ComponentCall);
 
 impl AstComponentCall {
-    pub fn component_name(&self) -> Option<AstComponentIdentifier> {
+    pub fn component_name(&self) -> Option<AstComplexIdentifier> {
         support::child(self.syntax())
     }
     pub fn signal(&self) -> Option<AstIdentifier> {
-        support::child(self.syntax())
-    }
-}
-
-ast_node!(AstComponentIdentifier, ComponentIdentifier);
-
-impl AstComponentIdentifier {
-    pub fn name(&self) -> Option<AstIdentifier> {
         support::child(self.syntax())
     }
 }

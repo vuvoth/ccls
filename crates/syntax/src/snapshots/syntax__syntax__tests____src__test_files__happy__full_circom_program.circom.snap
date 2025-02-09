@@ -68,7 +68,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1632..1635 "var"
 |     |     |     |     |      WhiteSpace 1635..1636
 |     |     |     |     |     |      WhiteSpace 1635..1636 " "
-|     |     |     |     |      VarIdentifier 1636..1638
+|     |     |     |     |      ComplexIdentifier 1636..1638
 |     |     |     |     |     |      Identifier 1636..1637
 |     |     |     |     |     |     |      Identifier 1636..1637 "n"
 |     |     |     |     |     |      WhiteSpace 1637..1638
@@ -92,7 +92,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1648..1651 "var"
 |     |     |     |     |      WhiteSpace 1651..1652
 |     |     |     |     |     |      WhiteSpace 1651..1652 " "
-|     |     |     |     |      VarIdentifier 1652..1654
+|     |     |     |     |      ComplexIdentifier 1652..1654
 |     |     |     |     |     |      Identifier 1652..1653
 |     |     |     |     |     |     |      Identifier 1652..1653 "r"
 |     |     |     |     |     |      WhiteSpace 1653..1654
@@ -244,7 +244,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1772..1775 "var"
 |     |     |     |     |      WhiteSpace 1775..1776
 |     |     |     |     |     |      WhiteSpace 1775..1776 " "
-|     |     |     |     |      VarIdentifier 1776..1781
+|     |     |     |     |      ComplexIdentifier 1776..1781
 |     |     |     |     |     |      Identifier 1776..1780
 |     |     |     |     |     |     |      Identifier 1776..1780 "nout"
 |     |     |     |     |     |      WhiteSpace 1780..1781
@@ -307,7 +307,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      InputKw 1817..1822 "input"
 |     |     |     |     |     |      WhiteSpace 1822..1823
 |     |     |     |     |     |     |      WhiteSpace 1822..1823 " "
-|     |     |     |     |      SignalIdentifier 1823..1833
+|     |     |     |     |      ComplexIdentifier 1823..1833
 |     |     |     |     |     |      Identifier 1823..1825
 |     |     |     |     |     |     |      Identifier 1823..1825 "in"
 |     |     |     |     |     |      LBracket 1825..1826
@@ -342,7 +342,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      OutputKw 1847..1853 "output"
 |     |     |     |     |     |      WhiteSpace 1853..1854
 |     |     |     |     |     |     |      WhiteSpace 1853..1854 " "
-|     |     |     |     |      SignalIdentifier 1854..1863
+|     |     |     |     |      ComplexIdentifier 1854..1863
 |     |     |     |     |     |      Identifier 1854..1857
 |     |     |     |     |     |     |      Identifier 1854..1857 "out"
 |     |     |     |     |     |      LBracket 1857..1858
@@ -366,7 +366,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1872..1875 "var"
 |     |     |     |     |      WhiteSpace 1875..1876
 |     |     |     |     |     |      WhiteSpace 1875..1876 " "
-|     |     |     |     |      VarIdentifier 1876..1880
+|     |     |     |     |      ComplexIdentifier 1876..1880
 |     |     |     |     |     |      Identifier 1876..1879
 |     |     |     |     |     |     |      Identifier 1876..1879 "lin"
 |     |     |     |     |     |      WhiteSpace 1879..1880
@@ -390,7 +390,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1890..1893 "var"
 |     |     |     |     |      WhiteSpace 1893..1894
 |     |     |     |     |     |      WhiteSpace 1893..1894 " "
-|     |     |     |     |      VarIdentifier 1894..1899
+|     |     |     |     |      ComplexIdentifier 1894..1899
 |     |     |     |     |     |      Identifier 1894..1898
 |     |     |     |     |     |     |      Identifier 1894..1898 "lout"
 |     |     |     |     |     |      WhiteSpace 1898..1899
@@ -416,7 +416,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1911..1914 "var"
 |     |     |     |     |      WhiteSpace 1914..1915
 |     |     |     |     |     |      WhiteSpace 1914..1915 " "
-|     |     |     |     |      VarIdentifier 1915..1916
+|     |     |     |     |      ComplexIdentifier 1915..1916
 |     |     |     |     |     |      Identifier 1915..1916
 |     |     |     |     |     |     |      Identifier 1915..1916 "k"
 |     |     |     |      Semicolon 1916..1917
@@ -430,7 +430,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1923..1926 "var"
 |     |     |     |     |      WhiteSpace 1926..1927
 |     |     |     |     |     |      WhiteSpace 1926..1927 " "
-|     |     |     |     |      VarIdentifier 1927..1928
+|     |     |     |     |      ComplexIdentifier 1927..1928
 |     |     |     |     |     |      Identifier 1927..1928
 |     |     |     |     |     |     |      Identifier 1927..1928 "j"
 |     |     |     |      Semicolon 1928..1929
@@ -446,7 +446,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 1937..1940 "var"
 |     |     |     |     |      WhiteSpace 1940..1941
 |     |     |     |     |     |      WhiteSpace 1940..1941 " "
-|     |     |     |     |      VarIdentifier 1941..1943
+|     |     |     |     |      ComplexIdentifier 1941..1943
 |     |     |     |     |     |      Identifier 1941..1943
 |     |     |     |     |     |     |      Identifier 1941..1943 "e2"
 |     |     |     |      Semicolon 1943..1944

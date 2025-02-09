@@ -26,7 +26,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      InputKw 50..55 "input"
 |     |     |     |      WhiteSpace 55..56
 |     |     |     |     |      WhiteSpace 55..56 " "
-|     |     |      SignalIdentifier 56..61
+|     |     |      ComplexIdentifier 56..61
 |     |     |     |      Identifier 56..58
 |     |     |     |     |      Identifier 56..58 "in"
 |     |     |     |      LBracket 58..59
@@ -53,7 +53,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      OutputKw 83..89 "output"
 |     |     |     |      WhiteSpace 89..90
 |     |     |     |     |      WhiteSpace 89..90 " "
-|     |     |      SignalIdentifier 90..93
+|     |     |      ComplexIdentifier 90..93
 |     |     |     |      Identifier 90..93
 |     |     |     |     |      Identifier 90..93 "out"
 |     |      Semicolon 93..94
@@ -67,7 +67,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      ComponentKw 108..117 "component"
 |     |     |      WhiteSpace 117..118
 |     |     |     |      WhiteSpace 117..118 " "
-|     |     |      ComponentIdentifier 118..127
+|     |     |      ComplexIdentifier 118..127
 |     |     |     |      Identifier 118..122
 |     |     |     |     |      Identifier 118..122 "comp"
 |     |     |     |      LBracket 122..123
@@ -108,7 +108,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      VarKw 175..178 "var"
 |     |     |     |      WhiteSpace 178..179
 |     |     |     |     |      WhiteSpace 178..179 " "
-|     |     |     |      VarIdentifier 179..181
+|     |     |     |      ComplexIdentifier 179..181
 |     |     |     |     |      Identifier 179..180
 |     |     |     |     |     |      Identifier 179..180 "i"
 |     |     |     |     |      WhiteSpace 180..181
@@ -306,7 +306,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      VarKw 347..350 "var"
 |     |     |     |      WhiteSpace 350..351
 |     |     |     |     |      WhiteSpace 350..351 " "
-|     |     |     |      VarIdentifier 351..353
+|     |     |     |      ComplexIdentifier 351..353
 |     |     |     |     |      Identifier 351..352
 |     |     |     |     |     |      Identifier 351..352 "i"
 |     |     |     |     |      WhiteSpace 352..353

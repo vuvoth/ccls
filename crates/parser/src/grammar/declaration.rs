@@ -19,6 +19,21 @@ fn array(p: &mut Parser) -> bool {
 }
 
 /*
+* eg: a, a[N], a[N][M - 1],...
+*/
+pub(crate) fn complex_identifier(p: &mut Parser) {
+    let open_marker = p.open();
+
+    // name
+    p.expect(Identifier);
+
+    // eg: [N - 1][M]
+    array(p);
+
+    p.close(open_marker, ComplexIdentifier);
+}
+
+/*
 "signal" --> None
 "signal input" --> Some(true)
 "signal output" --> Some(false)
@@ -54,14 +69,9 @@ var_init does not include `var` keyword
 eg: tmp = 10;
 */
 pub(crate) fn var_init(p: &mut Parser) {
-    let var_identifier_open_marker = p.open();
-
-    // name of variable
-    p.expect(Identifier);
-    // eg: [N - 1][M]
-    array(p);
-
-    p.close(var_identifier_open_marker, VarIdentifier);
+    // var identifier
+    // eg: a[N]
+    complex_identifier(p);
 
     // assign for variable
     // eg: = 10
@@ -73,12 +83,9 @@ pub(crate) fn var_init(p: &mut Parser) {
 
 // eg: in[N - 1] <== c.in;
 pub(crate) fn signal_init(p: &mut Parser, assign_able: bool) {
-    let signal_identifier_open_marker = p.open();
-    // name of signal
-    p.expect(Identifier);
-    // eg: [N][M-1]
-    array(p);
-    p.close(signal_identifier_open_marker, SignalIdentifier);
+    // signal identifier
+    // eg: in[N]
+    complex_identifier(p);
 
     // assign for  intermediate and outputs signals
     // eg: <== Multiplier2().out
@@ -169,20 +176,13 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
 
-    let m_c = p.open();
-    p.expect(Identifier);
-
-    // support array component
+    // component identifier
     // eg: comp[N - 1][10]
-    array(p);
-    p.close(m_c, ComponentIdentifier);
-
-    // support array component
-    // eg: comp[N - 1][10]
-    let is_array = array(p);
+    complex_identifier(p);
 
     // do not assign for array components
-    if !is_array && p.at(Assign) {
+    // but we will not catch this error
+    if p.at(Assign) {
         p.expect(Assign);
 
         // TODO: support `parallel` tag

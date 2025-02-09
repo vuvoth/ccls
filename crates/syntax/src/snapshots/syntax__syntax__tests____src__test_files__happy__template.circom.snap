@@ -57,7 +57,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      InputKw 108..113 "input"
 |     |     |     |     |      WhiteSpace 113..114
 |     |     |     |     |     |      WhiteSpace 113..114 " "
-|     |     |     |      SignalIdentifier 114..119
+|     |     |     |      ComplexIdentifier 114..119
 |     |     |     |     |      Identifier 114..116
 |     |     |     |     |     |      Identifier 114..116 "in"
 |     |     |     |     |      LBracket 116..117
@@ -84,7 +84,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      OutputKw 141..147 "output"
 |     |     |     |     |      WhiteSpace 147..148
 |     |     |     |     |     |      WhiteSpace 147..148 " "
-|     |     |     |      SignalIdentifier 148..151
+|     |     |     |      ComplexIdentifier 148..151
 |     |     |     |     |      Identifier 148..151
 |     |     |     |     |     |      Identifier 148..151 "out"
 |     |     |      Semicolon 151..152
@@ -98,7 +98,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      ComponentKw 166..175 "component"
 |     |     |     |      WhiteSpace 175..176
 |     |     |     |     |      WhiteSpace 175..176 " "
-|     |     |     |      ComponentIdentifier 176..185
+|     |     |     |      ComplexIdentifier 176..185
 |     |     |     |     |      Identifier 176..180
 |     |     |     |     |     |      Identifier 176..180 "comp"
 |     |     |     |     |      LBracket 180..181
@@ -141,7 +141,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      VarKw 246..249 "var"
 |     |     |     |     |      WhiteSpace 249..250
 |     |     |     |     |     |      WhiteSpace 249..250 " "
-|     |     |     |     |      VarIdentifier 250..252
+|     |     |     |     |      ComplexIdentifier 250..252
 |     |     |     |     |     |      Identifier 250..251
 |     |     |     |     |     |     |      Identifier 250..251 "i"
 |     |     |     |     |     |      WhiteSpace 251..252

@@ -164,7 +164,7 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      VarKw 142..145 "var"
 |     |     |     |      WhiteSpace 145..146
 |     |     |     |     |      WhiteSpace 145..146 " "
-|     |     |     |      VarIdentifier 146..148
+|     |     |     |      ComplexIdentifier 146..148
 |     |     |     |     |      Identifier 146..147
 |     |     |     |     |     |      Identifier 146..147 "i"
 |     |     |     |     |      WhiteSpace 147..148
