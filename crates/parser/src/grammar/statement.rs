@@ -1,12 +1,12 @@
 use super::{block::block, expression::expression, *};
 
 pub(super) fn statement(p: &mut Parser) {
-    let open_marker = p.open();
+    // let open_marker = p.open();
     match p.current() {
         IfKw => if_statement(p),
         _ => statement_no_condition(p),
     }
-    p.close(open_marker, Statement);
+    // p.close(open_marker, Statement);
 }
 
 /*
