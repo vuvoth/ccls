@@ -13,7 +13,7 @@ pub(super) fn tuple_expression(p: &mut Parser) {
         expression(p);
 
         // there are no expressions remaining
-        if p.eat(Comma) == false {
+        if !p.eat(Comma) {
             break;
         }
     }
@@ -35,7 +35,7 @@ pub(super) fn tuple_identifier(p: &mut Parser) {
     while p.at(Identifier) && !p.eof() {
         p.expect(Identifier);
 
-        if p.eat(Comma) == false {
+        if !p.eat(Comma) {
             break;
         }
     }
@@ -47,6 +47,7 @@ pub(super) fn tuple_identifier(p: &mut Parser) {
 /**
  * grammar: "[iden1, iden2,..., idenn]"
  * can be an empty ()
+ * only use in main component.
  */
 pub(super) fn list_identifier(p: &mut Parser) {
     // let m = p.open();
@@ -56,7 +57,7 @@ pub(super) fn list_identifier(p: &mut Parser) {
     while p.at(Identifier) && !p.eof() {
         p.expect(Identifier);
 
-        if p.eat(Comma) == false {
+        if !p.eat(Comma) {
             break;
         }
     }

@@ -143,7 +143,7 @@ fn log_statement(p: &mut Parser) {
             _ => expression(p),
         }
 
-        if p.eat(Comma) == false {
+        if !p.eat(Comma) {
             break;
         }
     }

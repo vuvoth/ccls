@@ -174,7 +174,7 @@ pub(super) fn component_declaration(p: &mut Parser) {
 
     // support array component
     // eg: comp[N - 1][10]
-    let _ = array(p);
+    array(p);
     p.close(m_c, ComponentIdentifier);
 
     // support array component
