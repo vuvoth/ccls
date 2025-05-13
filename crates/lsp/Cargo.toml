@@ -16,7 +16,7 @@ lsp-server = "0.7.6"
 
 rowan = "0.15.15"
 
-lsp-types = {version = "0.94.1", features = ["proposed"]}
+lsp-types = { version = "0.94.1", features = ["proposed"] }
 parser.workspace = true
 vfs.workspace = true
 syntax.workspace = true

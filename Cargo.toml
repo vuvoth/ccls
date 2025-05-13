@@ -4,12 +4,10 @@
 members = ["crates/*", "xtask/"]
 
 [workspace.dependencies]
-parser = {path = "./crates/parser", version = "0.1.0"}
-vfs = {path = "./crates/vfs", version = "0.1.0"}
-syntax = {path = './crates/syntax', version = "0.1.0"}
-circom-lsp = {path = './crates/lsp', version = "*"}
-common = { path = './crates/common', version = "*"}
-database = {path = "./crates/database", version = "*"}
+parser = { path = "./crates/parser", version = "0.1.0" }
+vfs = { path = "./crates/vfs", version = "0.1.0" }
+syntax = { path = './crates/syntax', version = "0.1.0" }
+circom-lsp = { path = './crates/lsp', version = "*" }
 
 [workspace.package]
 rust-version = "1.71"
