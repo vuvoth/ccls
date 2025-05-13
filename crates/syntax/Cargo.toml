@@ -7,15 +7,10 @@ rust-version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rowan = "0.15.13"
-parser.workspace = true
-lsp-types = {version = "0.94.1", features = ["proposed"]}
+parser = { workspace = true }
+
+rowan = { workspace = true }
+lsp-types = { workspace = true, features = ["proposed"] }
 
 [dev-dependencies]
-# for snapshot testing, yaml format
-insta = { version = "1.41.1", features = ["yaml"] }
-
-[profile.dev.package]
-# compile slightly slower once, but use less memory, have faster diffs
-insta.opt-level = 3
-similar.opt-level = 3
+insta = { workspace = true, features = ["yaml"] }
