@@ -9,12 +9,8 @@ expression: view_ast(& syntax)
 |     |      EndLine 764..766 "\r\n"
 |      BlockComment 766..1478
 |     |      BlockComment 766..1478 "/*\r\n\r\nBinary Sum\r\n==========\r\n\r\nThis component creates a binary sum componet of ops operands and n bits each operand.\r\n\r\ne is Number of carries: Depends on the number of operands in the input.\r\n\r\nMain Constraint:\r\n   in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +\r\n + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +\r\n + ..\r\n + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +\r\n ===\r\n   out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)\r\n\r\nTo waranty binary outputs:\r\n\r\n    out[0]     * (out[0] - 1) === 0\r\n    out[1]     * (out[0] - 1) === 0\r\n    .\r\n    .\r\n    .\r\n    out[n+e-1] * (out[n+e-1] - 1) == 0\r\n\r\n */"
-|      EndLine 1478..1480
-|     |      EndLine 1478..1480 "\r\n"
-|      EndLine 1480..1482
-|     |      EndLine 1480..1482 "\r\n"
-|      EndLine 1482..1484
-|     |      EndLine 1482..1484 "\r\n"
+|      EndLine 1478..1484
+|     |      EndLine 1478..1484 "\r\n\r\n\r\n"
 |      BlockComment 1484..1580
 |     |      BlockComment 1484..1580 "/*\r\n    This function calculates the number of extra bits in the output to do the full sum.\r\n */"
 |      EndLine 1580..1582
@@ -34,10 +30,8 @@ expression: view_ast(& syntax)
 |     |     |      Version 1597..1602 "2.0.0"
 |     |      Semicolon 1602..1603
 |     |     |      Semicolon 1602..1603 ";"
-|      EndLine 1603..1605
-|     |      EndLine 1603..1605 "\r\n"
-|      EndLine 1605..1607
-|     |      EndLine 1605..1607 "\r\n"
+|      EndLine 1603..1607
+|     |      EndLine 1603..1607 "\r\n\r\n"
 |      FunctionDef 1607..1735
 |     |      FunctionKw 1607..1615
 |     |     |      FunctionKw 1607..1615 "function"
@@ -202,12 +196,8 @@ expression: view_ast(& syntax)
 |     |     |     |     |      EndLine 1732..1734 "\r\n"
 |     |     |      RCurly 1734..1735
 |     |     |     |      RCurly 1734..1735 "}"
-|      EndLine 1735..1737
-|     |      EndLine 1735..1737 "\r\n"
-|      EndLine 1737..1739
-|     |      EndLine 1737..1739 "\r\n"
-|      EndLine 1739..1741
-|     |      EndLine 1739..1741 "\r\n"
+|      EndLine 1735..1741
+|     |      EndLine 1735..1741 "\r\n\r\n\r\n"
 |      TemplateDef 1741..2425
 |     |      TemplateKw 1741..1749
 |     |     |      TemplateKw 1741..1749 "template"
@@ -355,10 +345,8 @@ expression: view_ast(& syntax)
 |     |     |     |     |     |     |      RBracket 1862..1863 "]"
 |     |     |     |      Semicolon 1863..1864
 |     |     |     |     |      Semicolon 1863..1864 ";"
-|     |     |     |      EndLine 1864..1866
-|     |     |     |     |      EndLine 1864..1866 "\r\n"
-|     |     |     |      EndLine 1866..1868
-|     |     |     |     |      EndLine 1866..1868 "\r\n"
+|     |     |     |      EndLine 1864..1868
+|     |     |     |     |      EndLine 1864..1868 "\r\n\r\n"
 |     |     |     |      WhiteSpace 1868..1872
 |     |     |     |     |      WhiteSpace 1868..1872 "    "
 |     |     |     |      VarDecl 1872..1883
@@ -405,10 +393,8 @@ expression: view_ast(& syntax)
 |     |     |     |     |     |     |     |      Number 1901..1902 "0"
 |     |     |     |      Semicolon 1902..1903
 |     |     |     |     |      Semicolon 1902..1903 ";"
-|     |     |     |      EndLine 1903..1905
-|     |     |     |     |      EndLine 1903..1905 "\r\n"
-|     |     |     |      EndLine 1905..1907
-|     |     |     |     |      EndLine 1905..1907 "\r\n"
+|     |     |     |      EndLine 1903..1907
+|     |     |     |     |      EndLine 1903..1907 "\r\n\r\n"
 |     |     |     |      WhiteSpace 1907..1911
 |     |     |     |     |      WhiteSpace 1907..1911 "    "
 |     |     |     |      VarDecl 1911..1916
@@ -435,10 +421,8 @@ expression: view_ast(& syntax)
 |     |     |     |     |     |     |      Identifier 1927..1928 "j"
 |     |     |     |      Semicolon 1928..1929
 |     |     |     |     |      Semicolon 1928..1929 ";"
-|     |     |     |      EndLine 1929..1931
-|     |     |     |     |      EndLine 1929..1931 "\r\n"
-|     |     |     |      EndLine 1931..1933
-|     |     |     |     |      EndLine 1931..1933 "\r\n"
+|     |     |     |      EndLine 1929..1933
+|     |     |     |     |      EndLine 1929..1933 "\r\n\r\n"
 |     |     |     |      WhiteSpace 1933..1937
 |     |     |     |     |      WhiteSpace 1933..1937 "    "
 |     |     |     |      VarDecl 1937..1943
@@ -451,10 +435,8 @@ expression: view_ast(& syntax)
 |     |     |     |     |     |     |      Identifier 1941..1943 "e2"
 |     |     |     |      Semicolon 1943..1944
 |     |     |     |     |      Semicolon 1943..1944 ";"
-|     |     |     |      EndLine 1944..1946
-|     |     |     |     |      EndLine 1944..1946 "\r\n"
-|     |     |     |      EndLine 1946..1948
-|     |     |     |     |      EndLine 1946..1948 "\r\n"
+|     |     |     |      EndLine 1944..1948
+|     |     |     |     |      EndLine 1944..1948 "\r\n\r\n"
 |     |     |     |      WhiteSpace 1948..1952
 |     |     |     |     |      WhiteSpace 1948..1952 "    "
 |     |     |     |      AssignStatement 1952..1958

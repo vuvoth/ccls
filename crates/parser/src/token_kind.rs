@@ -18,7 +18,7 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex(r"\r?\n")]
+    #[regex(r"(?:\r?\n)+")]
     EndLine,
     // Pragma
     Pragma,

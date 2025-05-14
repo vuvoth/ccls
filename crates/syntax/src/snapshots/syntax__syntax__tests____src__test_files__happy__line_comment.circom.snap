@@ -7,10 +7,8 @@ expression: view_ast(& syntax)
 |     |      EndLine 0..2 "\r\n"
 |      CommentLine 2..15
 |     |      CommentLine 2..15 "// comment :>"
-|      EndLine 15..17
-|     |      EndLine 15..17 "\r\n"
-|      EndLine 17..19
-|     |      EndLine 17..19 "\r\n"
+|      EndLine 15..19
+|     |      EndLine 15..19 "\r\n\r\n"
 |      WhiteSpace 19..23
 |     |      WhiteSpace 19..23 "    "
 |      Pragma 23..43

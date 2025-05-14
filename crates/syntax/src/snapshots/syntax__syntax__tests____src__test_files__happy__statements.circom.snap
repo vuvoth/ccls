@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  Block 0..456
 |      LCurly 0..1
@@ -142,10 +142,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      WhiteSpace 123..127 "    "
 |     |     |     |      RCurly 127..128
 |     |     |     |     |      RCurly 127..128 "}"
-|     |      EndLine 128..130
-|     |     |      EndLine 128..130 "\r\n"
-|     |      EndLine 130..132
-|     |     |      EndLine 130..132 "\r\n"
+|     |      EndLine 128..132
+|     |     |      EndLine 128..132 "\r\n\r\n"
 |     |      WhiteSpace 132..136
 |     |     |      WhiteSpace 132..136 "    "
 |     |      CommentLine 136..142
@@ -260,10 +258,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      WhiteSpace 213..217 "    "
 |     |     |     |      RCurly 217..218
 |     |     |     |     |      RCurly 217..218 "}"
-|     |      EndLine 218..220
-|     |     |      EndLine 218..220 "\r\n"
-|     |      EndLine 220..222
-|     |     |      EndLine 220..222 "\r\n"
+|     |      EndLine 218..222
+|     |     |      EndLine 218..222 "\r\n\r\n"
 |     |      WhiteSpace 222..226
 |     |     |      WhiteSpace 222..226 "    "
 |     |      CommentLine 226..234
@@ -344,10 +340,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      WhiteSpace 288..292 "    "
 |     |     |     |      RCurly 292..293
 |     |     |     |     |      RCurly 292..293 "}"
-|     |      EndLine 293..295
-|     |     |      EndLine 293..295 "\r\n"
-|     |      EndLine 295..297
-|     |     |      EndLine 295..297 "\r\n"
+|     |      EndLine 293..297
+|     |     |      EndLine 293..297 "\r\n\r\n"
 |     |      WhiteSpace 297..301
 |     |     |      WhiteSpace 297..301 "    "
 |     |      CommentLine 301..310
@@ -367,10 +361,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |      Identifier 323..324 "r"
 |     |      Semicolon 324..325
 |     |     |      Semicolon 324..325 ";"
-|     |      EndLine 325..327
-|     |     |      EndLine 325..327 "\r\n"
-|     |      EndLine 327..329
-|     |     |      EndLine 327..329 "\r\n"
+|     |      EndLine 325..329
+|     |     |      EndLine 325..329 "\r\n\r\n"
 |     |      WhiteSpace 329..333
 |     |     |      WhiteSpace 329..333 "    "
 |     |      CommentLine 333..339
@@ -403,10 +395,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      RParen 365..366 ")"
 |     |      Semicolon 366..367
 |     |     |      Semicolon 366..367 ";"
-|     |      EndLine 367..369
-|     |     |      EndLine 367..369 "\r\n"
-|     |      EndLine 369..371
-|     |     |      EndLine 369..371 "\r\n"
+|     |      EndLine 367..371
+|     |     |      EndLine 367..371 "\r\n\r\n"
 |     |      WhiteSpace 371..375
 |     |     |      WhiteSpace 371..375 "    "
 |     |      CommentLine 375..384
@@ -438,10 +428,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |      RParen 402..403 ")"
 |     |      Semicolon 403..404
 |     |     |      Semicolon 403..404 ";"
-|     |      EndLine 404..406
-|     |     |      EndLine 404..406 "\r\n"
-|     |      EndLine 406..408
-|     |     |      EndLine 406..408 "\r\n"
+|     |      EndLine 404..408
+|     |     |      EndLine 404..408 "\r\n\r\n"
 |     |      WhiteSpace 408..412
 |     |     |      WhiteSpace 408..412 "    "
 |     |      CommentLine 412..435

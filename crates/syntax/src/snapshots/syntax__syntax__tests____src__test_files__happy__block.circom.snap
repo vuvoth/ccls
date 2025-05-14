@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  Block 0..533
 |      LCurly 0..1
@@ -86,10 +86,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      RBracket 126..127 "]"
 |     |      Semicolon 127..128
 |     |     |      Semicolon 127..128 ";"
-|     |      EndLine 128..130
-|     |     |      EndLine 128..130 "\r\n"
-|     |      EndLine 130..132
-|     |     |      EndLine 130..132 "\r\n"
+|     |      EndLine 128..132
+|     |     |      EndLine 128..132 "\r\n\r\n"
 |     |      WhiteSpace 132..144
 |     |     |      WhiteSpace 132..144 "            "
 |     |      CommentLine 144..157
@@ -472,10 +470,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |     |      RBracket 462..463 "]"
 |     |     |     |     |      Semicolon 463..464
 |     |     |     |     |     |      Semicolon 463..464 ";"
-|     |     |     |     |      EndLine 464..466
-|     |     |     |     |     |      EndLine 464..466 "\r\n"
-|     |     |     |     |      EndLine 466..468
-|     |     |     |     |     |      EndLine 466..468 "\r\n"
+|     |     |     |     |      EndLine 464..468
+|     |     |     |     |     |      EndLine 464..468 "\r\n\r\n"
 |     |     |     |     |      WhiteSpace 468..480
 |     |     |     |     |     |      WhiteSpace 468..480 "            "
 |     |     |     |      RCurly 480..481
