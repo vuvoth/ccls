@@ -25,7 +25,7 @@ pub enum TokenKind {
     #[token("pragma")]
     PragmaKw,
     #[token("circom")]
-    Circom,
+    CircomKw,
     #[regex("2.[0-9].[0-9]")]
     Version,
     // Literals

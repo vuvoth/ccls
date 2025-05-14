@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  CircomProgram 0..45
 |      EndLine 0..2
@@ -18,8 +18,8 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      PragmaKw 23..29 "pragma"
 |     |      WhiteSpace 29..30
 |     |     |      WhiteSpace 29..30 " "
-|     |      Circom 30..36
-|     |     |      Circom 30..36 "circom"
+|     |      CircomKw 30..36
+|     |     |      CircomKw 30..36 "circom"
 |     |      WhiteSpace 36..37
 |     |     |      WhiteSpace 36..37 " "
 |     |      Version 37..42
