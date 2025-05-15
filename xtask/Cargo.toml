@@ -7,11 +7,7 @@ edition = "2021"
 rust-version.workspace = true
 
 [dependencies]
-anyhow = "1.0.62"
-flate2 = "1.0.24"
-write-json = "0.1.2"
+anyhow = { workspace = true }
 xshell = "0.2.2"
 xflags = "0.3.0"
-time = { version = "0.3", default-features = false }
-zip = { version = "0.6", default-features = false, features = ["deflate", "time"] }
 # Avoid adding more dependencies to this crate
