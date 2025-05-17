@@ -16,6 +16,17 @@ use super::ast::AstStatementList;
 
 ast_node!(AstTemplateName, TemplateName);
 
+ast_node!(AstTemplateBody, TemplateBody);
+
+impl AstTemplateBody {
+    pub fn statement_list(&self) -> Option<AstStatementList> {
+        if let Some(block) = self.syntax().children().find_map(AstBlock::cast) {
+            return block.statement_list();
+        }
+        None
+    }
+}
+
 ast_node!(AstTemplateDef, TemplateDef);
 
 impl AstTemplateName {
@@ -31,8 +42,8 @@ impl AstTemplateDef {
     pub fn name(&self) -> Option<AstTemplateName> {
         self.syntax.children().find_map(AstTemplateName::cast)
     }
-    pub fn func_body(&self) -> Option<AstBlock> {
-        self.syntax.children().find_map(AstBlock::cast)
+    pub fn func_body(&self) -> Option<AstTemplateBody> {
+        self.syntax.children().find_map(AstTemplateBody::cast)
     }
     pub fn parameter_list(&self) -> Option<AstParameterList> {
         self.syntax().children().find_map(AstParameterList::cast)

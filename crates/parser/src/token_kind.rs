@@ -207,6 +207,7 @@ pub enum TokenKind {
     // Template
     TemplateDef,
     TemplateName,
+    TemplateBody,
     // ComplexIdentifier, which will replace:
     // ___ SignalIdentifier,
     // ___ VarIdentifier,
