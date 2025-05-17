@@ -63,6 +63,7 @@ function nbits(a) {
 
 template BinSum(n, ops) {
     var nout = nbits((2**n -1)*ops);
+    signal input public_in;
     signal input in[ops][n];
     signal output out[nout];
 
@@ -98,3 +99,5 @@ template BinSum(n, ops) {
         lin === lout;
     }
 }
+
+component main {public [public_in] } = BinSum(2, 3);

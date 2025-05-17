@@ -1,7 +1,6 @@
-use block::block;
-use list::tuple_identifier;
-
 use crate::grammar::*;
+use block::block;
+use list::{argument_list, tuple_identifier};
 
 /// Templates in circom are circuit blueprints with parameters.
 /// When used, they create circuits with their own signals,
@@ -28,9 +27,7 @@ pub fn template(p: &mut Parser) {
 
     p.expect(TemplateKw);
 
-    let name_marker = p.open();
-    p.expect(Identifier);
-    p.close(name_marker, TemplateName);
+    template_name(p);
 
     let parameter_marker = p.open();
     tuple_identifier(p);
@@ -43,19 +40,41 @@ pub fn template(p: &mut Parser) {
     p.close(m, TemplateDef);
 }
 
-/// TemplateName(2, 15)
+/// Template name used to identify a template.
+///
+/// Grammar: `Identifier`
+///
+/// Example:
+/// ```ignore
+/// MyTemplate
+/// ```
+/// * `Identifier`: `MyTemplate`.
+pub fn template_name(p: &mut Parser) {
+    let m = p.open();
+    p.expect(Identifier);
+    p.close(m, TemplateName);
+}
+
+/// Template instantiation used to apply a template with concrete parameters.
+///
+/// Grammar: `TemplateName(Arg1, Arg2, ..., ArgN)`
+///
+/// Example:
+/// ```ignore
+/// MyTemplate(8, true)
+/// ```
+/// * `TemplateName`: `MyTemplate`.
+/// * `(Arg1...ArgN)`: `(8, true)`.
+///
+/// Notes:
+/// - Argument types must match the template's parameter specification.
+/// - Used wherever generic or reusable logic is needed.
 pub fn template_instantiation(p: &mut Parser) {
     let m = p.open();
 
-    let name_marker = p.open();
-    p.expect(Identifier);
-    p.close(name_marker, TemplateName);
+    template_name(p);
 
-    let args_marker = p.open();
-    if p.at(LParen) {
-        tuple_identifier(p);
-    }
-    p.close(args_marker, ArgumentList);
+    argument_list(p);
 
     p.close(m, TemplateInstantiation);
 }
