@@ -1,6 +1,6 @@
 use crate::grammar::*;
 use block::block;
-use list::{argument_list, tuple_identifier};
+use list::{argument_list, parameter_list};
 
 /// Templates in circom are circuit blueprints with parameters.
 /// When used, they create circuits with their own signals,
@@ -29,9 +29,7 @@ pub fn template(p: &mut Parser) {
 
     template_name(p);
 
-    let parameter_marker = p.open();
-    tuple_identifier(p);
-    p.close(parameter_marker, ParameterList);
+    parameter_list(p);
 
     let body_marker = p.open();
     block(p);
