@@ -49,153 +49,154 @@ expression: view_ast(& syntax)
 |     |     |     |      RParen 1623..1624 ")"
 |     |      WhiteSpace 1624..1625
 |     |     |      WhiteSpace 1624..1625 " "
-|     |      Block 1625..1735
-|     |     |      LCurly 1625..1626
-|     |     |     |      LCurly 1625..1626 "{"
-|     |     |      EndLine 1626..1628
-|     |     |     |      EndLine 1626..1628 "\r\n"
-|     |     |      WhiteSpace 1628..1632
-|     |     |     |      WhiteSpace 1628..1632 "    "
-|     |     |      StatementList 1632..1734
-|     |     |     |      VarDecl 1632..1641
-|     |     |     |     |      VarKw 1632..1635
-|     |     |     |     |     |      VarKw 1632..1635 "var"
-|     |     |     |     |      WhiteSpace 1635..1636
-|     |     |     |     |     |      WhiteSpace 1635..1636 " "
-|     |     |     |     |      ComplexIdentifier 1636..1638
-|     |     |     |     |     |      Identifier 1636..1637
-|     |     |     |     |     |     |      Identifier 1636..1637 "n"
-|     |     |     |     |     |      WhiteSpace 1637..1638
-|     |     |     |     |     |     |      WhiteSpace 1637..1638 " "
-|     |     |     |     |      Assign 1638..1639
-|     |     |     |     |     |      Assign 1638..1639 "="
-|     |     |     |     |      WhiteSpace 1639..1640
-|     |     |     |     |     |      WhiteSpace 1639..1640 " "
-|     |     |     |     |      Expression 1640..1641
-|     |     |     |     |     |      ExpressionAtom 1640..1641
-|     |     |     |     |     |     |      Number 1640..1641
-|     |     |     |     |     |     |     |      Number 1640..1641 "1"
-|     |     |     |      Semicolon 1641..1642
-|     |     |     |     |      Semicolon 1641..1642 ";"
-|     |     |     |      EndLine 1642..1644
-|     |     |     |     |      EndLine 1642..1644 "\r\n"
-|     |     |     |      WhiteSpace 1644..1648
-|     |     |     |     |      WhiteSpace 1644..1648 "    "
-|     |     |     |      VarDecl 1648..1657
-|     |     |     |     |      VarKw 1648..1651
-|     |     |     |     |     |      VarKw 1648..1651 "var"
-|     |     |     |     |      WhiteSpace 1651..1652
-|     |     |     |     |     |      WhiteSpace 1651..1652 " "
-|     |     |     |     |      ComplexIdentifier 1652..1654
-|     |     |     |     |     |      Identifier 1652..1653
-|     |     |     |     |     |     |      Identifier 1652..1653 "r"
-|     |     |     |     |     |      WhiteSpace 1653..1654
-|     |     |     |     |     |     |      WhiteSpace 1653..1654 " "
-|     |     |     |     |      Assign 1654..1655
-|     |     |     |     |     |      Assign 1654..1655 "="
-|     |     |     |     |      WhiteSpace 1655..1656
-|     |     |     |     |     |      WhiteSpace 1655..1656 " "
-|     |     |     |     |      Expression 1656..1657
-|     |     |     |     |     |      ExpressionAtom 1656..1657
-|     |     |     |     |     |     |      Number 1656..1657
-|     |     |     |     |     |     |     |      Number 1656..1657 "0"
-|     |     |     |      Semicolon 1657..1658
-|     |     |     |     |      Semicolon 1657..1658 ";"
-|     |     |     |      EndLine 1658..1660
-|     |     |     |     |      EndLine 1658..1660 "\r\n"
-|     |     |     |      WhiteSpace 1660..1664
-|     |     |     |     |      WhiteSpace 1660..1664 "    "
-|     |     |     |      WhileLoop 1664..1717
-|     |     |     |     |      WhileKw 1664..1669
-|     |     |     |     |     |      WhileKw 1664..1669 "while"
-|     |     |     |     |      WhiteSpace 1669..1670
-|     |     |     |     |     |      WhiteSpace 1669..1670 " "
-|     |     |     |     |      LParen 1670..1671
-|     |     |     |     |     |      LParen 1670..1671 "("
-|     |     |     |     |      Expression 1671..1676
-|     |     |     |     |     |      LessThan 1671..1676
-|     |     |     |     |     |     |      Sub 1671..1674
-|     |     |     |     |     |     |     |      ExpressionAtom 1671..1672
-|     |     |     |     |     |     |     |     |      Identifier 1671..1672
-|     |     |     |     |     |     |     |     |     |      Identifier 1671..1672 "n"
-|     |     |     |     |     |     |     |      Sub 1672..1673
-|     |     |     |     |     |     |     |     |      Sub 1672..1673 "-"
-|     |     |     |     |     |     |     |      ExpressionAtom 1673..1674
-|     |     |     |     |     |     |     |     |      Number 1673..1674
-|     |     |     |     |     |     |     |     |     |      Number 1673..1674 "1"
-|     |     |     |     |     |     |      LessThan 1674..1675
-|     |     |     |     |     |     |     |      LessThan 1674..1675 "<"
-|     |     |     |     |     |     |      ExpressionAtom 1675..1676
-|     |     |     |     |     |     |     |      Identifier 1675..1676
-|     |     |     |     |     |     |     |     |      Identifier 1675..1676 "a"
-|     |     |     |     |      RParen 1676..1677
-|     |     |     |     |     |      RParen 1676..1677 ")"
-|     |     |     |     |      WhiteSpace 1677..1678
-|     |     |     |     |     |      WhiteSpace 1677..1678 " "
-|     |     |     |     |      Block 1678..1717
-|     |     |     |     |     |      LCurly 1678..1679
-|     |     |     |     |     |     |      LCurly 1678..1679 "{"
-|     |     |     |     |     |      EndLine 1679..1681
-|     |     |     |     |     |     |      EndLine 1679..1681 "\r\n"
-|     |     |     |     |     |      WhiteSpace 1681..1689
-|     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
-|     |     |     |     |     |      StatementList 1689..1716
-|     |     |     |     |     |     |      AssignStatement 1689..1692
-|     |     |     |     |     |     |     |      Expression 1689..1692
-|     |     |     |     |     |     |     |     |      UnitInc 1689..1692
-|     |     |     |     |     |     |     |     |     |      ExpressionAtom 1689..1690
-|     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690 "r"
-|     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692
-|     |     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692 "++"
-|     |     |     |     |     |     |      Semicolon 1692..1693
-|     |     |     |     |     |     |     |      Semicolon 1692..1693 ";"
-|     |     |     |     |     |     |      EndLine 1693..1695
-|     |     |     |     |     |     |     |      EndLine 1693..1695 "\r\n"
-|     |     |     |     |     |     |      WhiteSpace 1695..1703
-|     |     |     |     |     |     |     |      WhiteSpace 1695..1703 "        "
-|     |     |     |     |     |     |      AssignStatement 1703..1709
-|     |     |     |     |     |     |     |      Expression 1703..1705
-|     |     |     |     |     |     |     |     |      ExpressionAtom 1703..1704
-|     |     |     |     |     |     |     |     |     |      Identifier 1703..1704
-|     |     |     |     |     |     |     |     |     |     |      Identifier 1703..1704 "n"
-|     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705
-|     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705 " "
-|     |     |     |     |     |     |     |      MulAssign 1705..1707
-|     |     |     |     |     |     |     |     |      MulAssign 1705..1707 "*="
-|     |     |     |     |     |     |     |      WhiteSpace 1707..1708
-|     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708 " "
-|     |     |     |     |     |     |     |      Expression 1708..1709
-|     |     |     |     |     |     |     |     |      ExpressionAtom 1708..1709
-|     |     |     |     |     |     |     |     |     |      Number 1708..1709
-|     |     |     |     |     |     |     |     |     |     |      Number 1708..1709 "2"
-|     |     |     |     |     |     |      Semicolon 1709..1710
-|     |     |     |     |     |     |     |      Semicolon 1709..1710 ";"
-|     |     |     |     |     |     |      EndLine 1710..1712
-|     |     |     |     |     |     |     |      EndLine 1710..1712 "\r\n"
-|     |     |     |     |     |     |      WhiteSpace 1712..1716
-|     |     |     |     |     |     |     |      WhiteSpace 1712..1716 "    "
-|     |     |     |     |     |      RCurly 1716..1717
-|     |     |     |     |     |     |      RCurly 1716..1717 "}"
-|     |     |     |      EndLine 1717..1719
-|     |     |     |     |      EndLine 1717..1719 "\r\n"
-|     |     |     |      WhiteSpace 1719..1723
-|     |     |     |     |      WhiteSpace 1719..1723 "    "
-|     |     |     |      ReturnStatement 1723..1731
-|     |     |     |     |      ReturnKw 1723..1729
-|     |     |     |     |     |      ReturnKw 1723..1729 "return"
-|     |     |     |     |      WhiteSpace 1729..1730
-|     |     |     |     |     |      WhiteSpace 1729..1730 " "
-|     |     |     |     |      Expression 1730..1731
-|     |     |     |     |     |      ExpressionAtom 1730..1731
-|     |     |     |     |     |     |      Identifier 1730..1731
-|     |     |     |     |     |     |     |      Identifier 1730..1731 "r"
-|     |     |     |      Semicolon 1731..1732
-|     |     |     |     |      Semicolon 1731..1732 ";"
-|     |     |     |      EndLine 1732..1734
-|     |     |     |     |      EndLine 1732..1734 "\r\n"
-|     |     |      RCurly 1734..1735
-|     |     |     |      RCurly 1734..1735 "}"
+|     |      FunctionBody 1625..1735
+|     |     |      Block 1625..1735
+|     |     |     |      LCurly 1625..1626
+|     |     |     |     |      LCurly 1625..1626 "{"
+|     |     |     |      EndLine 1626..1628
+|     |     |     |     |      EndLine 1626..1628 "\r\n"
+|     |     |     |      WhiteSpace 1628..1632
+|     |     |     |     |      WhiteSpace 1628..1632 "    "
+|     |     |     |      StatementList 1632..1734
+|     |     |     |     |      VarDecl 1632..1641
+|     |     |     |     |     |      VarKw 1632..1635
+|     |     |     |     |     |     |      VarKw 1632..1635 "var"
+|     |     |     |     |     |      WhiteSpace 1635..1636
+|     |     |     |     |     |     |      WhiteSpace 1635..1636 " "
+|     |     |     |     |     |      ComplexIdentifier 1636..1638
+|     |     |     |     |     |     |      Identifier 1636..1637
+|     |     |     |     |     |     |     |      Identifier 1636..1637 "n"
+|     |     |     |     |     |     |      WhiteSpace 1637..1638
+|     |     |     |     |     |     |     |      WhiteSpace 1637..1638 " "
+|     |     |     |     |     |      Assign 1638..1639
+|     |     |     |     |     |     |      Assign 1638..1639 "="
+|     |     |     |     |     |      WhiteSpace 1639..1640
+|     |     |     |     |     |     |      WhiteSpace 1639..1640 " "
+|     |     |     |     |     |      Expression 1640..1641
+|     |     |     |     |     |     |      ExpressionAtom 1640..1641
+|     |     |     |     |     |     |     |      Number 1640..1641
+|     |     |     |     |     |     |     |     |      Number 1640..1641 "1"
+|     |     |     |     |      Semicolon 1641..1642
+|     |     |     |     |     |      Semicolon 1641..1642 ";"
+|     |     |     |     |      EndLine 1642..1644
+|     |     |     |     |     |      EndLine 1642..1644 "\r\n"
+|     |     |     |     |      WhiteSpace 1644..1648
+|     |     |     |     |     |      WhiteSpace 1644..1648 "    "
+|     |     |     |     |      VarDecl 1648..1657
+|     |     |     |     |     |      VarKw 1648..1651
+|     |     |     |     |     |     |      VarKw 1648..1651 "var"
+|     |     |     |     |     |      WhiteSpace 1651..1652
+|     |     |     |     |     |     |      WhiteSpace 1651..1652 " "
+|     |     |     |     |     |      ComplexIdentifier 1652..1654
+|     |     |     |     |     |     |      Identifier 1652..1653
+|     |     |     |     |     |     |     |      Identifier 1652..1653 "r"
+|     |     |     |     |     |     |      WhiteSpace 1653..1654
+|     |     |     |     |     |     |     |      WhiteSpace 1653..1654 " "
+|     |     |     |     |     |      Assign 1654..1655
+|     |     |     |     |     |     |      Assign 1654..1655 "="
+|     |     |     |     |     |      WhiteSpace 1655..1656
+|     |     |     |     |     |     |      WhiteSpace 1655..1656 " "
+|     |     |     |     |     |      Expression 1656..1657
+|     |     |     |     |     |     |      ExpressionAtom 1656..1657
+|     |     |     |     |     |     |     |      Number 1656..1657
+|     |     |     |     |     |     |     |     |      Number 1656..1657 "0"
+|     |     |     |     |      Semicolon 1657..1658
+|     |     |     |     |     |      Semicolon 1657..1658 ";"
+|     |     |     |     |      EndLine 1658..1660
+|     |     |     |     |     |      EndLine 1658..1660 "\r\n"
+|     |     |     |     |      WhiteSpace 1660..1664
+|     |     |     |     |     |      WhiteSpace 1660..1664 "    "
+|     |     |     |     |      WhileLoop 1664..1717
+|     |     |     |     |     |      WhileKw 1664..1669
+|     |     |     |     |     |     |      WhileKw 1664..1669 "while"
+|     |     |     |     |     |      WhiteSpace 1669..1670
+|     |     |     |     |     |     |      WhiteSpace 1669..1670 " "
+|     |     |     |     |     |      LParen 1670..1671
+|     |     |     |     |     |     |      LParen 1670..1671 "("
+|     |     |     |     |     |      Expression 1671..1676
+|     |     |     |     |     |     |      LessThan 1671..1676
+|     |     |     |     |     |     |     |      Sub 1671..1674
+|     |     |     |     |     |     |     |     |      ExpressionAtom 1671..1672
+|     |     |     |     |     |     |     |     |     |      Identifier 1671..1672
+|     |     |     |     |     |     |     |     |     |     |      Identifier 1671..1672 "n"
+|     |     |     |     |     |     |     |     |      Sub 1672..1673
+|     |     |     |     |     |     |     |     |     |      Sub 1672..1673 "-"
+|     |     |     |     |     |     |     |     |      ExpressionAtom 1673..1674
+|     |     |     |     |     |     |     |     |     |      Number 1673..1674
+|     |     |     |     |     |     |     |     |     |     |      Number 1673..1674 "1"
+|     |     |     |     |     |     |     |      LessThan 1674..1675
+|     |     |     |     |     |     |     |     |      LessThan 1674..1675 "<"
+|     |     |     |     |     |     |     |      ExpressionAtom 1675..1676
+|     |     |     |     |     |     |     |     |      Identifier 1675..1676
+|     |     |     |     |     |     |     |     |     |      Identifier 1675..1676 "a"
+|     |     |     |     |     |      RParen 1676..1677
+|     |     |     |     |     |     |      RParen 1676..1677 ")"
+|     |     |     |     |     |      WhiteSpace 1677..1678
+|     |     |     |     |     |     |      WhiteSpace 1677..1678 " "
+|     |     |     |     |     |      Block 1678..1717
+|     |     |     |     |     |     |      LCurly 1678..1679
+|     |     |     |     |     |     |     |      LCurly 1678..1679 "{"
+|     |     |     |     |     |     |      EndLine 1679..1681
+|     |     |     |     |     |     |     |      EndLine 1679..1681 "\r\n"
+|     |     |     |     |     |     |      WhiteSpace 1681..1689
+|     |     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
+|     |     |     |     |     |     |      StatementList 1689..1716
+|     |     |     |     |     |     |     |      AssignStatement 1689..1692
+|     |     |     |     |     |     |     |     |      Expression 1689..1692
+|     |     |     |     |     |     |     |     |     |      UnitInc 1689..1692
+|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 1689..1690
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690 "r"
+|     |     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692
+|     |     |     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692 "++"
+|     |     |     |     |     |     |     |      Semicolon 1692..1693
+|     |     |     |     |     |     |     |     |      Semicolon 1692..1693 ";"
+|     |     |     |     |     |     |     |      EndLine 1693..1695
+|     |     |     |     |     |     |     |     |      EndLine 1693..1695 "\r\n"
+|     |     |     |     |     |     |     |      WhiteSpace 1695..1703
+|     |     |     |     |     |     |     |     |      WhiteSpace 1695..1703 "        "
+|     |     |     |     |     |     |     |      AssignStatement 1703..1709
+|     |     |     |     |     |     |     |     |      Expression 1703..1705
+|     |     |     |     |     |     |     |     |     |      ExpressionAtom 1703..1704
+|     |     |     |     |     |     |     |     |     |     |      Identifier 1703..1704
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 1703..1704 "n"
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705
+|     |     |     |     |     |     |     |     |     |     |      WhiteSpace 1704..1705 " "
+|     |     |     |     |     |     |     |     |      MulAssign 1705..1707
+|     |     |     |     |     |     |     |     |     |      MulAssign 1705..1707 "*="
+|     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708
+|     |     |     |     |     |     |     |     |     |      WhiteSpace 1707..1708 " "
+|     |     |     |     |     |     |     |     |      Expression 1708..1709
+|     |     |     |     |     |     |     |     |     |      ExpressionAtom 1708..1709
+|     |     |     |     |     |     |     |     |     |     |      Number 1708..1709
+|     |     |     |     |     |     |     |     |     |     |     |      Number 1708..1709 "2"
+|     |     |     |     |     |     |     |      Semicolon 1709..1710
+|     |     |     |     |     |     |     |     |      Semicolon 1709..1710 ";"
+|     |     |     |     |     |     |     |      EndLine 1710..1712
+|     |     |     |     |     |     |     |     |      EndLine 1710..1712 "\r\n"
+|     |     |     |     |     |     |     |      WhiteSpace 1712..1716
+|     |     |     |     |     |     |     |     |      WhiteSpace 1712..1716 "    "
+|     |     |     |     |     |     |      RCurly 1716..1717
+|     |     |     |     |     |     |     |      RCurly 1716..1717 "}"
+|     |     |     |     |      EndLine 1717..1719
+|     |     |     |     |     |      EndLine 1717..1719 "\r\n"
+|     |     |     |     |      WhiteSpace 1719..1723
+|     |     |     |     |     |      WhiteSpace 1719..1723 "    "
+|     |     |     |     |      ReturnStatement 1723..1731
+|     |     |     |     |     |      ReturnKw 1723..1729
+|     |     |     |     |     |     |      ReturnKw 1723..1729 "return"
+|     |     |     |     |     |      WhiteSpace 1729..1730
+|     |     |     |     |     |     |      WhiteSpace 1729..1730 " "
+|     |     |     |     |     |      Expression 1730..1731
+|     |     |     |     |     |     |      ExpressionAtom 1730..1731
+|     |     |     |     |     |     |     |      Identifier 1730..1731
+|     |     |     |     |     |     |     |     |      Identifier 1730..1731 "r"
+|     |     |     |     |      Semicolon 1731..1732
+|     |     |     |     |     |      Semicolon 1731..1732 ";"
+|     |     |     |     |      EndLine 1732..1734
+|     |     |     |     |     |      EndLine 1732..1734 "\r\n"
+|     |     |     |      RCurly 1734..1735
+|     |     |     |     |      RCurly 1734..1735 "}"
 |      EndLine 1735..1741
 |     |      EndLine 1735..1741 "\r\n\r\n\r\n"
 |      TemplateDef 1741..2425

@@ -204,6 +204,7 @@ pub enum TokenKind {
     // Function
     FunctionDef,
     FunctionName,
+    FunctionBody,
     // Template
     TemplateDef,
     TemplateName,
