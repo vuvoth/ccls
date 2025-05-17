@@ -52,5 +52,5 @@ pub fn function(p: &mut Parser) {
 pub fn function_name(p: &mut Parser) {
     let m = p.open();
     p.expect(Identifier);
-    p.close(m, TemplateName);
+    p.close(m, FunctionName);
 }
