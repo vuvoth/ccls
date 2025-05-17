@@ -18,21 +18,10 @@ mod template;
 
 pub mod entry {
 
-    use crate::token_kind::TokenKind;
-
     use super::*;
 
     pub fn circom_program(p: &mut Parser) {
         let m = p.open();
-
-        while p.at_any(&[
-            TokenKind::BlockComment,
-            TokenKind::CommentLine,
-            TokenKind::EndLine,
-            TokenKind::WhiteSpace,
-        ]) {
-            p.skip();
-        }
 
         while !p.eof() {
             match p.current() {
@@ -44,6 +33,7 @@ pub mod entry {
                 _ => p.advance_with_error("invalid token"),
             }
         }
+
         p.close(m, CircomProgram);
     }
 
