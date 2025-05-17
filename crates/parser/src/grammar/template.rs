@@ -42,3 +42,20 @@ pub fn template(p: &mut Parser) {
 
     p.close(m, TemplateDef);
 }
+
+/// TemplateName(2, 15)
+pub fn template_instantiation(p: &mut Parser) {
+    let m = p.open();
+
+    let name_marker = p.open();
+    p.expect(Identifier);
+    p.close(name_marker, TemplateName);
+
+    let args_marker = p.open();
+    if p.at(LParen) {
+        tuple_identifier(p);
+    }
+    p.close(args_marker, ArgumentList);
+
+    p.close(m, TemplateInstantiation);
+}

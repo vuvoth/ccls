@@ -228,9 +228,13 @@ pub enum TokenKind {
     // Expression
     ExpressionAtom,
     Expression,
-    // Complex token kind
+    // MainComponent
     MainComponent,
+    PublicSignals,
+    // Complex token kind
     Block,
+    TemplateInstantiation,
+    ArgumentList,
     ParameterList,
     Call,
     TenaryConditional,
