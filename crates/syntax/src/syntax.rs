@@ -98,13 +98,17 @@ mod tests {
     use crate::test_syntax;
 
     #[test]
+    fn include_happy_test() {
+        test_syntax!("/src/test_files/happy/include.circom", Scope::CircomProgram);
+    }
+
+    #[test]
     fn pragma_happy_test() {
         test_syntax!("/src/test_files/happy/pragma.circom", Scope::Pragma);
     }
 
     #[test]
     fn template_happy_test() {
-        // SOURCE & EXPECTED RESULT
         test_syntax!("/src/test_files/happy/template.circom", Scope::Template);
     }
 

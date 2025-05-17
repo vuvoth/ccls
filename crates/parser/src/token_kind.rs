@@ -28,6 +28,10 @@ pub enum TokenKind {
     CircomKw,
     #[regex("2.[0-9].[0-9]")]
     Version,
+    // Include
+    Include,
+    #[token("include")]
+    IncludeKw,
     // Literals
     #[regex("[0-9]+")]
     Number,
@@ -168,8 +172,6 @@ pub enum TokenKind {
     SignalKw,
     #[token("var")]
     VarKw,
-    #[token("include")]
-    IncludeKw,
     #[token("input")]
     InputKw,
     #[token("output")]
