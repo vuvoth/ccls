@@ -46,22 +46,19 @@ Optional, but recommended for snapshot testing.
 
 ## 🐞 Debugging the Extension
 
-1. **Install Circom:**  
-   👉 https://docs.circom.io/getting-started/installation/
-
-2. **Install CCLS server and client:**
+1. **Install CCLS server and client:**
     ```bash
     cargo xtask install --server
     cargo xtask install --client
     npm audit fix --force   # optional
     ```
 
-3. **Run the extension in VSCode:**
+2. **Run the extension in VSCode:**
     - Open the `ccls` project in VSCode.
     - Open the *Run and Debug* panel.
     - Select `Run Extension (Debug Build)` and start debugging.
 
-4. A new VSCode window will open.  
+3. A new VSCode window will open.  
    Open a Circom file and try features like **Go to Definition**.
 
 ---
