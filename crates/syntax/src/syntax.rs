@@ -88,9 +88,14 @@ pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
 }
 
 #[cfg(test)]
+mod test_utils;
+
+#[cfg(test)]
 mod tests {
-    use crate::test_syntax;
     use parser::grammar::entry::Scope;
+
+    use crate::syntax::test_utils::view_ast;
+    use crate::test_syntax;
 
     #[test]
     fn pragma_happy_test() {

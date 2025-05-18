@@ -225,6 +225,7 @@ pub enum TokenKind {
     ExpressionAtom,
     Expression,
     // Complex token kind
+    MainComponent,
     Block,
     ParameterList,
     Call,
