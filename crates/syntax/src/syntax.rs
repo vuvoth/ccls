@@ -72,7 +72,7 @@ impl<'a> SyntaxTreeBuilder<'a> {
 }
 
 pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
-    let input = Input::new(&source);
+    let input = Input::new(source);
     let output = Parser::parsing_with_scope(&input, scope);
 
     // output is a tree whose node is index of token, no content of token
@@ -82,9 +82,7 @@ pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     let green = builder.finish();
 
     // then cast green node into syntax node
-    let syntax = SyntaxNode::new_root(green);
-
-    syntax
+    SyntaxNode::new_root(green)
 }
 
 #[cfg(test)]

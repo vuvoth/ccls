@@ -19,23 +19,19 @@ use syntax::{
 
 /**
 * We will store
-* Open data -> Parse -> output -> Syntax -> analyzer -> db{
-   FileID {
-       Template {
-           signal,
+* Open data -> Parse -> output -> Syntax -> analyzer -> db
+    {
+        FileID {
+            Template {
+                signal,
+            }
+        }
 
-       }
-   }
-
-                               value
-   Template map: { Hash(FileID, token) -> Template}
-   Vars map: {Hash(FileID, template, token)} -> Var}
-   Component map {Hash(FileID, template, token)} -> ComponentInfo
-   Signals map {Hash(FileID, template, token)} -> Signal
-
-
-
-}
+        Template map: { Hash(FileID, token) -> Template}
+        Vars map: {Hash(FileID, template, token)} -> Var}
+        Component map {Hash(FileID, template, token)} -> ComponentInfo
+        Signals map {Hash(FileID, template, token)} -> Signal
+    }
 */
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
