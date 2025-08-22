@@ -27,12 +27,12 @@ pub enum ParserError {
     InvalidEvents,
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub fn wrap_trivial_tokens(&mut self) -> TokenKind {
         loop {
             let kind = self.input.kind_of(self.pos);
 
-            if kind.is_trivial() == false {
+            if !kind.is_trivial() {
                 return kind;
             }
 
@@ -43,7 +43,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn open(&mut self) -> Marker {
-        if self.events.len() > 0 {
+        if !self.events.is_empty() {
             self.wrap_trivial_tokens();
         }
 

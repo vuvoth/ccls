@@ -12,27 +12,45 @@ mod pragma;
 mod statement;
 mod template;
 
-/**
- * parse circom program
- */
-
 pub mod entry {
-
-    use crate::token_kind::TokenKind;
 
     use super::*;
 
+    /// Parses a full Circom program from top-level constructs.
+    ///
+    /// This function handles parsing of all valid top-level elements in a Circom file,
+    /// such as pragmas, templates, includes, component instantiations, and function
+    /// definitions. Invalid tokens are flagged with an error.
+    ///
+    /// Grammar:
+    /// * `<CircomProgram>` ::= { `<Pragma>` | `<Include>` | `<Template>` | `<Component>` | `<Function>` }
+    ///
+    /// Example:
+    /// ```ignore
+    /// pragma circom 2.0.0;
+    /// include "utils.circom";
+    ///
+    /// template Adder(a, b) {
+    ///     signal input a;
+    ///     signal input b;
+    ///     signal output c;
+    ///     c <== a + b;
+    /// }
+    ///
+    /// function double(x) -> y {
+    ///     y = x * 2;
+    /// }
+    ///
+    /// component main = Adder(1, 2);
+    /// ```
+    /// * `<Pragma>`: `pragma circom 2.0.0;`
+    /// * `<Include>`: `include "utils.circom";`
+    /// * `<Template>`: A circuit blueprint, e.g. `template Adder(...) { ... }`
+    /// * `<Function>`: A reusable logic function, e.g. `function double(...) -> ... { ... }`
+    /// * `<Component>`: An instance of a template, e.g. `component main = Adder(...);`
+    ///
     pub fn circom_program(p: &mut Parser) {
         let m = p.open();
-
-        while p.at_any(&[
-            TokenKind::BlockComment,
-            TokenKind::CommentLine,
-            TokenKind::EndLine,
-            TokenKind::WhiteSpace,
-        ]) {
-            p.skip();
-        }
 
         while !p.eof() {
             match p.current() {
@@ -40,10 +58,11 @@ pub mod entry {
                 TemplateKw => template::template(p),
                 IncludeKw => include::include(p),
                 ComponentKw => main_component::main_component(p),
-                FunctionKw => function::function_parse(p),
+                FunctionKw => function::function(p),
                 _ => p.advance_with_error("invalid token"),
             }
         }
+
         p.close(m, CircomProgram);
     }
 

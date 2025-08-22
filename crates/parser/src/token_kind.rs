@@ -18,16 +18,20 @@ pub enum TokenKind {
     // Trivial
     #[regex("[ \t]+")]
     WhiteSpace,
-    #[regex(r"\r?\n")]
+    #[regex(r"(?:\r?\n)+")]
     EndLine,
     // Pragma
     Pragma,
     #[token("pragma")]
     PragmaKw,
     #[token("circom")]
-    Circom,
+    CircomKw,
     #[regex("2.[0-9].[0-9]")]
     Version,
+    // Include
+    Include,
+    #[token("include")]
+    IncludeKw,
     // Literals
     #[regex("[0-9]+")]
     Number,
@@ -168,8 +172,6 @@ pub enum TokenKind {
     SignalKw,
     #[token("var")]
     VarKw,
-    #[token("include")]
-    IncludeKw,
     #[token("input")]
     InputKw,
     #[token("output")]
@@ -202,9 +204,11 @@ pub enum TokenKind {
     // Function
     FunctionDef,
     FunctionName,
+    FunctionBody,
     // Template
     TemplateDef,
     TemplateName,
+    TemplateBody,
     // ComplexIdentifier, which will replace:
     // ___ SignalIdentifier,
     // ___ VarIdentifier,
@@ -224,9 +228,13 @@ pub enum TokenKind {
     // Expression
     ExpressionAtom,
     Expression,
-    // Complex token kind
+    // MainComponent
     MainComponent,
+    PublicSignals,
+    // Complex token kind
     Block,
+    TemplateInstantiation,
+    ArgumentList,
     ParameterList,
     Call,
     TenaryConditional,

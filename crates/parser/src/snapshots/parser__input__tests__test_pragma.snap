@@ -7,15 +7,13 @@ kind:
   - WhiteSpace
   - BlockComment
   - EndLine
-  - EndLine
   - WhiteSpace
   - PragmaKw
   - WhiteSpace
-  - Circom
+  - CircomKw
   - WhiteSpace
   - Version
   - Semicolon
-  - EndLine
   - EndLine
   - WhiteSpace
 source: "\n        /* test pragma token kinds */\n\n    pragma circom 2.0.0;\n\n    "
@@ -27,8 +25,6 @@ position:
   - start: 9
     end: 38
   - start: 38
-    end: 39
-  - start: 39
     end: 40
   - start: 40
     end: 44
@@ -45,8 +41,6 @@ position:
   - start: 63
     end: 64
   - start: 64
-    end: 65
-  - start: 65
     end: 66
   - start: 66
     end: 70

@@ -1,0 +1,42 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ CircomProgram 0..148
+|      Pragma 0..20
+|     |      PragmaKw 0..6
+|     |     |      PragmaKw 0..6 "pragma"
+|     |      WhiteSpace 6..7
+|     |     |      WhiteSpace 6..7 " "
+|     |      CircomKw 7..13
+|     |     |      CircomKw 7..13 "circom"
+|     |      WhiteSpace 13..14
+|     |     |      WhiteSpace 13..14 " "
+|     |      Version 14..19
+|     |     |      Version 14..19 "2.1.6"
+|     |      Semicolon 19..20
+|     |     |      Semicolon 19..20 ";"
+|      EndLine 20..22
+|     |      EndLine 20..22 "\n\n"
+|      Include 22..58
+|     |      IncludeKw 22..29
+|     |     |      IncludeKw 22..29 "include"
+|     |      WhiteSpace 29..30
+|     |     |      WhiteSpace 29..30 " "
+|     |      CircomString 30..57
+|     |     |      CircomString 30..57 "\"circomlib/poseidon.circom\""
+|     |      Semicolon 57..58
+|     |     |      Semicolon 57..58 ";"
+|      EndLine 58..59
+|     |      EndLine 58..59 "\n"
+|      Include 59..147
+|     |      IncludeKw 59..66
+|     |     |      IncludeKw 59..66 "include"
+|     |      WhiteSpace 66..67
+|     |     |      WhiteSpace 66..67 " "
+|     |      CircomString 67..146
+|     |     |      CircomString 67..146 "\"https://github.com/0xPARC/circom-secp256k1/blob/master/circuits/bigint.circom\""
+|     |      Semicolon 146..147
+|     |     |      Semicolon 146..147 ";"
+|      EndLine 147..148
+|     |      EndLine 147..148 "\n"
