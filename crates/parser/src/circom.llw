@@ -1,0 +1,198 @@
+// Circom Language Grammar for Lelwel
+// Based on https://docs.circom.io/
+
+// Tokens
+token Template='template' Function='function' Signal='signal' Input='input' Output='output';
+token Var='var' Component='component' Pragma='pragma' Circom='circom' Include='include';
+token Main='main' Public='public' If='if' Else='else' For='for' While='while';
+token Return='return' Log='log' Assert='assert';
+
+// Brackets and Punctuation
+token LPar='(' RPar=')' LBrace='{' RBrace='}' LBrack='[' RBrack=']';
+token Semi=';' Comma=',' Dot='.' Question='?' Colon=':';
+
+// Arithmetic Operators
+token Plus='+' Minus='-' Star='*' StarStar='**' Slash='/' IntDiv='\\' Percent='%';
+
+// Bitwise Operators
+token Ampersand='&' Pipe='|' Caret='^' Tilde='~' LtLt='<<' GtGt='>>';
+
+// Boolean Operators
+token AmpAmp='&&' PipePipe='||' Bang='!';
+
+// Comparison Operators
+token EqEq='==' BangEq='!=' LessThan='<' GreaterThan='>' LessThanEq='<=' GreaterThanEq='>=';
+
+// Assignment Operators
+token Eq='=';
+token PlusEq='+=' MinusEq='-=' StarEq='*=' StarStarEq='**=' SlashEq='/=' IntDivEq='\\=';
+token PercentEq='%=' AmpEq='&=' PipeEq='|=' CaretEq='^=' LtLtEq='<<=' GtGtEq='>>=';
+token PlusPlus='++' MinusMinus='--';
+
+// Signal Assignment Operators
+token EqEqEq='===' ArrowR='-->' ConstrainR='==>' ArrowL='<--' ConstrainL='<==';
+
+// Literals and Identifiers
+token Identifier='<identifier>' Number='<number>' String='<string>' Version='<version>';
+
+// Whitespace and Comments (trivia)
+token Whitespace CommentLine CommentBlock;
+
+// Skip trivia tokens
+skip Whitespace CommentLine CommentBlock;
+
+// Right associative operators
+right StarStar Eq;
+
+// Start symbol
+start program;
+
+// Program structure
+program: (pragma | include | template | function | main_component)*;
+
+// Pragma directive
+pragma: 'pragma' 'circom' Version ';';
+
+// Include directive
+include: 'include' String ';';
+
+// Template definition
+template: 'template' Identifier '(' [param_list] ')' block;
+
+// Function definition
+function: 'function' Identifier '(' [param_list] ')' block;
+
+// Main component
+main_component: 'component' 'main' [public_list] '=' template_call ';';
+
+public_list: '{' 'public' '[' id_list ']' '}';
+
+// Parameter list
+param_list: param (',' param)*;
+param: Identifier;
+
+// Identifier list
+id_list: Identifier (',' Identifier)*;
+
+// Block
+block: '{' stmt* '}';
+
+// Statements - using explicit FIRST sets via ordered choice
+stmt^:
+  'signal' signal_decl_rest
+| 'var' var_decl_rest
+| 'component' component_decl_rest
+| 'if' if_stmt_rest
+| 'while' while_stmt_rest
+| 'for' for_stmt_rest
+| 'return' return_stmt_rest
+| 'log' log_stmt_rest
+| 'assert' assert_stmt_rest
+| block
+| assignment
+;
+
+// Signal declaration
+signal_decl_rest: [signal_io] [signal_tag_list] signal_init_list ';';
+signal_decl: 'signal' signal_decl_rest;
+
+signal_io: 'input' | 'output';
+
+signal_tag_list: '{' Identifier (',' Identifier)* '}';
+
+signal_init_list: signal_init (',' signal_init)*;
+
+signal_init: complex_id [?1 signal_assign];
+
+signal_assign: ConstrainL expr | ArrowL expr;
+
+// Variable declaration
+var_decl_rest: var_init_list ';';
+var_decl: 'var' var_decl_rest;
+
+var_init_list: var_init (',' var_init)*;
+
+var_init: complex_id ['=' expr];
+
+// Component declaration
+component_decl_rest: complex_id '=' template_call ';';
+component_decl: 'component' component_decl_rest;
+
+// Template call
+template_call: Identifier '(' [arg_list] ')';
+
+// Argument list
+arg_list: expr (',' expr)*;
+
+// Complex identifier (simple form without arrays for now to avoid conflicts)
+complex_id: Identifier;
+
+// Control flow statements
+if_stmt_rest: '(' expr ')' stmt [?t 'else' stmt];
+if_stmt: 'if' if_stmt_rest;
+
+while_stmt_rest: '(' expr ')' stmt;
+while_stmt: 'while' while_stmt_rest;
+
+for_stmt_rest: '(' for_init ';' [expr] ';' [assignment] ')' stmt;
+for_stmt: 'for' for_stmt_rest;
+
+for_init: var_decl | assignment;
+
+return_stmt_rest: [expr] ';';
+return_stmt: 'return' return_stmt_rest;
+
+log_stmt_rest: '(' log_arg_list ')' ';';
+log_stmt: 'log' log_stmt_rest;
+
+log_arg_list: log_arg (',' log_arg)*;
+
+// Use ordered choice for String vs expr (String is more specific)
+log_arg: String / expr;
+
+assert_stmt_rest: '(' expr ')' ';';
+assert_stmt: 'assert' assert_stmt_rest;
+
+// Assignment statement
+assignment: expr [assign_op expr] ';';
+
+assign_op:
+  // Signal assignments
+  ConstrainL | ArrowL | ConstrainR | ArrowR | EqEqEq
+  // Regular assignment
+| Eq
+  // Compound arithmetic
+| PlusEq | MinusEq | StarEq | StarStarEq | SlashEq | IntDivEq | PercentEq
+  // Compound bitwise
+| AmpEq | PipeEq | CaretEq | LtLtEq | GtGtEq
+;
+
+// Expression with precedence (using left recursion for Pratt parser)
+// In Lelwel, branches in a left-recursive rule are ordered by decreasing binding power
+// The Pratt parser uses this order to determine operator precedence
+expr:
+  // Lowest precedence first (ternary)
+  expr ('?' expr ':' expr | '||' expr | '&&' expr | '|' expr | '^' expr | '&' expr
+  | '==' expr | '!=' expr | '<' expr | '>' expr | '<=' expr | '>=' expr
+  | '<<' expr | '>>' expr | '+' expr | '-' expr | '*' expr | '/' expr | IntDiv expr | '%' expr | '**' expr)
+| ('+' | '-' | '!' | '~' | '++' | '--') expr
+| expr postfix
+| primary_expr
+;
+
+postfix:
+  '++'
+| '--'
+| '(' [arg_list] ')' @call_postfix
+| '[' expr ']' @index_postfix
+| '.' Identifier @member_postfix
+;
+
+primary_expr:
+  Number
+| Identifier
+| String
+| '(' [?3 tuple_rest | expr] ')'
+;
+
+tuple_rest: expr ',' expr (',' expr)*;

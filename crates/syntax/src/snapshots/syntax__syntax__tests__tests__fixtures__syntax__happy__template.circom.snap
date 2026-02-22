@@ -1,0 +1,138 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ program 0..360
+|      template 0..349
+|     |      Template 0..8 "template"
+|     |      Whitespace 8..9 " "
+|     |      Identifier 9..20 "MultiplierN"
+|     |      Whitespace 20..21 " "
+|     |      LPar 21..22 "("
+|     |      param_list 22..30
+|     |     |      param 22..23
+|     |     |     |      Identifier 22..23 "N"
+|     |     |      Comma 23..24 ","
+|     |     |      Whitespace 24..25 " "
+|     |     |      param 25..26
+|     |     |     |      Identifier 25..26 "P"
+|     |     |      Comma 26..27 ","
+|     |     |      Whitespace 27..28 " "
+|     |     |      param 28..30
+|     |     |     |      Identifier 28..30 "QQ"
+|     |      RPar 30..31 ")"
+|     |      Whitespace 31..32 " "
+|     |      block 32..349
+|     |     |      LBrace 32..33 "{"
+|     |     |      Whitespace 33..47 "\r\n            "
+|     |     |      CommentLine 47..87 "//Declaration of signals and components."
+|     |     |      Whitespace 87..101 "\r\n            "
+|     |     |      Signal 101..107 "signal"
+|     |     |      Whitespace 107..108 " "
+|     |     |      signal_decl_rest 108..117
+|     |     |     |      signal_io 108..113
+|     |     |     |     |      Input 108..113 "input"
+|     |     |     |      Whitespace 113..114 " "
+|     |     |     |      signal_init_list 114..117
+|     |     |     |     |      signal_init 114..117
+|     |     |     |     |     |      complex_id 114..116
+|     |     |     |     |     |     |      Identifier 114..116 "in"
+|     |     |     |     |     |      error 116..117
+|     |     |     |     |     |     |      LBrack 116..117 "["
+|     |     |      assignment 117..120
+|     |     |     |      expr 117..118
+|     |     |     |     |      primary_expr 117..118
+|     |     |     |     |     |      Identifier 117..118 "N"
+|     |     |     |      error 118..119
+|     |     |     |     |      RBrack 118..119 "]"
+|     |     |     |      Semi 119..120 ";"
+|     |     |      Whitespace 120..134 "\r\n            "
+|     |     |      Signal 134..140 "signal"
+|     |     |      Whitespace 140..141 " "
+|     |     |      signal_decl_rest 141..152
+|     |     |     |      signal_io 141..147
+|     |     |     |     |      Output 141..147 "output"
+|     |     |     |      Whitespace 147..148 " "
+|     |     |     |      signal_init_list 148..151
+|     |     |     |     |      signal_init 148..151
+|     |     |     |     |     |      complex_id 148..151
+|     |     |     |     |     |     |      Identifier 148..151 "out"
+|     |     |     |      Semi 151..152 ";"
+|     |     |      Whitespace 152..166 "\r\n            "
+|     |     |      Component 166..175 "component"
+|     |     |      Whitespace 175..176 " "
+|     |     |      component_decl_rest 176..270
+|     |     |     |      complex_id 176..180
+|     |     |     |     |      Identifier 176..180 "comp"
+|     |     |     |      template_call 180..270
+|     |     |     |     |      error 180..181
+|     |     |     |     |     |      LBrack 180..181 "["
+|     |     |     |     |      arg_list 181..269
+|     |     |     |     |     |      expr 181..184
+|     |     |     |     |     |     |      expr 181..182
+|     |     |     |     |     |     |     |      primary_expr 181..182
+|     |     |     |     |     |     |     |     |      Identifier 181..182 "N"
+|     |     |     |     |     |     |      Minus 182..183 "-"
+|     |     |     |     |     |     |      expr 183..184
+|     |     |     |     |     |     |     |      primary_expr 183..184
+|     |     |     |     |     |     |     |     |      Number 183..184 "1"
+|     |     |     |     |     |      error 184..269
+|     |     |     |     |     |     |      RBrack 184..185 "]"
+|     |     |     |     |     |     |      Semi 185..186 ";"
+|     |     |     |     |     |     |      Whitespace 186..215 "\r\n             \r\n            "
+|     |     |     |     |     |     |      CommentLine 215..228 "//Statements."
+|     |     |     |     |     |     |      Whitespace 228..242 "\r\n            "
+|     |     |     |     |     |     |      For 242..245 "for"
+|     |     |     |     |     |     |      LPar 245..246 "("
+|     |     |     |     |     |     |      Var 246..249 "var"
+|     |     |     |     |     |     |      Whitespace 249..250 " "
+|     |     |     |     |     |     |      Identifier 250..251 "i"
+|     |     |     |     |     |     |      Whitespace 251..252 " "
+|     |     |     |     |     |     |      Eq 252..253 "="
+|     |     |     |     |     |     |      Whitespace 253..254 " "
+|     |     |     |     |     |     |      Number 254..255 "0"
+|     |     |     |     |     |     |      Semi 255..256 ";"
+|     |     |     |     |     |     |      Whitespace 256..257 " "
+|     |     |     |     |     |     |      Identifier 257..258 "i"
+|     |     |     |     |     |     |      Whitespace 258..259 " "
+|     |     |     |     |     |     |      LessThan 259..260 "<"
+|     |     |     |     |     |     |      Whitespace 260..261 " "
+|     |     |     |     |     |     |      Identifier 261..262 "N"
+|     |     |     |     |     |     |      Minus 262..263 "-"
+|     |     |     |     |     |     |      Number 263..264 "1"
+|     |     |     |     |     |     |      Semi 264..265 ";"
+|     |     |     |     |     |     |      Whitespace 265..266 " "
+|     |     |     |     |     |     |      Identifier 266..267 "i"
+|     |     |     |     |     |     |      PlusPlus 267..269 "++"
+|     |     |     |     |      RPar 269..270 ")"
+|     |     |      block 270..328
+|     |     |     |      LBrace 270..271 "{"
+|     |     |     |      Whitespace 271..289 "\r\n                "
+|     |     |     |      assignment 289..313
+|     |     |     |     |      expr 289..296
+|     |     |     |     |     |      expr 289..293
+|     |     |     |     |     |     |      primary_expr 289..293
+|     |     |     |     |     |     |     |      Identifier 289..293 "comp"
+|     |     |     |     |     |      index_postfix 293..296
+|     |     |     |     |     |     |      LBrack 293..294 "["
+|     |     |     |     |     |     |      expr 294..295
+|     |     |     |     |     |     |     |      primary_expr 294..295
+|     |     |     |     |     |     |     |     |      Identifier 294..295 "i"
+|     |     |     |     |     |     |      RBrack 295..296 "]"
+|     |     |     |     |      Whitespace 296..297 " "
+|     |     |     |     |      assign_op 297..298
+|     |     |     |     |     |      Eq 297..298 "="
+|     |     |     |     |      Whitespace 298..299 " "
+|     |     |     |     |      expr 299..312
+|     |     |     |     |     |      expr 299..310
+|     |     |     |     |     |     |      primary_expr 299..310
+|     |     |     |     |     |     |     |      Identifier 299..310 "Multiplier2"
+|     |     |     |     |     |      call_postfix 310..312
+|     |     |     |     |     |     |      LPar 310..311 "("
+|     |     |     |     |     |     |      RPar 311..312 ")"
+|     |     |     |     |      Semi 312..313 ";"
+|     |     |     |      Whitespace 313..327 "\r\n            "
+|     |     |     |      RBrace 327..328 "}"
+|     |     |      Whitespace 328..348 "\r\n                \r\n"
+|     |     |      RBrace 348..349 "}"
+|      Whitespace 349..360 "\r\n         "

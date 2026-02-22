@@ -1,8 +1,4 @@
-use parser::grammar::entry::Scope;
-use parser::input::Input;
-use parser::output::{Child, Output};
-use parser::parser::Parser;
-use parser::token_kind::TokenKind;
+use parser::{Cst, Node, NodeRef, Parser};
 use rowan::{GreenNode, GreenNodeBuilder};
 
 pub use rowan::{
@@ -10,81 +6,61 @@ pub use rowan::{
     WalkEvent,
 };
 
-use crate::syntax_node::SyntaxNode;
+use crate::syntax_node::{SyntaxKind, SyntaxNode};
 
-pub struct SyntaxTreeBuilder<'a> {
-    builder: GreenNodeBuilder<'static>,
-    input: &'a Input<'a>,
+#[derive(Debug)]
+pub enum SyntaxError {
+    InvalidTree(String),
 }
 
-impl<'a> SyntaxTreeBuilder<'a> {
-    pub fn new(input: &'a Input) -> Self {
-        Self {
-            builder: GreenNodeBuilder::new(),
-            input,
+impl std::fmt::Display for SyntaxError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SyntaxError::InvalidTree(msg) => write!(f, "Malformed syntax tree: {}", msg),
         }
     }
-    pub fn build_rec(&mut self, tree: &Output) {
-        self.builder.start_node(tree.kind().into());
-        for child in tree.children() {
-            match child {
-                Child::Token(token_id) => {
-                    let token_kind = self.input.kind_of(*token_id);
-                    // TODO: return Error to replace .unwrap()
-                    let token_value = self.input.token_value(*token_id).unwrap();
-                    self.builder.start_node(token_kind.into());
-                    self.builder.token(token_kind.into(), token_value);
-                    self.builder.finish_node();
-                }
-                Child::Tree(child_tree) => self.build_rec(child_tree),
-                Child::Error(error) => {
-                    let token_kind = TokenKind::Error;
-                    let token_value = error.as_str();
+}
 
-                    self.builder.start_node(token_kind.into());
-                    self.builder.token(token_kind.into(), token_value);
-                    self.builder.finish_node();
+impl std::error::Error for SyntaxError {}
+
+pub struct SyntaxTreeBuilder;
+
+impl SyntaxTreeBuilder {
+    pub fn build(cst: &Cst, source: &str) -> GreenNode {
+        let mut builder = GreenNodeBuilder::new();
+        let root_ref = NodeRef::ROOT;
+        Self::convert_node(&mut builder, cst, root_ref, source);
+        builder.finish()
+    }
+
+    fn convert_node(builder: &mut GreenNodeBuilder, cst: &Cst, node_ref: NodeRef, source: &str) {
+        match cst.get(node_ref) {
+            Node::Rule(rule, _) => {
+                builder.start_node(SyntaxKind::from_rule(rule).into());
+                for child_ref in cst.children(node_ref) {
+                    Self::convert_node(builder, cst, child_ref, source);
+                }
+                builder.finish_node();
+            }
+            Node::Token(token, _span_idx) => {
+                if let Some((text, _span)) = cst.match_token(node_ref, token) {
+                    builder.token(SyntaxKind::from_token(token).into(), text);
                 }
             }
         }
-
-        self.builder.finish_node();
-    }
-
-    pub fn build(&mut self, tree: Output) {
-        self.build_rec(&tree);
-    }
-
-    pub fn finish(self) -> GreenNode {
-        self.builder.finish()
     }
 
     pub fn syntax_tree(source: &str) -> SyntaxNode {
-        let input = Input::new(source);
-
-        let output = Parser::parsing(&input);
-
-        let mut builder = SyntaxTreeBuilder::new(&input);
-        builder.build(output);
-        let green = builder.finish();
+        let mut diags = Vec::new();
+        let parser = Parser::new(source, &mut diags);
+        let cst = parser.parse(&mut diags);
+        let green = Self::build(&cst, source);
         SyntaxNode::new_root(green)
     }
 }
 
-pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
-    let input = Input::new(&source);
-    let output = Parser::parsing_with_scope(&input, scope);
-
-    // output is a tree whose node is index of token, no content of token
-    // convert output into green node
-    let mut builder = SyntaxTreeBuilder::new(&input);
-    builder.build(output);
-    let green = builder.finish();
-
-    // then cast green node into syntax node
-    let syntax = SyntaxNode::new_root(green);
-
-    syntax
+pub fn syntax_node_from_source(source: &str) -> SyntaxNode {
+    SyntaxTreeBuilder::syntax_tree(source)
 }
 
 #[cfg(test)]
@@ -92,49 +68,45 @@ mod test_utils;
 
 #[cfg(test)]
 mod tests {
-    use parser::grammar::entry::Scope;
-
+    use super::SyntaxTreeBuilder;
     use crate::syntax::test_utils::view_ast;
     use crate::test_syntax;
 
     #[test]
+    fn test_syntax_tree_creation() {
+        let source = "template Test() { signal input in; }";
+        let ast = SyntaxTreeBuilder::syntax_tree(source);
+        assert!(ast.children().next().is_some());
+    }
+
+    #[test]
     fn pragma_happy_test() {
-        test_syntax!("/src/test_files/happy/pragma.circom", Scope::Pragma);
+        test_syntax!("tests/fixtures/syntax/happy/pragma.circom");
     }
 
     #[test]
     fn template_happy_test() {
-        // SOURCE & EXPECTED RESULT
-        test_syntax!("/src/test_files/happy/template.circom", Scope::Template);
+        test_syntax!("tests/fixtures/syntax/happy/template.circom");
     }
 
     #[test]
     fn block_happy_test() {
-        test_syntax!("/src/test_files/happy/block.circom", Scope::Block);
+        test_syntax!("tests/fixtures/syntax/happy/block.circom");
     }
 
     #[test]
     fn statements_happy_test() {
-        test_syntax!("/src/test_files/happy/statements.circom", Scope::Block);
+        test_syntax!("tests/fixtures/syntax/happy/statements.circom");
     }
 
     #[test]
     fn comment_happy_test() {
-        test_syntax!(
-            "/src/test_files/happy/block_comment.circom",
-            Scope::CircomProgram
-        );
-        test_syntax!(
-            "/src/test_files/happy/line_comment.circom",
-            Scope::CircomProgram
-        );
+        test_syntax!("tests/fixtures/syntax/happy/block_comment.circom");
+        test_syntax!("tests/fixtures/syntax/happy/line_comment.circom");
     }
 
     #[test]
     fn full_circom_program() {
-        test_syntax!(
-            "/src/test_files/happy/full_circom_program.circom",
-            Scope::CircomProgram
-        );
+        test_syntax!("tests/fixtures/syntax/happy/full_circom_program.circom");
     }
 }

@@ -5,9 +5,11 @@ version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[build-dependencies]
+lelwel = "0.10"
+
 [dependencies]
 logos = { workspace = true }
-lsp-types = { workspace = true, features = ["proposed"] }
 rowan = { workspace = true }
 serde = { workspace = true }
 

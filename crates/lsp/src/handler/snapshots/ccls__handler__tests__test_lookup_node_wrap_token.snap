@@ -1,5 +1,5 @@
 ---
-source: crates/lsp/src/handler/goto_definition.rs
+source: crates/lsp/src/handler/mod.rs
 expression: string_syntax_node
 ---
 template X() {

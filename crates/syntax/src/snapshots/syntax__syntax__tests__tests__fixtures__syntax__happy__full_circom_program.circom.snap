@@ -1,0 +1,632 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ program 0..2427
+|      CommentBlock 0..764 "/*\r\n    Copyright 2018 0KIMS association.\r\n\r\n    This file is part of circom (Zero Knowledge Circuit Compiler).\r\n\r\n    circom is a free software: you can redistribute it and/or modify it\r\n    under the terms of the GNU General Public License as published by\r\n    the Free Software Foundation, either version 3 of the License, or\r\n    (at your option) any later version.\r\n\r\n    circom is distributed in the hope that it will be useful, but WITHOUT\r\n    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY\r\n    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public\r\n    License for more details.\r\n\r\n    You should have received a copy of the GNU General Public License\r\n    along with circom. If not, see <https://www.gnu.org/licenses/>.\r\n*/"
+|      Whitespace 764..766 "\r\n"
+|      CommentBlock 766..1478 "/*\r\n\r\nBinary Sum\r\n==========\r\n\r\nThis component creates a binary sum componet of ops operands and n bits each operand.\r\n\r\ne is Number of carries: Depends on the number of operands in the input.\r\n\r\nMain Constraint:\r\n   in[0][0]     * 2^0  +  in[0][1]     * 2^1  + ..... + in[0][n-1]    * 2^(n-1)  +\r\n + in[1][0]     * 2^0  +  in[1][1]     * 2^1  + ..... + in[1][n-1]    * 2^(n-1)  +\r\n + ..\r\n + in[ops-1][0] * 2^0  +  in[ops-1][1] * 2^1  + ..... + in[ops-1][n-1] * 2^(n-1)  +\r\n ===\r\n   out[0] * 2^0  + out[1] * 2^1 +   + out[n+e-1] *2(n+e-1)\r\n\r\nTo waranty binary outputs:\r\n\r\n    out[0]     * (out[0] - 1) === 0\r\n    out[1]     * (out[0] - 1) === 0\r\n    .\r\n    .\r\n    .\r\n    out[n+e-1] * (out[n+e-1] - 1) == 0\r\n\r\n */"
+|      Whitespace 1478..1484 "\r\n\r\n\r\n"
+|      CommentBlock 1484..1580 "/*\r\n    This function calculates the number of extra bits in the output to do the full sum.\r\n */"
+|      Whitespace 1580..1583 "\r\n "
+|      pragma 1583..1603
+|     |      Pragma 1583..1589 "pragma"
+|     |      Whitespace 1589..1590 " "
+|     |      Circom 1590..1596 "circom"
+|     |      Whitespace 1596..1597 " "
+|     |      Version 1597..1602 "2.0.0"
+|     |      Semi 1602..1603 ";"
+|      Whitespace 1603..1607 "\r\n\r\n"
+|      function 1607..1735
+|     |      Function 1607..1615 "function"
+|     |      Whitespace 1615..1616 " "
+|     |      Identifier 1616..1621 "nbits"
+|     |      LPar 1621..1622 "("
+|     |      param_list 1622..1623
+|     |     |      param 1622..1623
+|     |     |     |      Identifier 1622..1623 "a"
+|     |      RPar 1623..1624 ")"
+|     |      Whitespace 1624..1625 " "
+|     |      block 1625..1735
+|     |     |      LBrace 1625..1626 "{"
+|     |     |      Whitespace 1626..1632 "\r\n    "
+|     |     |      Var 1632..1635 "var"
+|     |     |      Whitespace 1635..1636 " "
+|     |     |      var_decl_rest 1636..1642
+|     |     |     |      var_init_list 1636..1641
+|     |     |     |     |      var_init 1636..1641
+|     |     |     |     |     |      complex_id 1636..1637
+|     |     |     |     |     |     |      Identifier 1636..1637 "n"
+|     |     |     |     |     |      Whitespace 1637..1638 " "
+|     |     |     |     |     |      Eq 1638..1639 "="
+|     |     |     |     |     |      Whitespace 1639..1640 " "
+|     |     |     |     |     |      expr 1640..1641
+|     |     |     |     |     |     |      primary_expr 1640..1641
+|     |     |     |     |     |     |     |      Number 1640..1641 "1"
+|     |     |     |      Semi 1641..1642 ";"
+|     |     |      Whitespace 1642..1648 "\r\n    "
+|     |     |      Var 1648..1651 "var"
+|     |     |      Whitespace 1651..1652 " "
+|     |     |      var_decl_rest 1652..1658
+|     |     |     |      var_init_list 1652..1657
+|     |     |     |     |      var_init 1652..1657
+|     |     |     |     |     |      complex_id 1652..1653
+|     |     |     |     |     |     |      Identifier 1652..1653 "r"
+|     |     |     |     |     |      Whitespace 1653..1654 " "
+|     |     |     |     |     |      Eq 1654..1655 "="
+|     |     |     |     |     |      Whitespace 1655..1656 " "
+|     |     |     |     |     |      expr 1656..1657
+|     |     |     |     |     |     |      primary_expr 1656..1657
+|     |     |     |     |     |     |     |      Number 1656..1657 "0"
+|     |     |     |      Semi 1657..1658 ";"
+|     |     |      Whitespace 1658..1664 "\r\n    "
+|     |     |      While 1664..1669 "while"
+|     |     |      Whitespace 1669..1670 " "
+|     |     |      while_stmt_rest 1670..1717
+|     |     |     |      LPar 1670..1671 "("
+|     |     |     |      expr 1671..1676
+|     |     |     |     |      expr 1671..1672
+|     |     |     |     |     |      primary_expr 1671..1672
+|     |     |     |     |     |     |      Identifier 1671..1672 "n"
+|     |     |     |     |      Minus 1672..1673 "-"
+|     |     |     |     |      expr 1673..1676
+|     |     |     |     |     |      expr 1673..1674
+|     |     |     |     |     |     |      primary_expr 1673..1674
+|     |     |     |     |     |     |     |      Number 1673..1674 "1"
+|     |     |     |     |     |      LessThan 1674..1675 "<"
+|     |     |     |     |     |      expr 1675..1676
+|     |     |     |     |     |     |      primary_expr 1675..1676
+|     |     |     |     |     |     |     |      Identifier 1675..1676 "a"
+|     |     |     |      RPar 1676..1677 ")"
+|     |     |     |      Whitespace 1677..1678 " "
+|     |     |     |      block 1678..1717
+|     |     |     |     |      LBrace 1678..1679 "{"
+|     |     |     |     |      Whitespace 1679..1689 "\r\n        "
+|     |     |     |     |      assignment 1689..1693
+|     |     |     |     |     |      expr 1689..1692
+|     |     |     |     |     |     |      expr 1689..1690
+|     |     |     |     |     |     |     |      primary_expr 1689..1690
+|     |     |     |     |     |     |     |     |      Identifier 1689..1690 "r"
+|     |     |     |     |     |     |      postfix 1690..1692
+|     |     |     |     |     |     |     |      PlusPlus 1690..1692 "++"
+|     |     |     |     |     |      Semi 1692..1693 ";"
+|     |     |     |     |      Whitespace 1693..1703 "\r\n        "
+|     |     |     |     |      assignment 1703..1710
+|     |     |     |     |     |      expr 1703..1704
+|     |     |     |     |     |     |      primary_expr 1703..1704
+|     |     |     |     |     |     |     |      Identifier 1703..1704 "n"
+|     |     |     |     |     |      Whitespace 1704..1705 " "
+|     |     |     |     |     |      assign_op 1705..1707
+|     |     |     |     |     |     |      StarEq 1705..1707 "*="
+|     |     |     |     |     |      Whitespace 1707..1708 " "
+|     |     |     |     |     |      expr 1708..1709
+|     |     |     |     |     |     |      primary_expr 1708..1709
+|     |     |     |     |     |     |     |      Number 1708..1709 "2"
+|     |     |     |     |     |      Semi 1709..1710 ";"
+|     |     |     |     |      Whitespace 1710..1716 "\r\n    "
+|     |     |     |     |      RBrace 1716..1717 "}"
+|     |     |      Whitespace 1717..1723 "\r\n    "
+|     |     |      Return 1723..1729 "return"
+|     |     |      Whitespace 1729..1730 " "
+|     |     |      return_stmt_rest 1730..1732
+|     |     |     |      expr 1730..1731
+|     |     |     |     |      primary_expr 1730..1731
+|     |     |     |     |     |      Identifier 1730..1731 "r"
+|     |     |     |      Semi 1731..1732 ";"
+|     |     |      Whitespace 1732..1734 "\r\n"
+|     |     |      RBrace 1734..1735 "}"
+|      Whitespace 1735..1741 "\r\n\r\n\r\n"
+|      template 1741..2425
+|     |      Template 1741..1749 "template"
+|     |      Whitespace 1749..1750 " "
+|     |      Identifier 1750..1756 "BinSum"
+|     |      LPar 1756..1757 "("
+|     |      param_list 1757..1763
+|     |     |      param 1757..1758
+|     |     |     |      Identifier 1757..1758 "n"
+|     |     |      Comma 1758..1759 ","
+|     |     |      Whitespace 1759..1760 " "
+|     |     |      param 1760..1763
+|     |     |     |      Identifier 1760..1763 "ops"
+|     |      RPar 1763..1764 ")"
+|     |      Whitespace 1764..1765 " "
+|     |      block 1765..2425
+|     |     |      LBrace 1765..1766 "{"
+|     |     |      Whitespace 1766..1772 "\r\n    "
+|     |     |      Var 1772..1775 "var"
+|     |     |      Whitespace 1775..1776 " "
+|     |     |      var_decl_rest 1776..1804
+|     |     |     |      var_init_list 1776..1803
+|     |     |     |     |      var_init 1776..1803
+|     |     |     |     |     |      complex_id 1776..1780
+|     |     |     |     |     |     |      Identifier 1776..1780 "nout"
+|     |     |     |     |     |      Whitespace 1780..1781 " "
+|     |     |     |     |     |      Eq 1781..1782 "="
+|     |     |     |     |     |      Whitespace 1782..1783 " "
+|     |     |     |     |     |      expr 1783..1803
+|     |     |     |     |     |     |      expr 1783..1788
+|     |     |     |     |     |     |     |      primary_expr 1783..1788
+|     |     |     |     |     |     |     |     |      Identifier 1783..1788 "nbits"
+|     |     |     |     |     |     |      call_postfix 1788..1803
+|     |     |     |     |     |     |     |      LPar 1788..1789 "("
+|     |     |     |     |     |     |     |      arg_list 1789..1802
+|     |     |     |     |     |     |     |     |      expr 1789..1802
+|     |     |     |     |     |     |     |     |     |      expr 1789..1798
+|     |     |     |     |     |     |     |     |     |     |      primary_expr 1789..1798
+|     |     |     |     |     |     |     |     |     |     |     |      LPar 1789..1790 "("
+|     |     |     |     |     |     |     |     |     |     |     |      tuple_rest 1790..1797
+|     |     |     |     |     |     |     |     |     |     |     |     |      expr 1790..1797
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 1790..1791
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 1790..1791
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1790..1791 "2"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      StarStar 1791..1793 "**"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 1793..1797
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 1793..1794
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 1793..1794
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 1793..1794 "n"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Whitespace 1794..1795 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Minus 1795..1796 "-"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 1796..1797
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 1796..1797
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 1796..1797 "1"
+|     |     |     |     |     |     |     |     |     |     |     |      RPar 1797..1798 ")"
+|     |     |     |     |     |     |     |     |     |      Star 1798..1799 "*"
+|     |     |     |     |     |     |     |     |     |      expr 1799..1802
+|     |     |     |     |     |     |     |     |     |     |      primary_expr 1799..1802
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 1799..1802 "ops"
+|     |     |     |     |     |     |     |      RPar 1802..1803 ")"
+|     |     |     |      Semi 1803..1804 ";"
+|     |     |      Whitespace 1804..1810 "\r\n    "
+|     |     |      Signal 1810..1816 "signal"
+|     |     |      Whitespace 1816..1817 " "
+|     |     |      signal_decl_rest 1817..1826
+|     |     |     |      signal_io 1817..1822
+|     |     |     |     |      Input 1817..1822 "input"
+|     |     |     |      Whitespace 1822..1823 " "
+|     |     |     |      signal_init_list 1823..1826
+|     |     |     |     |      signal_init 1823..1826
+|     |     |     |     |     |      complex_id 1823..1825
+|     |     |     |     |     |     |      Identifier 1823..1825 "in"
+|     |     |     |     |     |      error 1825..1826
+|     |     |     |     |     |     |      LBrack 1825..1826 "["
+|     |     |      assignment 1826..1831
+|     |     |     |      expr 1826..1829
+|     |     |     |     |      primary_expr 1826..1829
+|     |     |     |     |     |      Identifier 1826..1829 "ops"
+|     |     |     |      error 1829..1831
+|     |     |     |     |      RBrack 1829..1830 "]"
+|     |     |     |     |      LBrack 1830..1831 "["
+|     |     |      assignment 1831..1834
+|     |     |     |      expr 1831..1832
+|     |     |     |     |      primary_expr 1831..1832
+|     |     |     |     |     |      Identifier 1831..1832 "n"
+|     |     |     |      error 1832..1833
+|     |     |     |     |      RBrack 1832..1833 "]"
+|     |     |     |      Semi 1833..1834 ";"
+|     |     |      Whitespace 1834..1840 "\r\n    "
+|     |     |      Signal 1840..1846 "signal"
+|     |     |      Whitespace 1846..1847 " "
+|     |     |      signal_decl_rest 1847..1858
+|     |     |     |      signal_io 1847..1853
+|     |     |     |     |      Output 1847..1853 "output"
+|     |     |     |      Whitespace 1853..1854 " "
+|     |     |     |      signal_init_list 1854..1858
+|     |     |     |     |      signal_init 1854..1858
+|     |     |     |     |     |      complex_id 1854..1857
+|     |     |     |     |     |     |      Identifier 1854..1857 "out"
+|     |     |     |     |     |      error 1857..1858
+|     |     |     |     |     |     |      LBrack 1857..1858 "["
+|     |     |      assignment 1858..1864
+|     |     |     |      expr 1858..1862
+|     |     |     |     |      primary_expr 1858..1862
+|     |     |     |     |     |      Identifier 1858..1862 "nout"
+|     |     |     |      error 1862..1863
+|     |     |     |     |      RBrack 1862..1863 "]"
+|     |     |     |      Semi 1863..1864 ";"
+|     |     |      Whitespace 1864..1872 "\r\n\r\n    "
+|     |     |      Var 1872..1875 "var"
+|     |     |      Whitespace 1875..1876 " "
+|     |     |      var_decl_rest 1876..1884
+|     |     |     |      var_init_list 1876..1883
+|     |     |     |     |      var_init 1876..1883
+|     |     |     |     |     |      complex_id 1876..1879
+|     |     |     |     |     |     |      Identifier 1876..1879 "lin"
+|     |     |     |     |     |      Whitespace 1879..1880 " "
+|     |     |     |     |     |      Eq 1880..1881 "="
+|     |     |     |     |     |      Whitespace 1881..1882 " "
+|     |     |     |     |     |      expr 1882..1883
+|     |     |     |     |     |     |      primary_expr 1882..1883
+|     |     |     |     |     |     |     |      Number 1882..1883 "0"
+|     |     |     |      Semi 1883..1884 ";"
+|     |     |      Whitespace 1884..1890 "\r\n    "
+|     |     |      Var 1890..1893 "var"
+|     |     |      Whitespace 1893..1894 " "
+|     |     |      var_decl_rest 1894..1903
+|     |     |     |      var_init_list 1894..1902
+|     |     |     |     |      var_init 1894..1902
+|     |     |     |     |     |      complex_id 1894..1898
+|     |     |     |     |     |     |      Identifier 1894..1898 "lout"
+|     |     |     |     |     |      Whitespace 1898..1899 " "
+|     |     |     |     |     |      Eq 1899..1900 "="
+|     |     |     |     |     |      Whitespace 1900..1901 " "
+|     |     |     |     |     |      expr 1901..1902
+|     |     |     |     |     |     |      primary_expr 1901..1902
+|     |     |     |     |     |     |     |      Number 1901..1902 "0"
+|     |     |     |      Semi 1902..1903 ";"
+|     |     |      Whitespace 1903..1911 "\r\n\r\n    "
+|     |     |      Var 1911..1914 "var"
+|     |     |      Whitespace 1914..1915 " "
+|     |     |      var_decl_rest 1915..1917
+|     |     |     |      var_init_list 1915..1916
+|     |     |     |     |      var_init 1915..1916
+|     |     |     |     |     |      complex_id 1915..1916
+|     |     |     |     |     |     |      Identifier 1915..1916 "k"
+|     |     |     |      Semi 1916..1917 ";"
+|     |     |      Whitespace 1917..1923 "\r\n    "
+|     |     |      Var 1923..1926 "var"
+|     |     |      Whitespace 1926..1927 " "
+|     |     |      var_decl_rest 1927..1929
+|     |     |     |      var_init_list 1927..1928
+|     |     |     |     |      var_init 1927..1928
+|     |     |     |     |     |      complex_id 1927..1928
+|     |     |     |     |     |     |      Identifier 1927..1928 "j"
+|     |     |     |      Semi 1928..1929 ";"
+|     |     |      Whitespace 1929..1937 "\r\n\r\n    "
+|     |     |      Var 1937..1940 "var"
+|     |     |      Whitespace 1940..1941 " "
+|     |     |      var_decl_rest 1941..1944
+|     |     |     |      var_init_list 1941..1943
+|     |     |     |     |      var_init 1941..1943
+|     |     |     |     |     |      complex_id 1941..1943
+|     |     |     |     |     |     |      Identifier 1941..1943 "e2"
+|     |     |     |      Semi 1943..1944 ";"
+|     |     |      Whitespace 1944..1952 "\r\n\r\n    "
+|     |     |      assignment 1952..1959
+|     |     |     |      expr 1952..1954
+|     |     |     |     |      primary_expr 1952..1954
+|     |     |     |     |     |      Identifier 1952..1954 "e2"
+|     |     |     |      Whitespace 1954..1955 " "
+|     |     |     |      assign_op 1955..1956
+|     |     |     |     |      Eq 1955..1956 "="
+|     |     |     |      Whitespace 1956..1957 " "
+|     |     |     |      expr 1957..1958
+|     |     |     |     |      primary_expr 1957..1958
+|     |     |     |     |     |      Number 1957..1958 "1"
+|     |     |     |      Semi 1958..1959 ";"
+|     |     |      Whitespace 1959..1965 "\r\n    "
+|     |     |      For 1965..1968 "for"
+|     |     |      Whitespace 1968..1969 " "
+|     |     |      for_stmt_rest 1969..2422
+|     |     |     |      LPar 1969..1970 "("
+|     |     |     |      for_init 1970..1974
+|     |     |     |     |      assignment 1970..1974
+|     |     |     |     |     |      expr 1970..1971
+|     |     |     |     |     |     |      primary_expr 1970..1971
+|     |     |     |     |     |     |     |      Identifier 1970..1971 "k"
+|     |     |     |     |     |      assign_op 1971..1972
+|     |     |     |     |     |     |      Eq 1971..1972 "="
+|     |     |     |     |     |      expr 1972..1973
+|     |     |     |     |     |     |      primary_expr 1972..1973
+|     |     |     |     |     |     |     |      Number 1972..1973 "0"
+|     |     |     |     |     |      Semi 1973..1974 ";"
+|     |     |     |      Whitespace 1974..1975 " "
+|     |     |     |      expr 1975..1978
+|     |     |     |     |      expr 1975..1976
+|     |     |     |     |     |      primary_expr 1975..1976
+|     |     |     |     |     |     |      Identifier 1975..1976 "k"
+|     |     |     |     |      LessThan 1976..1977 "<"
+|     |     |     |     |      expr 1977..1978
+|     |     |     |     |     |      primary_expr 1977..1978
+|     |     |     |     |     |     |      Identifier 1977..1978 "n"
+|     |     |     |      Semi 1978..1979 ";"
+|     |     |     |      Whitespace 1979..1980 " "
+|     |     |     |      assignment 1980..1983
+|     |     |     |     |      expr 1980..1983
+|     |     |     |     |     |      expr 1980..1981
+|     |     |     |     |     |     |      primary_expr 1980..1981
+|     |     |     |     |     |     |     |      Identifier 1980..1981 "k"
+|     |     |     |     |     |      postfix 1981..1983
+|     |     |     |     |     |     |      PlusPlus 1981..1983 "++"
+|     |     |     |      RPar 1983..1984 ")"
+|     |     |     |      Whitespace 1984..1985 " "
+|     |     |     |      block 1985..2422
+|     |     |     |     |      LBrace 1985..1986 "{"
+|     |     |     |     |      Whitespace 1986..1996 "\r\n        "
+|     |     |     |     |      For 1996..1999 "for"
+|     |     |     |     |      Whitespace 1999..2000 " "
+|     |     |     |     |      for_stmt_rest 2000..2065
+|     |     |     |     |     |      LPar 2000..2001 "("
+|     |     |     |     |     |      for_init 2001..2005
+|     |     |     |     |     |     |      assignment 2001..2005
+|     |     |     |     |     |     |     |      expr 2001..2002
+|     |     |     |     |     |     |     |     |      primary_expr 2001..2002
+|     |     |     |     |     |     |     |     |     |      Identifier 2001..2002 "j"
+|     |     |     |     |     |     |     |      assign_op 2002..2003
+|     |     |     |     |     |     |     |     |      Eq 2002..2003 "="
+|     |     |     |     |     |     |     |      expr 2003..2004
+|     |     |     |     |     |     |     |     |      primary_expr 2003..2004
+|     |     |     |     |     |     |     |     |     |      Number 2003..2004 "0"
+|     |     |     |     |     |     |     |      Semi 2004..2005 ";"
+|     |     |     |     |     |      Whitespace 2005..2006 " "
+|     |     |     |     |     |      expr 2006..2011
+|     |     |     |     |     |     |      expr 2006..2007
+|     |     |     |     |     |     |     |      primary_expr 2006..2007
+|     |     |     |     |     |     |     |     |      Identifier 2006..2007 "j"
+|     |     |     |     |     |     |      LessThan 2007..2008 "<"
+|     |     |     |     |     |     |      expr 2008..2011
+|     |     |     |     |     |     |     |      primary_expr 2008..2011
+|     |     |     |     |     |     |     |     |      Identifier 2008..2011 "ops"
+|     |     |     |     |     |      Semi 2011..2012 ";"
+|     |     |     |     |     |      Whitespace 2012..2013 " "
+|     |     |     |     |     |      assignment 2013..2016
+|     |     |     |     |     |     |      expr 2013..2016
+|     |     |     |     |     |     |     |      expr 2013..2014
+|     |     |     |     |     |     |     |     |      primary_expr 2013..2014
+|     |     |     |     |     |     |     |     |     |      Identifier 2013..2014 "j"
+|     |     |     |     |     |     |     |      postfix 2014..2016
+|     |     |     |     |     |     |     |     |      PlusPlus 2014..2016 "++"
+|     |     |     |     |     |      RPar 2016..2017 ")"
+|     |     |     |     |     |      Whitespace 2017..2018 " "
+|     |     |     |     |     |      block 2018..2065
+|     |     |     |     |     |     |      LBrace 2018..2019 "{"
+|     |     |     |     |     |     |      Whitespace 2019..2033 "\r\n            "
+|     |     |     |     |     |     |      assignment 2033..2054
+|     |     |     |     |     |     |     |      expr 2033..2036
+|     |     |     |     |     |     |     |     |      primary_expr 2033..2036
+|     |     |     |     |     |     |     |     |     |      Identifier 2033..2036 "lin"
+|     |     |     |     |     |     |     |      Whitespace 2036..2037 " "
+|     |     |     |     |     |     |     |      assign_op 2037..2039
+|     |     |     |     |     |     |     |     |      PlusEq 2037..2039 "+="
+|     |     |     |     |     |     |     |      Whitespace 2039..2040 " "
+|     |     |     |     |     |     |     |      expr 2040..2053
+|     |     |     |     |     |     |     |     |      expr 2040..2048
+|     |     |     |     |     |     |     |     |     |      expr 2040..2045
+|     |     |     |     |     |     |     |     |     |     |      expr 2040..2042
+|     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2040..2042
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2040..2042 "in"
+|     |     |     |     |     |     |     |     |     |     |      index_postfix 2042..2045
+|     |     |     |     |     |     |     |     |     |     |     |      LBrack 2042..2043 "["
+|     |     |     |     |     |     |     |     |     |     |     |      expr 2043..2044
+|     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2043..2044
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2043..2044 "j"
+|     |     |     |     |     |     |     |     |     |     |     |      RBrack 2044..2045 "]"
+|     |     |     |     |     |     |     |     |     |      index_postfix 2045..2048
+|     |     |     |     |     |     |     |     |     |     |      LBrack 2045..2046 "["
+|     |     |     |     |     |     |     |     |     |     |      expr 2046..2047
+|     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2046..2047
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2046..2047 "k"
+|     |     |     |     |     |     |     |     |     |     |      RBrack 2047..2048 "]"
+|     |     |     |     |     |     |     |     |      Whitespace 2048..2049 " "
+|     |     |     |     |     |     |     |     |      Star 2049..2050 "*"
+|     |     |     |     |     |     |     |     |      Whitespace 2050..2051 " "
+|     |     |     |     |     |     |     |     |      expr 2051..2053
+|     |     |     |     |     |     |     |     |     |      primary_expr 2051..2053
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2051..2053 "e2"
+|     |     |     |     |     |     |     |      Semi 2053..2054 ";"
+|     |     |     |     |     |     |      Whitespace 2054..2064 "\r\n        "
+|     |     |     |     |     |     |      RBrace 2064..2065 "}"
+|     |     |     |     |      Whitespace 2065..2075 "\r\n        "
+|     |     |     |     |      assignment 2075..2088
+|     |     |     |     |     |      expr 2075..2077
+|     |     |     |     |     |     |      primary_expr 2075..2077
+|     |     |     |     |     |     |     |      Identifier 2075..2077 "e2"
+|     |     |     |     |     |      Whitespace 2077..2078 " "
+|     |     |     |     |     |      assign_op 2078..2079
+|     |     |     |     |     |     |      Eq 2078..2079 "="
+|     |     |     |     |     |      Whitespace 2079..2080 " "
+|     |     |     |     |     |      expr 2080..2087
+|     |     |     |     |     |     |      expr 2080..2082
+|     |     |     |     |     |     |     |      primary_expr 2080..2082
+|     |     |     |     |     |     |     |     |      Identifier 2080..2082 "e2"
+|     |     |     |     |     |     |      Whitespace 2082..2083 " "
+|     |     |     |     |     |     |      Plus 2083..2084 "+"
+|     |     |     |     |     |     |      Whitespace 2084..2085 " "
+|     |     |     |     |     |     |      expr 2085..2087
+|     |     |     |     |     |     |     |      primary_expr 2085..2087
+|     |     |     |     |     |     |     |     |      Identifier 2085..2087 "e2"
+|     |     |     |     |     |      Semi 2087..2088 ";"
+|     |     |     |     |      Whitespace 2088..2104 "\r\n    \r\n        "
+|     |     |     |     |      assignment 2104..2111
+|     |     |     |     |     |      expr 2104..2106
+|     |     |     |     |     |     |      primary_expr 2104..2106
+|     |     |     |     |     |     |     |      Identifier 2104..2106 "e2"
+|     |     |     |     |     |      Whitespace 2106..2107 " "
+|     |     |     |     |     |      assign_op 2107..2108
+|     |     |     |     |     |     |      Eq 2107..2108 "="
+|     |     |     |     |     |      Whitespace 2108..2109 " "
+|     |     |     |     |     |      expr 2109..2110
+|     |     |     |     |     |     |      primary_expr 2109..2110
+|     |     |     |     |     |     |     |      Number 2109..2110 "1"
+|     |     |     |     |     |      Semi 2110..2111 ";"
+|     |     |     |     |      Whitespace 2111..2121 "\r\n        "
+|     |     |     |     |      For 2121..2124 "for"
+|     |     |     |     |      Whitespace 2124..2125 " "
+|     |     |     |     |      for_stmt_rest 2125..2352
+|     |     |     |     |     |      LPar 2125..2126 "("
+|     |     |     |     |     |      for_init 2126..2130
+|     |     |     |     |     |     |      assignment 2126..2130
+|     |     |     |     |     |     |     |      expr 2126..2127
+|     |     |     |     |     |     |     |     |      primary_expr 2126..2127
+|     |     |     |     |     |     |     |     |     |      Identifier 2126..2127 "k"
+|     |     |     |     |     |     |     |      assign_op 2127..2128
+|     |     |     |     |     |     |     |     |      Eq 2127..2128 "="
+|     |     |     |     |     |     |     |      expr 2128..2129
+|     |     |     |     |     |     |     |     |      primary_expr 2128..2129
+|     |     |     |     |     |     |     |     |     |      Number 2128..2129 "0"
+|     |     |     |     |     |     |     |      Semi 2129..2130 ";"
+|     |     |     |     |     |      Whitespace 2130..2131 " "
+|     |     |     |     |     |      expr 2131..2137
+|     |     |     |     |     |     |      expr 2131..2132
+|     |     |     |     |     |     |     |      primary_expr 2131..2132
+|     |     |     |     |     |     |     |     |      Identifier 2131..2132 "k"
+|     |     |     |     |     |     |      LessThan 2132..2133 "<"
+|     |     |     |     |     |     |      expr 2133..2137
+|     |     |     |     |     |     |     |      primary_expr 2133..2137
+|     |     |     |     |     |     |     |     |      Identifier 2133..2137 "nout"
+|     |     |     |     |     |      Semi 2137..2138 ";"
+|     |     |     |     |     |      Whitespace 2138..2139 " "
+|     |     |     |     |     |      assignment 2139..2142
+|     |     |     |     |     |     |      expr 2139..2142
+|     |     |     |     |     |     |     |      expr 2139..2140
+|     |     |     |     |     |     |     |     |      primary_expr 2139..2140
+|     |     |     |     |     |     |     |     |     |      Identifier 2139..2140 "k"
+|     |     |     |     |     |     |     |      postfix 2140..2142
+|     |     |     |     |     |     |     |     |      PlusPlus 2140..2142 "++"
+|     |     |     |     |     |      RPar 2142..2143 ")"
+|     |     |     |     |     |      Whitespace 2143..2144 " "
+|     |     |     |     |     |      block 2144..2352
+|     |     |     |     |     |     |      LBrace 2144..2145 "{"
+|     |     |     |     |     |     |      Whitespace 2145..2159 "\r\n            "
+|     |     |     |     |     |     |      assignment 2159..2185
+|     |     |     |     |     |     |     |      expr 2159..2165
+|     |     |     |     |     |     |     |     |      expr 2159..2162
+|     |     |     |     |     |     |     |     |     |      primary_expr 2159..2162
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2159..2162 "out"
+|     |     |     |     |     |     |     |     |      index_postfix 2162..2165
+|     |     |     |     |     |     |     |     |     |      LBrack 2162..2163 "["
+|     |     |     |     |     |     |     |     |     |      expr 2163..2164
+|     |     |     |     |     |     |     |     |     |     |      primary_expr 2163..2164
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2163..2164 "k"
+|     |     |     |     |     |     |     |     |     |      RBrack 2164..2165 "]"
+|     |     |     |     |     |     |     |      Whitespace 2165..2166 " "
+|     |     |     |     |     |     |     |      assign_op 2166..2169
+|     |     |     |     |     |     |     |     |      ArrowL 2166..2169 "<--"
+|     |     |     |     |     |     |     |      Whitespace 2169..2170 " "
+|     |     |     |     |     |     |     |      expr 2170..2184
+|     |     |     |     |     |     |     |     |      expr 2170..2180
+|     |     |     |     |     |     |     |     |     |      primary_expr 2170..2180
+|     |     |     |     |     |     |     |     |     |     |      LPar 2170..2171 "("
+|     |     |     |     |     |     |     |     |     |     |      tuple_rest 2171..2179
+|     |     |     |     |     |     |     |     |     |     |     |      expr 2171..2179
+|     |     |     |     |     |     |     |     |     |     |     |     |      expr 2171..2174
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2171..2174
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2171..2174 "lin"
+|     |     |     |     |     |     |     |     |     |     |     |     |      Whitespace 2174..2175 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      GtGt 2175..2177 ">>"
+|     |     |     |     |     |     |     |     |     |     |     |     |      Whitespace 2177..2178 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      expr 2178..2179
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2178..2179
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2178..2179 "k"
+|     |     |     |     |     |     |     |     |     |     |      RPar 2179..2180 ")"
+|     |     |     |     |     |     |     |     |      Whitespace 2180..2181 " "
+|     |     |     |     |     |     |     |     |      Ampersand 2181..2182 "&"
+|     |     |     |     |     |     |     |     |      Whitespace 2182..2183 " "
+|     |     |     |     |     |     |     |     |      expr 2183..2184
+|     |     |     |     |     |     |     |     |     |      primary_expr 2183..2184
+|     |     |     |     |     |     |     |     |     |     |      Number 2183..2184 "1"
+|     |     |     |     |     |     |     |      Semi 2184..2185 ";"
+|     |     |     |     |     |     |      Whitespace 2185..2205 "\r\n    \r\n            "
+|     |     |     |     |     |     |      CommentLine 2205..2228 "// Ensure out is binary"
+|     |     |     |     |     |     |      Whitespace 2228..2242 "\r\n            "
+|     |     |     |     |     |     |      assignment 2242..2270
+|     |     |     |     |     |     |     |      expr 2242..2263
+|     |     |     |     |     |     |     |     |      expr 2242..2248
+|     |     |     |     |     |     |     |     |     |      expr 2242..2245
+|     |     |     |     |     |     |     |     |     |     |      primary_expr 2242..2245
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2242..2245 "out"
+|     |     |     |     |     |     |     |     |     |      index_postfix 2245..2248
+|     |     |     |     |     |     |     |     |     |     |      LBrack 2245..2246 "["
+|     |     |     |     |     |     |     |     |     |     |      expr 2246..2247
+|     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2246..2247
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2246..2247 "k"
+|     |     |     |     |     |     |     |     |     |     |      RBrack 2247..2248 "]"
+|     |     |     |     |     |     |     |     |      Whitespace 2248..2249 " "
+|     |     |     |     |     |     |     |     |      Star 2249..2250 "*"
+|     |     |     |     |     |     |     |     |      Whitespace 2250..2251 " "
+|     |     |     |     |     |     |     |     |      expr 2251..2263
+|     |     |     |     |     |     |     |     |     |      primary_expr 2251..2263
+|     |     |     |     |     |     |     |     |     |     |      LPar 2251..2252 "("
+|     |     |     |     |     |     |     |     |     |     |      tuple_rest 2252..2262
+|     |     |     |     |     |     |     |     |     |     |     |      expr 2252..2262
+|     |     |     |     |     |     |     |     |     |     |     |     |      expr 2252..2258
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 2252..2255
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2252..2255
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2252..2255 "out"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      index_postfix 2255..2258
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      LBrack 2255..2256 "["
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      expr 2256..2257
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2256..2257
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2256..2257 "k"
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      RBrack 2257..2258 "]"
+|     |     |     |     |     |     |     |     |     |     |     |     |      Whitespace 2258..2259 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      Minus 2259..2260 "-"
+|     |     |     |     |     |     |     |     |     |     |     |     |      Whitespace 2260..2261 " "
+|     |     |     |     |     |     |     |     |     |     |     |     |      expr 2261..2262
+|     |     |     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2261..2262
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |      Number 2261..2262 "1"
+|     |     |     |     |     |     |     |     |     |     |      RPar 2262..2263 ")"
+|     |     |     |     |     |     |     |      Whitespace 2263..2264 " "
+|     |     |     |     |     |     |     |      assign_op 2264..2267
+|     |     |     |     |     |     |     |     |      EqEqEq 2264..2267 "==="
+|     |     |     |     |     |     |     |      Whitespace 2267..2268 " "
+|     |     |     |     |     |     |     |      expr 2268..2269
+|     |     |     |     |     |     |     |     |      primary_expr 2268..2269
+|     |     |     |     |     |     |     |     |     |      Number 2268..2269 "0"
+|     |     |     |     |     |     |     |      Semi 2269..2270 ";"
+|     |     |     |     |     |     |      Whitespace 2270..2290 "\r\n    \r\n            "
+|     |     |     |     |     |     |      assignment 2290..2310
+|     |     |     |     |     |     |     |      expr 2290..2294
+|     |     |     |     |     |     |     |     |      primary_expr 2290..2294
+|     |     |     |     |     |     |     |     |     |      Identifier 2290..2294 "lout"
+|     |     |     |     |     |     |     |      Whitespace 2294..2295 " "
+|     |     |     |     |     |     |     |      assign_op 2295..2297
+|     |     |     |     |     |     |     |     |      PlusEq 2295..2297 "+="
+|     |     |     |     |     |     |     |      Whitespace 2297..2298 " "
+|     |     |     |     |     |     |     |      expr 2298..2309
+|     |     |     |     |     |     |     |     |      expr 2298..2304
+|     |     |     |     |     |     |     |     |     |      expr 2298..2301
+|     |     |     |     |     |     |     |     |     |     |      primary_expr 2298..2301
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2298..2301 "out"
+|     |     |     |     |     |     |     |     |     |      index_postfix 2301..2304
+|     |     |     |     |     |     |     |     |     |     |      LBrack 2301..2302 "["
+|     |     |     |     |     |     |     |     |     |     |      expr 2302..2303
+|     |     |     |     |     |     |     |     |     |     |     |      primary_expr 2302..2303
+|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2302..2303 "k"
+|     |     |     |     |     |     |     |     |     |     |      RBrack 2303..2304 "]"
+|     |     |     |     |     |     |     |     |      Whitespace 2304..2305 " "
+|     |     |     |     |     |     |     |     |      Star 2305..2306 "*"
+|     |     |     |     |     |     |     |     |      Whitespace 2306..2307 " "
+|     |     |     |     |     |     |     |     |      expr 2307..2309
+|     |     |     |     |     |     |     |     |     |      primary_expr 2307..2309
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2307..2309 "e2"
+|     |     |     |     |     |     |     |      Semi 2309..2310 ";"
+|     |     |     |     |     |     |      Whitespace 2310..2330 "\r\n    \r\n            "
+|     |     |     |     |     |     |      assignment 2330..2341
+|     |     |     |     |     |     |     |      expr 2330..2332
+|     |     |     |     |     |     |     |     |      primary_expr 2330..2332
+|     |     |     |     |     |     |     |     |     |      Identifier 2330..2332 "e2"
+|     |     |     |     |     |     |     |      Whitespace 2332..2333 " "
+|     |     |     |     |     |     |     |      assign_op 2333..2334
+|     |     |     |     |     |     |     |     |      Eq 2333..2334 "="
+|     |     |     |     |     |     |     |      Whitespace 2334..2335 " "
+|     |     |     |     |     |     |     |      expr 2335..2340
+|     |     |     |     |     |     |     |     |      expr 2335..2337
+|     |     |     |     |     |     |     |     |     |      primary_expr 2335..2337
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2335..2337 "e2"
+|     |     |     |     |     |     |     |     |      Plus 2337..2338 "+"
+|     |     |     |     |     |     |     |     |      expr 2338..2340
+|     |     |     |     |     |     |     |     |     |      primary_expr 2338..2340
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2338..2340 "e2"
+|     |     |     |     |     |     |     |      Semi 2340..2341 ";"
+|     |     |     |     |     |     |      Whitespace 2341..2351 "\r\n        "
+|     |     |     |     |     |     |      RBrace 2351..2352 "}"
+|     |     |     |     |      Whitespace 2352..2368 "\r\n    \r\n        "
+|     |     |     |     |      CommentLine 2368..2386 "// Ensure the sum;"
+|     |     |     |     |      Whitespace 2386..2402 "\r\n    \r\n        "
+|     |     |     |     |      assignment 2402..2415
+|     |     |     |     |     |      expr 2402..2405
+|     |     |     |     |     |     |      primary_expr 2402..2405
+|     |     |     |     |     |     |     |      Identifier 2402..2405 "lin"
+|     |     |     |     |     |      Whitespace 2405..2406 " "
+|     |     |     |     |     |      assign_op 2406..2409
+|     |     |     |     |     |     |      EqEqEq 2406..2409 "==="
+|     |     |     |     |     |      Whitespace 2409..2410 " "
+|     |     |     |     |     |      expr 2410..2414
+|     |     |     |     |     |     |      primary_expr 2410..2414
+|     |     |     |     |     |     |     |      Identifier 2410..2414 "lout"
+|     |     |     |     |     |      Semi 2414..2415 ";"
+|     |     |     |     |      Whitespace 2415..2421 "\r\n    "
+|     |     |     |     |      RBrace 2421..2422 "}"
+|     |     |      Whitespace 2422..2424 "\r\n"
+|     |     |      RBrace 2424..2425 "}"
+|      Whitespace 2425..2427 "\r\n"

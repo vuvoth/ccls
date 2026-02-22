@@ -1,66 +1,61 @@
-import path = require("path");
-import { ExtensionContext, commands, window } from "vscode";
-
+import path from "path";
+import { ExtensionContext, commands, window, workspace } from "vscode";
 import {
-  Executable,
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  Trace,
 } from "vscode-languageclient/node";
-import which = require("which");
+import which from "which";
 
 let client: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
-  // If the extension is launched in debug mode then the debug server options are used
-  // Otherwise the run options are used
   const platform = process.platform;
-  let ccls_path = "ccls";
+  const config = workspace.getConfiguration("circom-lsp");
 
-  const exist_ccls = await which(ccls_path, { nothrow: true });
+  // 1. Check custom server path from config
+  let cclsPath = config.get<string>("server.path") || "";
 
-  if (exist_ccls === null) {
+  // 2. If not configured, try to find in PATH
+  if (!cclsPath) {
+    cclsPath = (await which("ccls", { nothrow: true })) || "";
+  }
+
+  // 3. If not in PATH, use bundled binary
+  if (!cclsPath) {
     if (platform === "linux") {
-      ccls_path = path.join(__dirname, "../bin/ccls_linux");
+      cclsPath = path.join(context.extensionPath, "bin", "ccls_linux");
     } else if (platform === "darwin") {
-      ccls_path = path.join(__dirname, "../bin/ccls_mac");
+      cclsPath = path.join(context.extensionPath, "bin", "ccls_mac");
+    } else if (platform === "win32") {
+      cclsPath = path.join(context.extensionPath, "bin", "ccls_windows.exe");
     } else {
-      window.showErrorMessage(`We don't support ${platform}`);
+      window.showErrorMessage(`Circom LSP: Unsupported platform ${platform}`);
+      return;
     }
   }
 
-  const run: Executable = {
-    command: process.env.__CIRCOM_LSP_SERVER_DEBUG ?? ccls_path,
-  };
-
   const serverOptions: ServerOptions = {
-    run,
-    debug: run,
+    command: process.env.__CIRCOM_LSP_SERVER_DEBUG ?? cclsPath,
   };
 
-  // Options to control the language client
   const clientOptions: LanguageClientOptions = {
-    // Register the server for plain text documents
     documentSelector: [{ scheme: "file", language: "circom" }],
   };
 
-  // Create the language client and start the client.
   client = new LanguageClient(
     "circom-lsp",
-    "circom-lsp",
+    "Circom Language Server",
     serverOptions,
     clientOptions
   );
 
   await client.start();
+
   const disposable = commands.registerCommand(
     "circom-plus.restart",
     async () => {
-      // The code you place here will be executed every time your command is executed
-
-      window.showInformationMessage("Restart server");
-      // Display a message box to the user
+      window.showInformationMessage("Restarting Circom LSP server...");
       await client.restart();
     }
   );
@@ -72,6 +67,5 @@ export async function deactivate() {
   if (!client) {
     return undefined;
   }
-
   await client.stop();
 }

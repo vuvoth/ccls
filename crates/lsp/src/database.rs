@@ -4,637 +4,384 @@ use std::{
     path::PathBuf,
 };
 
-use std::collections::hash_map::DefaultHasher;
-
 use lsp_types::{Position, Range, Url};
-
-use rowan::{ast::AstNode, TextSize};
+use path_absolutize::*;
+use rowan::TextSize;
 use syntax::{
-    abstract_syntax_tree::{
-        AstCircomProgram, AstComponentDecl, AstFunctionDef, AstInputSignalDecl,
-        AstOutputSignalDecl, AstSignalDecl, AstTemplateDef, AstVarDecl,
-    },
-    syntax_node::{SyntaxNode, SyntaxToken},
+    abstract_syntax_tree::{Function, Program, Template},
+    syntax_node::SyntaxNode,
 };
-
-/**
-* We will store
-* Open data -> Parse -> output -> Syntax -> analyzer -> db{
-   FileID {
-       Template {
-           signal,
-
-       }
-   }
-
-                               value
-   Template map: { Hash(FileID, token) -> Template}
-   Vars map: {Hash(FileID, template, token)} -> Var}
-   Component map {Hash(FileID, template, token)} -> ComponentInfo
-   Signals map {Hash(FileID, template, token)} -> Signal
-
-
-
-}
-*/
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct FileId(pub u64);
 
 #[derive(Clone)]
 pub struct FileDB {
-    pub file_id: FileId,
-    pub file_path: Url,
-    pub end_line_vec: Vec<u32>,
+    pub id: FileId,
+    pub url: Url,
+    line_ends: Vec<u32>,
 }
-
-use path_absolutize::*;
 
 impl FileDB {
-    pub fn create(content: &str, file_path: Url) -> Self {
-        let mut hasher = DefaultHasher::new();
-        file_path
-            .to_file_path()
-            .unwrap()
-            .absolutize()
-            .unwrap()
-            .hash(&mut hasher);
-        Self::new(FileId(hasher.finish()), content, file_path)
-    }
-
-    pub(super) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
-        let mut file_utils = Self {
-            file_id,
-            file_path,
-            end_line_vec: Vec::new(),
-        };
-
-        for (id, c) in content.chars().enumerate() {
-            if c == '\n' {
-                file_utils.end_line_vec.push(id as u32);
+    pub fn new(content: &str, url: Url) -> Self {
+        let id = {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            if let Ok(p) = url.to_file_path() {
+                if let Ok(abs) = p.absolutize() {
+                    abs.to_path_buf().hash(&mut hasher);
+                }
             }
-        }
-
-        file_utils
-    }
-
-    pub fn get_path(&self) -> PathBuf {
-        let p = self.file_path.path();
-        PathBuf::from(p)
-    }
-
-    pub fn off_set(&self, position: Position) -> TextSize {
-        if position.line == 0 {
-            return position.character.into();
-        }
-        (self.end_line_vec[position.line as usize - 1] + position.character + 1).into()
-    }
-
-    pub fn position(&self, off_set: TextSize) -> Position {
-        let line = match self.end_line_vec.binary_search(&(off_set.into())) {
-            Ok(l) => l,
-            Err(l) => l,
+            FileId(hasher.finish())
         };
 
-        Position::new(
-            line as u32,
-            if line > 0 {
-                (u32::from(off_set)) - self.end_line_vec[line - 1] - 1
-            } else {
-                off_set.into()
-            },
-        )
+        let line_ends = content
+            .char_indices()
+            .filter_map(|(i, c)| (c == '\n').then_some(i as u32))
+            .collect();
+
+        Self { id, url, line_ends }
     }
 
-    pub fn range(&self, syntax: &SyntaxNode) -> Range {
-        let syntax_range = syntax.text_range();
-        Range {
-            start: self.position(syntax_range.start()),
-            end: self.position(syntax_range.end()),
+    pub fn path(&self) -> PathBuf {
+        self.url.to_file_path().unwrap_or_default()
+    }
+
+    pub fn offset(&self, pos: Position) -> TextSize {
+        if pos.line == 0 {
+            return pos.character.into();
         }
+        self.line_ends
+            .get(pos.line as usize - 1)
+            .map(|&end| (end + pos.character + 1).into())
+            .unwrap_or_else(|| self.line_ends.last().copied().unwrap_or(0).into())
     }
-}
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
-pub struct Id(pub u64);
-
-pub trait TokenId {
-    fn token_id(&self) -> Id;
-}
-
-impl TokenId for SyntaxNode {
-    fn token_id(&self) -> Id {
-        let mut hasher = DefaultHasher::new();
-        self.to_string().hash(&mut hasher);
-        Id(hasher.finish())
-    }
-}
-
-impl TokenId for SyntaxToken {
-    fn token_id(&self) -> Id {
-        let mut hasher = DefaultHasher::new();
-        self.to_string().hash(&mut hasher);
-        Id(hasher.finish())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct SemanticLocations(pub HashMap<Id, Vec<Range>>);
-
-impl Default for SemanticLocations {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl SemanticLocations {
-    pub fn insert(&mut self, token_id: Id, range: Range) {
-        if let Some(locations) = self.0.get_mut(&token_id) {
-            locations.push(range);
+    pub fn position(&self, offset: TextSize) -> Position {
+        let offset: u32 = offset.into();
+        let line = self.line_ends.binary_search(&offset).unwrap_or_else(|x| x);
+        let char = if line > 0 {
+            offset.saturating_sub(self.line_ends.get(line - 1).copied().unwrap_or(0) + 1)
         } else {
-            self.0.insert(token_id, vec![range]);
-        }
+            offset
+        };
+        Position::new(line as u32, char)
     }
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-}
 
-// template
-#[derive(Debug, Clone)]
-pub struct TemplateDataSemantic {
-    pub param: SemanticLocations,
-    pub signal: SemanticLocations,
-    pub variable: SemanticLocations,
-    pub component: SemanticLocations,
-}
-
-impl TemplateDataSemantic {
-    fn new() -> Self {
-        Self {
-            param: SemanticLocations::new(),
-            signal: SemanticLocations::new(),
-            variable: SemanticLocations::new(),
-            component: SemanticLocations::new(),
-        }
-    }
-}
-
-// function
-#[derive(Debug, Clone)]
-pub struct FunctionDataSemantic {
-    pub param: SemanticLocations,
-    // TODO: Functions cannot declare signals or generate constraints
-    pub variable: SemanticLocations,
-    pub component: SemanticLocations,
-}
-
-impl FunctionDataSemantic {
-    fn new() -> Self {
-        Self {
-            param: SemanticLocations::new(),
-            variable: SemanticLocations::new(),
-            component: SemanticLocations::new(),
-        }
+    pub fn range(&self, node: &SyntaxNode) -> Range {
+        let r = node.text_range();
+        Range::new(self.position(r.start()), self.position(r.end()))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct SemanticData {
-    pub template: SemanticLocations,
-    pub template_data_semantic: HashMap<Id, TemplateDataSemantic>,
-
-    pub function: SemanticLocations,
-    pub function_data_semantic: HashMap<Id, FunctionDataSemantic>,
+pub struct Def {
+    pub range: Range,
+    pub kind: DefKind,
 }
 
-pub enum TemplateDataInfo {
-    Param((Id, Range)),
-    Signal((Id, Range)),
-    Variable((Id, Range)),
-    Component((Id, Range)),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DefKind {
+    Template,
+    Function,
+    Param,
+    Signal,
+    Var,
+    Component,
 }
 
-pub enum FunctionDataInfo {
-    Param((Id, Range)),
-    Variable((Id, Range)),
-    Component((Id, Range)),
+#[derive(Debug, Clone, Default)]
+pub struct SymbolTable(HashMap<String, Def>);
+
+impl SymbolTable {
+    pub fn insert(&mut self, name: impl Into<String>, def: Def) {
+        self.0.insert(name.into(), def);
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Def> {
+        self.0.get(name)
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        self.0.contains_key(name)
+    }
 }
 
-pub enum SemanticInfo {
-    Template((Id, Range)),
-    TemplateData((Id, TemplateDataInfo)),
-
-    Function((Id, Range)),
-    FunctionData((Id, FunctionDataInfo)),
+#[derive(Debug, Clone, Default)]
+pub struct ScopeSymbols {
+    pub params: SymbolTable,
+    pub signals: SymbolTable,
+    pub vars: SymbolTable,
+    pub components: SymbolTable,
 }
 
-#[derive(Debug, Clone)]
+impl ScopeSymbols {
+    pub fn lookup(&self, name: &str) -> Option<&Def> {
+        self.params
+            .get(name)
+            .or_else(|| self.signals.get(name))
+            .or_else(|| self.vars.get(name))
+            .or_else(|| self.components.get(name))
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        self.params.contains(name)
+            || self.signals.contains(name)
+            || self.vars.contains(name)
+            || self.components.contains(name)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct FileSemantics {
+    pub templates: SymbolTable,
+    pub functions: SymbolTable,
+    pub template_scopes: HashMap<String, ScopeSymbols>,
+    pub function_scopes: HashMap<String, ScopeSymbols>,
+}
+
+impl FileSemantics {
+    pub fn lookup_global(&self, name: &str) -> Option<&Def> {
+        self.templates
+            .get(name)
+            .or_else(|| self.functions.get(name))
+    }
+
+    pub fn lookup_in_template(&self, template_name: &str, symbol_name: &str) -> Option<&Def> {
+        self.template_scopes.get(template_name)?.lookup(symbol_name)
+    }
+
+    pub fn lookup_in_function(&self, function_name: &str, symbol_name: &str) -> Option<&Def> {
+        self.function_scopes.get(function_name)?.lookup(symbol_name)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct SemanticDB {
-    pub semantic: HashMap<FileId, SemanticData>,
-}
-
-impl Default for SemanticDB {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub files: HashMap<FileId, FileSemantics>,
 }
 
 impl SemanticDB {
-    pub fn new() -> Self {
-        Self {
-            semantic: HashMap::new(),
-        }
+    pub fn get(&self, id: FileId) -> Option<&FileSemantics> {
+        self.files.get(&id)
     }
 
-    pub fn insert(&mut self, file_id: FileId, semantic_info: SemanticInfo) {
-        let semantic = self.semantic.entry(file_id).or_insert(SemanticData {
-            template: SemanticLocations::new(),
-            template_data_semantic: HashMap::new(),
-            function: SemanticLocations::new(),
-            function_data_semantic: HashMap::new(),
-        });
-
-        match semantic_info {
-            SemanticInfo::Template((id, range)) => {
-                semantic.template.insert(id, range);
-            }
-            SemanticInfo::TemplateData((template_id, template_data_info)) => {
-                let template_semantic = semantic
-                    .template_data_semantic
-                    .entry(template_id)
-                    .or_insert(TemplateDataSemantic::new());
-
-                match template_data_info {
-                    TemplateDataInfo::Component((id, r)) => {
-                        template_semantic.component.insert(id, r)
-                    }
-                    TemplateDataInfo::Variable((id, r)) => template_semantic.variable.insert(id, r),
-                    TemplateDataInfo::Signal((id, r)) => template_semantic.signal.insert(id, r),
-                    TemplateDataInfo::Param((id, r)) => template_semantic.param.insert(id, r),
-                }
-            }
-            SemanticInfo::Function((id, range)) => {
-                semantic.function.insert(id, range);
-            }
-            SemanticInfo::FunctionData((function_id, function_data_info)) => {
-                let function_semantic = semantic
-                    .function_data_semantic
-                    .entry(function_id)
-                    .or_insert(FunctionDataSemantic::new());
-
-                match function_data_info {
-                    FunctionDataInfo::Component((id, r)) => {
-                        function_semantic.component.insert(id, r)
-                    }
-                    FunctionDataInfo::Variable((id, r)) => function_semantic.variable.insert(id, r),
-                    FunctionDataInfo::Param((id, r)) => function_semantic.param.insert(id, r),
-                }
-            }
-        }
+    pub fn get_mut(&mut self, id: FileId) -> &mut FileSemantics {
+        self.files.entry(id).or_default()
     }
 
-    pub fn circom_program_semantic(
-        &mut self,
-        file_db: &FileDB,
-        abstract_syntax_tree: &AstCircomProgram,
-    ) {
-        for template in abstract_syntax_tree.template_list() {
+    pub fn index_program(&mut self, file: &FileDB, program: &Program) {
+        let semantics = self.files.entry(file.id).or_default();
+
+        for template in program.templates() {
             if let Some(name) = template.name() {
-                let template_id = name.syntax().token_id();
-                self.insert(
-                    file_db.file_id,
-                    SemanticInfo::Template((template_id, file_db.range(template.syntax()))),
+                let name_str = name.text();
+                semantics.templates.insert(
+                    name_str,
+                    Def {
+                        range: file.range(template.syntax_node()),
+                        kind: DefKind::Template,
+                    },
                 );
-                self.template_semantic(file_db, &template);
+
+                let scope = semantics
+                    .template_scopes
+                    .entry(name_str.to_string())
+                    .or_default();
+                Self::index_template(scope, file, &template);
             }
         }
 
-        for function in abstract_syntax_tree.function_list() {
-            if let Some(name) = function.function_name() {
-                let function_id = name.syntax().token_id();
-                self.insert(
-                    file_db.file_id,
-                    SemanticInfo::Function((function_id, file_db.range(function.syntax()))),
+        for function in program.functions() {
+            if let Some(name) = function.name() {
+                let name_str = name.text();
+                semantics.functions.insert(
+                    name_str,
+                    Def {
+                        range: file.range(function.syntax_node()),
+                        kind: DefKind::Function,
+                    },
                 );
-                self.function_semantic(file_db, &function);
-            }
-        }
-    }
 
-    pub fn template_semantic(&mut self, file_db: &FileDB, ast_template: &AstTemplateDef) {
-        let template_id = ast_template.syntax().token_id();
-
-        if let Some(params) = ast_template.parameter_list() {
-            for param_name in params.parameters() {
-                self.insert(
-                    file_db.file_id,
-                    SemanticInfo::TemplateData((
-                        template_id,
-                        TemplateDataInfo::Param((
-                            param_name.syntax().token_id(),
-                            file_db.range(param_name.syntax()),
-                        )),
-                    )),
-                );
-            }
-        };
-
-        if let Some(statements) = ast_template.statements() {
-            for signal in statements.find_children::<AstInputSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::TemplateData((
-                            template_id,
-                            TemplateDataInfo::Signal((
-                                name.syntax().token_id(),
-                                file_db.range(signal.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-            for signal in statements.find_children::<AstOutputSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::TemplateData((
-                            template_id,
-                            TemplateDataInfo::Signal((
-                                name.syntax().token_id(),
-                                file_db.range(signal.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-
-            for signal in statements.find_children::<AstSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::TemplateData((
-                            template_id,
-                            TemplateDataInfo::Signal((
-                                name.syntax().token_id(),
-                                file_db.range(signal.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-
-            for var in statements.find_children::<AstVarDecl>() {
-                if let Some(name) = var.var_identifier().unwrap().name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::TemplateData((
-                            template_id,
-                            TemplateDataInfo::Variable((
-                                name.syntax().token_id(),
-                                file_db.range(var.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-
-            for component in statements.find_children::<AstComponentDecl>() {
-                if let Some(component_var) = component.component_identifier() {
-                    if let Some(name) = component_var.name() {
-                        self.insert(
-                            file_db.file_id,
-                            SemanticInfo::TemplateData((
-                                template_id,
-                                TemplateDataInfo::Component((
-                                    name.syntax().token_id(),
-                                    file_db.range(component.syntax()),
-                                )),
-                            )),
-                        );
-                    }
-                }
+                let scope = semantics
+                    .function_scopes
+                    .entry(name_str.to_string())
+                    .or_default();
+                Self::index_function(scope, file, &function);
             }
         }
     }
 
-    pub fn function_semantic(&mut self, file_db: &FileDB, ast_function: &AstFunctionDef) {
-        let function_id = ast_function.syntax().token_id();
-
-        if let Some(params) = ast_function.parameter_list() {
-            for param_name in params.parameters() {
-                self.insert(
-                    file_db.file_id,
-                    SemanticInfo::FunctionData((
-                        function_id,
-                        FunctionDataInfo::Param((
-                            param_name.syntax().token_id(),
-                            file_db.range(param_name.syntax()),
-                        )),
-                    )),
+    fn index_template(scope: &mut ScopeSymbols, file: &FileDB, template: &Template) {
+        if let Some(params) = template.params() {
+            for param in params.idents() {
+                let name = param.text();
+                scope.params.insert(
+                    name,
+                    Def {
+                        range: file.range(&param.syntax_token().parent().unwrap()),
+                        kind: DefKind::Param,
+                    },
                 );
             }
-        };
+        }
 
-        if let Some(statements) = ast_function.statements() {
-            // function does not contains signal decalrations --> skip signals
-
-            for var in statements.find_children::<AstVarDecl>() {
-                if let Some(name) = var.var_identifier().unwrap().name() {
-                    self.insert(
-                        file_db.file_id,
-                        SemanticInfo::FunctionData((
-                            function_id,
-                            FunctionDataInfo::Variable((
-                                name.syntax().token_id(),
-                                file_db.range(var.syntax()),
-                            )),
-                        )),
-                    );
-                }
-            }
-
-            for component in statements.find_children::<AstComponentDecl>() {
-                if let Some(component_var) = component.component_identifier() {
-                    if let Some(name) = component_var.name() {
-                        self.insert(
-                            file_db.file_id,
-                            SemanticInfo::FunctionData((
-                                function_id,
-                                FunctionDataInfo::Component((
-                                    name.syntax().token_id(),
-                                    file_db.range(component.syntax()),
-                                )),
-                            )),
-                        );
-                    }
-                }
+        for signal in template.signals() {
+            if let Some(ident) = signal.ident() {
+                let name = ident.text();
+                scope.signals.insert(
+                    name,
+                    Def {
+                        range: file.range(signal.syntax_node()),
+                        kind: DefKind::Signal,
+                    },
+                );
             }
         }
-    }
-}
 
-impl SemanticData {
-    pub fn lookup_template_param(
-        &self,
-        template_id: Id,
-        signal: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
-            return semantic_template.param.0.get(&signal.token_id());
+        for var in template.vars() {
+            if let Some(ident) = var.ident() {
+                let name = ident.text();
+                scope.vars.insert(
+                    name,
+                    Def {
+                        range: file.range(var.syntax_node()),
+                        kind: DefKind::Var,
+                    },
+                );
+            }
         }
-        None
-    }
 
-    pub fn lookup_template_signal(
-        &self,
-        template_id: Id,
-        signal: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
-            return semantic_template.signal.0.get(&signal.token_id());
+        for comp in template.components() {
+            if let Some(ident) = comp.ident() {
+                let name = ident.text();
+                scope.components.insert(
+                    name,
+                    Def {
+                        range: file.range(comp.syntax_node()),
+                        kind: DefKind::Component,
+                    },
+                );
+            }
         }
-        None
-    }
-
-    // TODO: remove duplicate code here.
-    pub fn lookup_template_variable(
-        &self,
-        template_id: Id,
-        variable: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
-            return semantic_template.variable.0.get(&variable.token_id());
-        }
-        None
     }
 
-    pub fn lookup_template_component(
-        &self,
-        template_id: Id,
-        component: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_template) = self.template_data_semantic.get(&template_id) {
-            return semantic_template.component.0.get(&component.token_id());
+    fn index_function(scope: &mut ScopeSymbols, file: &FileDB, function: &Function) {
+        if let Some(params) = function.params() {
+            for param in params.idents() {
+                let name = param.text();
+                scope.params.insert(
+                    name,
+                    Def {
+                        range: file.range(&param.syntax_token().parent().unwrap()),
+                        kind: DefKind::Param,
+                    },
+                );
+            }
         }
-        None
-    }
 
-    // ------------- function
-    pub fn lookup_function_param(
-        &self,
-        function_id: Id,
-        signal: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
-            return semantic_function.param.0.get(&signal.token_id());
+        for var in function.vars() {
+            if let Some(ident) = var.ident() {
+                let name = ident.text();
+                scope.vars.insert(
+                    name,
+                    Def {
+                        range: file.range(var.syntax_node()),
+                        kind: DefKind::Var,
+                    },
+                );
+            }
         }
-        None
-    }
 
-    pub fn lookup_function_variable(
-        &self,
-        function_id: Id,
-        variable: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
-            return semantic_function.variable.0.get(&variable.token_id());
+        for comp in function.components() {
+            if let Some(ident) = comp.ident() {
+                let name = ident.text();
+                scope.components.insert(
+                    name,
+                    Def {
+                        range: file.range(comp.syntax_node()),
+                        kind: DefKind::Component,
+                    },
+                );
+            }
         }
-        None
-    }
-
-    pub fn lookup_function_component(
-        &self,
-        function_id: Id,
-        component: &SyntaxToken,
-    ) -> Option<&Vec<Range>> {
-        if let Some(semantic_function) = self.function_data_semantic.get(&function_id) {
-            return semantic_function.component.0.get(&component.token_id());
-        }
-        None
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use std::path::Path;
 
-    use ::syntax::{abstract_syntax_tree::AstCircomProgram, syntax::SyntaxTreeBuilder};
     use lsp_types::{Position, Url};
-
     use rowan::ast::AstNode;
+    use syntax::{abstract_syntax_tree::Program, syntax::SyntaxTreeBuilder};
 
-    use crate::database::{FileDB, FileId};
-
-    use super::TokenId;
+    use super::{DefKind, FileDB};
 
     #[test]
     fn file_id_test() {
-        let file_1 = FileDB::create("a", Url::from_file_path(Path::new("/a/../a/c")).unwrap());
-        let file_2 = FileDB::create("a", Url::from_file_path(Path::new("/a/c")).unwrap());
-
-        assert_eq!(file_1.file_id, file_2.file_id);
+        let file_1 = FileDB::new("a", Url::from_file_path(Path::new("/a/../a/c")).unwrap());
+        let file_2 = FileDB::new("a", Url::from_file_path(Path::new("/a/c")).unwrap());
+        assert_eq!(file_1.id, file_2.id);
     }
+
     #[test]
-    fn token_id_hash_test() {
-        let source: String = r#"pragma circom 2.0.0;
+    fn test_symbol_resolution() {
+        let source = r#"
+pragma circom 2.0.0;
 
-        
-        template Multiplier2 () {}
-        template Multiplier2 () {} 
-        "#
-        .to_string();
+template Multiplier() {
+    signal input a;
+    signal input b;
+    signal output c;
+    c <== a * b;
+}
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(&source);
+template Main() {
+    signal input x;
+    component mult = Multiplier();
+}
+"#;
+        let url = Url::from_file_path(Path::new("/test.circom")).unwrap();
+        let file = FileDB::new(source, url);
+        let syntax = SyntaxTreeBuilder::syntax_tree(source);
 
-        if let Some(ast) = AstCircomProgram::cast(syntax) {
-            let templates = ast.template_list();
-            let first_id = templates[0].syntax().token_id();
-            let second_id = templates[1].syntax().token_id();
+        if let Some(program) = Program::cast(syntax) {
+            let mut db = super::SemanticDB::default();
+            db.index_program(&file, &program);
 
-            assert_eq!(first_id, second_id);
+            let semantics = db.get(file.id).unwrap();
+
+            assert!(semantics.templates.get("Multiplier").is_some());
+            assert_eq!(
+                semantics.templates.get("Multiplier").unwrap().kind,
+                DefKind::Template
+            );
+
+            let signal_def = semantics.lookup_in_template("Multiplier", "a");
+            assert!(signal_def.is_some());
+            assert_eq!(signal_def.unwrap().kind, DefKind::Signal);
+
+            let comp_def = semantics.lookup_in_template("Main", "mult");
+            assert!(comp_def.is_some());
+            assert_eq!(comp_def.unwrap().kind, DefKind::Component);
         }
     }
+
     #[test]
     fn off_set_test() {
-        let str = r#"
-one
-two
-three
-       "#;
+        let str = "\none\ntwo\nthree";
+        let file = FileDB::new(str, Url::from_file_path(Path::new("/tmp.txt")).unwrap());
 
-        let file_utils = FileDB::new(
-            FileId(1),
-            str,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
-
-        let position = Position::new(0, 1);
-
-        assert_eq!(file_utils.off_set(position), 1.into());
-
-        let position = Position::new(1, 1);
-
-        assert_eq!(file_utils.off_set(position), 2.into());
+        assert_eq!(file.offset(Position::new(0, 1)), 1.into());
+        assert_eq!(file.offset(Position::new(1, 1)), 2.into());
     }
 
     #[test]
     fn position_test() {
-        let str = r#"
-        one
-        two
-        three
-               "#;
+        let str = "\none\ntwo\nthree";
+        let file = FileDB::new(str, Url::from_file_path(Path::new("/tmp.txt")).unwrap());
 
-        // 0, 4, 8
-        let file_utils = FileDB::new(
-            FileId(1),
-            str,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
-        assert_eq!(Position::new(1, 1), file_utils.position(2.into()));
-        assert_eq!(Position::new(0, 0), file_utils.position(0.into()));
+        assert_eq!(file.position(0.into()), Position::new(0, 0));
+        assert_eq!(file.position(2.into()), Position::new(1, 1));
     }
 }

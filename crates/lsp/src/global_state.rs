@@ -1,59 +1,51 @@
-use std::{fs, path::PathBuf};
+use std::fs;
 
-use crate::{
-    database::{FileDB, SemanticDB},
-    handler::goto_definition::lookup_node_wrap_token,
-};
 use anyhow::Result;
 use dashmap::DashMap;
 use lsp_server::{RequestId, Response};
-use lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Location, Url,
+use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, HoverParams, Location, Url};
+use parser::{Rule, Token};
+use rowan::ast::AstNode;
+use syntax::abstract_syntax_tree::Program;
+use syntax::syntax::SyntaxTreeBuilder;
+use syntax::syntax_node::SyntaxKind;
+
+use crate::{
+    database::{FileDB, SemanticDB},
+    handler::{resolve, resolve_include, token_at},
 };
 
-use parser::token_kind::TokenKind;
-use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::AstCircomProgram;
-use syntax::syntax::SyntaxTreeBuilder;
-use syntax::syntax_node::SyntaxToken;
-
-use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
-
-#[derive(Debug)]
 pub struct TextDocument {
-    text: String,
-    uri: Url,
+    pub text: String,
+    pub uri: Url,
 }
 
-impl From<DidOpenTextDocumentParams> for TextDocument {
-    fn from(value: DidOpenTextDocumentParams) -> Self {
+impl From<lsp_types::DidOpenTextDocumentParams> for TextDocument {
+    fn from(p: lsp_types::DidOpenTextDocumentParams) -> Self {
         Self {
-            text: value.text_document.text,
-            uri: value.text_document.uri,
+            text: p.text_document.text,
+            uri: p.text_document.uri,
         }
     }
 }
 
-impl From<DidChangeTextDocumentParams> for TextDocument {
-    fn from(value: DidChangeTextDocumentParams) -> Self {
+impl From<lsp_types::DidChangeTextDocumentParams> for TextDocument {
+    fn from(p: lsp_types::DidChangeTextDocumentParams) -> Self {
         Self {
-            text: value.content_changes[0].text.to_string(),
-            uri: value.text_document.uri,
+            text: p
+                .content_changes
+                .first()
+                .map(|c| c.text.clone())
+                .unwrap_or_default(),
+            uri: p.text_document.uri,
         }
     }
 }
 
-/// state of all (circom) source file
 pub struct GlobalState {
-    /// key: file id (from file url) - value: ast of its content (source code)
-    pub ast_map: DashMap<String, AstCircomProgram>,
-
-    /// key: file id (from file url) - value: file content (+ end lines)
-    pub file_map: DashMap<String, FileDB>,
-
-    /// key: file id (from file url) - value: database (template in4, function in4...)
-    pub db: SemanticDB,
+    programs: DashMap<String, Program>,
+    files: DashMap<String, FileDB>,
+    db: SemanticDB,
 }
 
 impl Default for GlobalState {
@@ -65,191 +57,181 @@ impl Default for GlobalState {
 impl GlobalState {
     pub fn new() -> Self {
         Self {
-            ast_map: DashMap::new(),
-            file_map: DashMap::new(),
-            db: SemanticDB::new(),
+            programs: DashMap::new(),
+            files: DashMap::new(),
+            db: SemanticDB::default(),
         }
     }
 
-    pub fn lookup_definition(
-        &self,
-        root: &FileDB,
-        ast: &AstCircomProgram,
-        token: &SyntaxToken,
-    ) -> Vec<Location> {
-        // look up token in current file
-        let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
-        let mut result = lookup_definition(root, ast, semantic_data, token);
-
-        if token.kind() == TokenKind::CircomString {
-            eprintln!("___ definition inside current file");
-            return result;
-        }
-
-        // if can not find that token in current file,
-        // and if token in a component call / declaration
-        // continue looking up in libs
-        let p = root.get_path();
-
-        if lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
-            || lookup_node_wrap_token(TokenKind::ComponentCall, token).is_some()
-        {
-            for lib in ast.libs() {
-                let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
-                let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
-                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
-
-                if let Some(file_lib) = self.file_map.get(&lib_url.to_string()) {
-                    let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
-                    if let Some(semantic_data_lib) = self.db.semantic.get(&file_lib.file_id) {
-                        let lib_result =
-                            lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
-                        result.extend(lib_result);
-                    }
-                }
-            }
-        }
-
-        result
-    }
-
-    pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
-        // path to the file that contains the element we want to get definition
-        // eg: file:///mnt/d/language-server/test-circom/program2.circom
+    pub fn goto_definition(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
         let uri = params.text_document_position_params.text_document.uri;
+        let key = uri.to_string();
 
-        // reference to the abtract syntax tree for the file from that uri
-        // eg: Ref { k: 0x56136e3ce100, v: 0x56136e3ce118 }
-        // ast.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
-        // ast.value() = AstCircomProgram { syntax: CircomProgram@0..2707 }
-        let ast = self.ast_map.get(&uri.to_string()).unwrap();
-
-        // information of the file contains the element we want to get definition
-        // eg: Ref { k: 0x56136e3bf5a0, v: 0x56136e3bf5b8 }
-        // file.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
-        // file.value() =
-        // FileDB {
-        //     file_id: FileId(17547606022754654883),
-        //     file_path: Url {
-        //         scheme: "file",
-        //         cannot_be_a_base: false,
-        //         username: "",
-        //         password: None,
-        //         host: None,
-        //         port: None,
-        //         path: "/mnt/d/language-server/test-circom/program2.circom",
-        //         query: None,
-        //         fragment: None
-        //     },
-        //     end_line_vec: [2, 44, ..., 2701]
-        // }
-        let file = self.file_map.get(&uri.to_string()).unwrap();
-
-        let mut locations = Vec::new();
-
-        // extract token from ast at position (file, params position)
-        // eg: token = Identifier@2205..2207 "e2"
-        if let Some(token) =
-            lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
-        {
-            locations = self.lookup_definition(&file, &ast, &token);
-            // locations of declarations of that element
-            // it may returns more than 1 location if exist same name declarations
-            // eg:
-            // [
-            //     Location {
-            //         uri: Url {
-            //             scheme: "file",
-            //             cannot_be_a_base: false,
-            //             username: "",
-            //             password: None,
-            //             host: None,
-            //             port: None,
-            //             path: "/mnt/d/language-server/test-circom/program2.circom",
-            //             query: None,
-            //             fragment: None
-            //         },
-            //         range: Range {
-            //             start: Position { line: 75, character: 8 },
-            //             end: Position { line: 75, character: 14 }
-            //         }
-            //     }
-            // ]
+        let Some(program) = self.programs.get(&key) else {
+            return self.null_response(id);
+        };
+        let Some(file) = self.files.get(&key) else {
+            return self.null_response(id);
         };
 
-        let result: Option<GotoDefinitionResponse> = Some(GotoDefinitionResponse::Array(locations));
-
-        let result = serde_json::to_value(result).unwrap();
-        // serialize result into JSON format
-        // eg:
-        // Array [
-        //     Object {
-        //         "range": Object {
-        //             "end": Object {
-        //                 "character": Number(14),
-        //                 "line": Number(75)
-        //             },
-        //             "start": Object {
-        //                 "character": Number(8),
-        //                 "line": Number(75)
-        //             }
-        //         },
-        //         "uri": String("file:///mnt/d/language-server/test-circom/program2.circom")
-        //     }
-        // ]
+        let locations = self.resolve_definitions(
+            &file,
+            &program,
+            params.text_document_position_params.position,
+        );
 
         Response {
             id,
-            result: Some(result),
+            result: Some(
+                serde_json::to_value(Some(GotoDefinitionResponse::Array(locations))).unwrap(),
+            ),
             error: None,
         }
     }
 
-    /// update a file of (circom) source code
-    /// parse new code --> syntax tree
-    /// remove old data of that file in semantic database
-    /// add new data (circom_program_semantic) + related libs into database
-    /// update corresponding file-map and ast-map in global-state
-    pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
-        let text = &text_document.text;
-        let url = &text_document.uri.to_string();
+    pub fn hover(&self, id: RequestId, _params: HoverParams) -> Response {
+        self.null_response(id)
+    }
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(text);
-        let file_db = FileDB::create(text, text_document.uri.clone());
-        let file_id = file_db.file_id;
+    pub fn update(&mut self, doc: &TextDocument) -> Result<()> {
+        let key = doc.uri.to_string();
+        let syntax = SyntaxTreeBuilder::syntax_tree(&doc.text);
+        let file = FileDB::new(&doc.text, doc.uri.clone());
 
-        let p: PathBuf = file_db.get_path();
-        if let Some(ast) = AstCircomProgram::cast(syntax) {
-            self.db.semantic.remove(&file_id);
-            self.db.circom_program_semantic(&file_db, &ast);
+        let Some(program) = Program::cast(syntax) else {
+            return Ok(());
+        };
 
-            for lib in ast.libs() {
-                if let Some(lib_abs_path) = lib.lib() {
-                    let lib_path = p.parent().unwrap().join(lib_abs_path.value()).clone();
-                    let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
-                    if let Ok(src) = fs::read_to_string(lib_path) {
-                        let text_doc = TextDocument {
-                            text: src,
-                            uri: lib_url.clone(),
-                        };
-                        let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
-                        let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
+        self.db.files.remove(&file.id);
+        self.db.index_program(&file, &program);
 
-                        if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
-                            self.db.semantic.remove(&lib_file.file_id);
-                            self.db.circom_program_semantic(&lib_file, &lib_ast);
-                            self.ast_map.insert(lib_url.to_string(), lib_ast);
-                        }
-
-                        self.file_map.insert(lib_url.to_string(), lib_file);
-                    }
-                }
+        // Load includes
+        for include in program.includes() {
+            if let Some(path) = include.path() {
+                self.load_include(&file, &path)?;
             }
-            self.ast_map.insert(url.to_string(), ast);
         }
 
-        self.file_map.insert(url.to_string(), file_db);
-
+        self.programs.insert(key.clone(), program);
+        self.files.insert(key, file);
         Ok(())
     }
+
+    fn load_include(&mut self, file: &FileDB, path: &str) -> Result<()> {
+        let lib_path = file
+            .path()
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("No parent dir"))?
+            .join(path);
+
+        let lib_url =
+            Url::from_file_path(&lib_path).map_err(|_| anyhow::anyhow!("Invalid path"))?;
+        let key = lib_url.to_string();
+
+        if self.files.contains_key(&key) {
+            return Ok(());
+        }
+
+        let text = fs::read_to_string(&lib_path)?;
+        let lib_file = FileDB::new(&text, lib_url);
+        let syntax = SyntaxTreeBuilder::syntax_tree(&text);
+
+        if let Some(program) = Program::cast(syntax) {
+            self.db.index_program(&lib_file, &program);
+            self.programs.insert(key.clone(), program);
+        }
+
+        self.files.insert(key, lib_file);
+        Ok(())
+    }
+
+    fn resolve_definitions(
+        &self,
+        file: &FileDB,
+        program: &Program,
+        pos: lsp_types::Position,
+    ) -> Vec<Location> {
+        let Some(token) = token_at(file, program, pos) else {
+            return Vec::new();
+        };
+
+        let Some(semantics) = self.db.get(file.id) else {
+            return Vec::new();
+        };
+
+        // Handle include paths
+        if token.kind() == SyntaxKind::from_token(Token::String) {
+            return resolve_include(file, &token);
+        }
+
+        let mut results = resolve(file, program, semantics, &token);
+
+        // Cross-file lookup for component/template references
+        if is_cross_file_ref(&token) {
+            results.extend(self.cross_file_lookup(file, program, &token));
+        } else if results.is_empty() && is_identifier_token(&token) {
+            // Also try cross-file lookup if local resolution failed for an identifier.
+            // This handles inline template calls like: signal x <== Template()([args])
+            // where the token is not inside a TemplateCall or ComponentDecl node.
+            results.extend(self.cross_file_lookup(file, program, &token));
+        }
+
+        results
+    }
+
+    fn cross_file_lookup(
+        &self,
+        file: &FileDB,
+        program: &Program,
+        token: &syntax::syntax_node::SyntaxToken,
+    ) -> Vec<Location> {
+        let mut results = Vec::new();
+        let path = file.path();
+        let Some(parent) = path.parent() else {
+            return results;
+        };
+
+        for include in program.includes() {
+            let Some(path) = include.path() else { continue };
+            let lib_path = parent.join(path);
+
+            let Ok(lib_url) = Url::from_file_path(&lib_path) else {
+                continue;
+            };
+            let key = lib_url.to_string();
+
+            let Some(lib_file) = self.files.get(&key) else {
+                continue;
+            };
+            let Some(lib_program) = self.programs.get(&key) else {
+                continue;
+            };
+            let Some(lib_semantics) = self.db.get(lib_file.id) else {
+                continue;
+            };
+
+            results.extend(resolve(&lib_file, &lib_program, lib_semantics, token));
+        }
+
+        results
+    }
+
+    fn null_response(&self, id: RequestId) -> Response {
+        Response {
+            id,
+            result: Some(serde_json::Value::Null),
+            error: None,
+        }
+    }
+}
+
+fn is_cross_file_ref(token: &syntax::syntax_node::SyntaxToken) -> bool {
+    token.parent_ancestors().any(|n| {
+        n.kind() == SyntaxKind::from_rule(Rule::ComponentDecl)
+            || n.kind() == SyntaxKind::from_rule(Rule::TemplateCall)
+    })
+}
+
+fn is_identifier_token(token: &syntax::syntax_node::SyntaxToken) -> bool {
+    token.kind() == SyntaxKind::from_token(Token::Identifier)
 }
