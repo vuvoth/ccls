@@ -10,11 +10,41 @@ use syntax::abstract_syntax_tree::AstComponentCall;
 use syntax::abstract_syntax_tree::AstInclude;
 use syntax::abstract_syntax_tree::AstTemplateDef;
 use syntax::abstract_syntax_tree::AstTemplateName;
+use syntax::abstract_syntax_tree::Named;
 use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
 use syntax::syntax_node::SyntaxNode;
 use syntax::syntax_node::SyntaxToken;
 
 use crate::database::{FileDB, SemanticData, TokenId};
+use crate::global_state::GlobalState;
+
+use anyhow::Result;
+use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse};
+
+/// Entry point for the `textDocument/definition` request.
+///
+/// Resolves the token under the cursor, then runs the (possibly cross-file) definition lookup. If
+/// the file is unknown to the server or no token is under the cursor, returns `None`.
+pub fn handle(
+    state: &GlobalState,
+    params: GotoDefinitionParams,
+) -> Result<Option<GotoDefinitionResponse>> {
+    let uri = params.text_document_position_params.text_document.uri;
+    let position = params.text_document_position_params.position;
+
+    let Some(ast) = state.ast_map.get(&uri.to_string()) else {
+        return Ok(None);
+    };
+    let Some(file) = state.file_map.get(&uri.to_string()) else {
+        return Ok(None);
+    };
+
+    let locations = match lookup_token_at_position(&file, &ast, position) {
+        Some(token) => state.lookup_definition(&file, &ast, &token),
+        None => Vec::new(),
+    };
+    Ok(Some(GotoDefinitionResponse::Array(locations)))
+}
 
 // find the first ancestor with given kind of a syntax token
 pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Option<SyntaxNode> {
@@ -29,7 +59,7 @@ pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Optio
 }
 
 // return an Identifier/CircomString token at a position
-pub fn lookup_token_at_postion(
+pub fn lookup_token_at_position(
     file: &FileDB,
     ast: &AstCircomProgram,
     position: Position,
@@ -52,16 +82,12 @@ pub fn lookup_token_at_postion(
 
 // find all template name (in component declaration) which are used inside a template
 pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<AstTemplateName> {
-    if let Some(statements) = template.statements() {
-        for component in statements.find_children::<AstComponentDecl>() {
-            if let Some(iden) = component.component_identifier() {
-                if iden.name().unwrap().syntax().text() == text {
-                    return component.template();
-                }
-            }
-        }
-    }
-    None
+    let statements = template.statements()?;
+    statements
+        .find_children::<AstComponentDecl>()
+        .into_iter()
+        .find(|c| c.identifier().is_some_and(|n| n.syntax().text() == text))
+        .and_then(|c| c.template())
 }
 
 // if token in an include statement
@@ -149,10 +175,11 @@ pub fn lookup_definition(
 
         eprintln!("look up in templates...");
         for template in template_list {
-            let template_name = template.name().unwrap();
-            if template_name.name().unwrap().syntax().text() == token.text() {
-                let range = file.range(template.syntax());
-                res.push(range);
+            if let Some(name) = template.identifier() {
+                if name.syntax().text() == token.text() {
+                    let range = file.range(template.syntax());
+                    res.push(range);
+                }
             }
 
             if !template
@@ -235,12 +262,12 @@ mod tests {
     use rowan::ast::AstNode;
     use syntax::{
         abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl},
-        syntax::SyntaxTreeBuilder,
+        syntax::syntax_tree,
     };
 
     use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
 
-    use super::lookup_token_at_postion;
+    use super::lookup_token_at_position;
 
     fn get_source_from_path(file_path: &str) -> String {
         let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -256,11 +283,11 @@ mod tests {
         let source = get_source_from_path(file_path);
         let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
 
-        let syntax_node = SyntaxTreeBuilder::syntax_tree(&source);
+        let syntax_node = syntax_tree(&source);
 
         if let Some(program_ast) = AstCircomProgram::cast(syntax_node) {
             let inputs = program_ast.template_list()[0]
-                .func_body()
+                .body()
                 .unwrap()
                 .statement_list()
                 .unwrap()
@@ -269,7 +296,7 @@ mod tests {
 
             let tmp = signal_name.syntax().text_range().start();
 
-            if let Some(token) = lookup_token_at_postion(&file, &program_ast, file.position(tmp)) {
+            if let Some(token) = lookup_token_at_position(&file, &program_ast, file.position(tmp)) {
                 let wrap_token = lookup_node_wrap_token(TokenKind::TemplateDef, &token);
 
                 let string_syntax_node = match wrap_token {

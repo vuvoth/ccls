@@ -1,0 +1,644 @@
+---
+source: crates/parser/src/lexer.rs
+expression: "&tokens"
+---
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 0
+    end: 1
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 1
+    end: 9
+- kind: LParen
+  text: (
+  range:
+    start: 9
+    end: 10
+- kind: LCurly
+  text: "{"
+  range:
+    start: 10
+    end: 11
+- kind: LBracket
+  text: "["
+  range:
+    start: 11
+    end: 12
+- kind: RBracket
+  text: "]"
+  range:
+    start: 12
+    end: 13
+- kind: RCurly
+  text: "}"
+  range:
+    start: 13
+    end: 14
+- kind: RParen
+  text: )
+  range:
+    start: 14
+    end: 15
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 15
+    end: 16
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 16
+    end: 24
+- kind: Semicolon
+  text: ;
+  range:
+    start: 24
+    end: 25
+- kind: Dot
+  text: "."
+  range:
+    start: 25
+    end: 26
+- kind: Comma
+  text: ","
+  range:
+    start: 26
+    end: 27
+- kind: Colon
+  text: ":"
+  range:
+    start: 27
+    end: 28
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 28
+    end: 29
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 29
+    end: 37
+- kind: BoolAnd
+  text: "&&"
+  range:
+    start: 37
+    end: 39
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 39
+    end: 40
+- kind: BitAnd
+  text: "&"
+  range:
+    start: 40
+    end: 41
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 41
+    end: 42
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 42
+    end: 50
+- kind: BoolOr
+  text: "||"
+  range:
+    start: 50
+    end: 52
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 52
+    end: 53
+- kind: BitOr
+  text: "|"
+  range:
+    start: 53
+    end: 54
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 54
+    end: 55
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 55
+    end: 63
+- kind: NotEqual
+  text: "!="
+  range:
+    start: 63
+    end: 65
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 65
+    end: 66
+- kind: Not
+  text: "!"
+  range:
+    start: 66
+    end: 67
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 67
+    end: 68
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 68
+    end: 76
+- kind: EqualSignal
+  text: "==="
+  range:
+    start: 76
+    end: 79
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 79
+    end: 80
+- kind: Equal
+  text: "=="
+  range:
+    start: 80
+    end: 82
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 82
+    end: 83
+- kind: Assign
+  text: "="
+  range:
+    start: 83
+    end: 84
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 84
+    end: 85
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 85
+    end: 93
+- kind: LAssignSignal
+  text: "-->"
+  range:
+    start: 93
+    end: 96
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 96
+    end: 97
+- kind: LAssignContraintSignal
+  text: "==>"
+  range:
+    start: 97
+    end: 100
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 100
+    end: 101
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 101
+    end: 109
+- kind: RAssignSignal
+  text: "<--"
+  range:
+    start: 109
+    end: 112
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 112
+    end: 113
+- kind: RAssignConstraintSignal
+  text: "<=="
+  range:
+    start: 113
+    end: 116
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 116
+    end: 117
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 117
+    end: 125
+- kind: LessThanAndEqual
+  text: "<="
+  range:
+    start: 125
+    end: 127
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 127
+    end: 128
+- kind: LessThan
+  text: "<"
+  range:
+    start: 128
+    end: 129
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 129
+    end: 130
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 130
+    end: 138
+- kind: GreaterThanAndEqual
+  text: ">="
+  range:
+    start: 138
+    end: 140
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 140
+    end: 141
+- kind: GreaterThan
+  text: ">"
+  range:
+    start: 141
+    end: 142
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 142
+    end: 143
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 143
+    end: 151
+- kind: UnitInc
+  text: ++
+  range:
+    start: 151
+    end: 153
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 153
+    end: 154
+- kind: AddAssign
+  text: +=
+  range:
+    start: 154
+    end: 156
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 156
+    end: 157
+- kind: Add
+  text: +
+  range:
+    start: 157
+    end: 158
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 158
+    end: 159
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 159
+    end: 167
+- kind: UnitDec
+  text: "--"
+  range:
+    start: 167
+    end: 169
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 169
+    end: 170
+- kind: SubAssign
+  text: "-="
+  range:
+    start: 170
+    end: 172
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 172
+    end: 173
+- kind: Sub
+  text: "-"
+  range:
+    start: 173
+    end: 174
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 174
+    end: 175
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 175
+    end: 183
+- kind: PowerAssign
+  text: "**="
+  range:
+    start: 183
+    end: 186
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 186
+    end: 187
+- kind: Power
+  text: "**"
+  range:
+    start: 187
+    end: 189
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 189
+    end: 190
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 190
+    end: 198
+- kind: Mul
+  text: "*"
+  range:
+    start: 198
+    end: 199
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 199
+    end: 200
+- kind: MulAssign
+  text: "*="
+  range:
+    start: 200
+    end: 202
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 202
+    end: 203
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 203
+    end: 211
+- kind: Div
+  text: /
+  range:
+    start: 211
+    end: 212
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 212
+    end: 213
+- kind: DivAssign
+  text: /=
+  range:
+    start: 213
+    end: 215
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 215
+    end: 216
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 216
+    end: 224
+- kind: IntDiv
+  text: "\\"
+  range:
+    start: 224
+    end: 225
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 225
+    end: 226
+- kind: IntDivAssign
+  text: "\\="
+  range:
+    start: 226
+    end: 228
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 228
+    end: 229
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 229
+    end: 237
+- kind: Mod
+  text: "%"
+  range:
+    start: 237
+    end: 238
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 238
+    end: 239
+- kind: ModAssign
+  text: "%="
+  range:
+    start: 239
+    end: 241
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 241
+    end: 242
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 242
+    end: 250
+- kind: BitXor
+  text: ^
+  range:
+    start: 250
+    end: 251
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 251
+    end: 252
+- kind: BitXorAssign
+  text: ^=
+  range:
+    start: 252
+    end: 254
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 254
+    end: 255
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 255
+    end: 263
+- kind: BitNot
+  text: "~"
+  range:
+    start: 263
+    end: 264
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 264
+    end: 265
+- kind: BitNotAssign
+  text: ~=
+  range:
+    start: 265
+    end: 267
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 267
+    end: 268
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 268
+    end: 276
+- kind: ShiftR
+  text: ">>"
+  range:
+    start: 276
+    end: 278
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 278
+    end: 279
+- kind: ShiftRAssign
+  text: ">>="
+  range:
+    start: 279
+    end: 282
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 282
+    end: 283
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 283
+    end: 291
+- kind: ShiftL
+  text: "<<"
+  range:
+    start: 291
+    end: 293
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 293
+    end: 294
+- kind: ShiftLAssign
+  text: "<<="
+  range:
+    start: 294
+    end: 297
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 297
+    end: 298
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 298
+    end: 306
+- kind: BitAnd
+  text: "&"
+  range:
+    start: 306
+    end: 307
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 307
+    end: 308
+- kind: BitAndAssign
+  text: "&="
+  range:
+    start: 308
+    end: 310
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 310
+    end: 311
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 311
+    end: 319
+- kind: BitOr
+  text: "|"
+  range:
+    start: 319
+    end: 320
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 320
+    end: 321
+- kind: BitOrAssign
+  text: "|="
+  range:
+    start: 321
+    end: 323
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 323
+    end: 324
+- kind: WhiteSpace
+  text: "    "
+  range:
+    start: 324
+    end: 328
+- kind: RCurly
+  text: "}"
+  range:
+    start: 328
+    end: 329

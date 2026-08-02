@@ -1,37 +1,47 @@
 use parser::token_kind::TokenKind::*;
-use rowan::ast::AstChildren;
-use rowan::SyntaxText;
+use rowan::ast::{support, AstNode};
 
 use crate::syntax_node::CircomLanguage;
 use crate::syntax_node::SyntaxNode;
 use parser::token_kind::TokenKind;
-use rowan::ast::{support, AstNode};
 
-use super::template::AstTemplateDef;
-use super::template::AstTemplateName;
+use super::expression::AstExpression;
+use super::template::{AstTemplateDef, AstTemplateName};
+
+/// A node that declares a nameable symbol and exposes its leaf identifier token — the `a` in
+/// `signal input a;`, the `T` in `template T() {}`. Implementing it lets a declaration be looked up
+/// generically via [`AstStatementList::find`] and compared by name without the caller knowing the
+/// node's identifier-chain shape (`signal_identifier().name()` vs `component_identifier().name()`).
+pub trait Named: AstNode<Language = CircomLanguage> {
+    fn identifier(&self) -> Option<AstIdentifier>;
+}
+
+// --- signal declarations -----------------------------------------------------
 
 ast_node!(AstSignalHeader, SignalHeader);
 ast_node!(AstInputSignalDecl, InputSignalDecl);
 ast_node!(AstOutputSignalDecl, OutputSignalDecl);
 ast_node!(AstSignalDecl, SignalDecl);
 
-impl AstInputSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
-        support::child(self.syntax())
-    }
+macro_rules! impl_signal_identifier {
+    ($ty:ty) => {
+        impl $ty {
+            pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
+                support::child(self.syntax())
+            }
+        }
+        impl Named for $ty {
+            fn identifier(&self) -> Option<AstIdentifier> {
+                self.signal_identifier().and_then(|c| c.name())
+            }
+        }
+    };
 }
+impl_signal_identifier!(AstInputSignalDecl);
+impl_signal_identifier!(AstOutputSignalDecl);
+impl_signal_identifier!(AstSignalDecl);
 
-impl AstOutputSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
-        support::child(self.syntax())
-    }
-}
-
-impl AstSignalDecl {
-    pub fn signal_identifier(&self) -> Option<AstComplexIdentifier> {
-        support::child(self.syntax())
-    }
-}
+// --- variable / component declarations ---------------------------------------
 
 ast_node!(AstVarDecl, VarDecl);
 
@@ -40,13 +50,16 @@ impl AstVarDecl {
         support::child(self.syntax())
     }
 }
+impl Named for AstVarDecl {
+    fn identifier(&self) -> Option<AstIdentifier> {
+        self.var_identifier().and_then(|c| c.name())
+    }
+}
 
 ast_node!(AstComponentDecl, ComponentDecl);
 
-// component hash = Poseidon(2);
-// template --> Poseidon
-// component_identifier --> hash
 impl AstComponentDecl {
+    /// The instantiated template, e.g. `Poseidon` in `component hash = Poseidon(2);`.
     pub fn template(&self) -> Option<AstTemplateName> {
         support::child(self.syntax())
     }
@@ -54,27 +67,40 @@ impl AstComponentDecl {
         support::child(self.syntax())
     }
 }
+impl Named for AstComponentDecl {
+    fn identifier(&self) -> Option<AstIdentifier> {
+        self.component_identifier().and_then(|c| c.name())
+    }
+}
 
-ast_node!(AstStatement, Statement);
+// --- statements / blocks -----------------------------------------------------
 
 ast_node!(AstStatementList, StatementList);
 
 impl AstStatementList {
-    pub fn statement_list(&self) -> AstChildren<AstStatement> {
-        support::children(self.syntax())
+    /// All direct children that cast to `N`. The grammar emits each statement as its concrete node
+    /// kind (not a generic `Statement` node), so statements are queried by concrete type.
+    pub fn find_children<N: AstNode<Language = CircomLanguage>>(&self) -> Vec<N> {
+        support::children(self.syntax()).collect()
     }
 
-    pub fn find_children<N: AstNode<Language = CircomLanguage>>(&self) -> Vec<N> {
-        self.syntax().children().filter_map(N::cast).collect()
+    /// The first child of type `N` whose declared name equals `name`.
+    pub fn find<N: Named>(&self, name: &str) -> Option<N> {
+        self.find_children::<N>()
+            .into_iter()
+            .find(|n| n.identifier().is_some_and(|id| id.syntax().text() == name))
     }
 }
 
 ast_node!(AstBlock, Block);
+
 impl AstBlock {
     pub fn statement_list(&self) -> Option<AstStatementList> {
-        support::child::<AstStatementList>(self.syntax())
+        support::child(self.syntax())
     }
 }
+
+// --- pragma / version --------------------------------------------------------
 
 ast_node!(AstVersion, Version);
 ast_node!(AstPragma, Pragma);
@@ -84,14 +110,14 @@ impl AstPragma {
         support::child(self.syntax())
     }
 }
-ast_node!(AstParameterList, TokenKind::ParameterList);
+
+// --- identifiers / names / params -------------------------------------------
+
+ast_node!(AstParameterList, ParameterList);
 
 impl AstParameterList {
     pub fn parameters(&self) -> Vec<AstIdentifier> {
-        self.syntax()
-            .children()
-            .filter_map(AstIdentifier::cast)
-            .collect()
+        support::children(self.syntax()).collect()
     }
 }
 
@@ -105,11 +131,7 @@ impl AstComplexIdentifier {
 
 ast_node!(AstIdentifier, Identifier);
 
-impl AstIdentifier {
-    pub fn equal(&self, other: &SyntaxText) -> bool {
-        self.syntax().text() == *other
-    }
-}
+// --- functions / program -----------------------------------------------------
 
 ast_node!(AstFunctionName, FunctionName);
 
@@ -117,26 +139,16 @@ ast_node!(AstFunctionDef, FunctionDef);
 
 impl AstFunctionDef {
     pub fn body(&self) -> Option<AstBlock> {
-        self.syntax().children().find_map(AstBlock::cast)
+        support::child(self.syntax())
     }
-
     pub fn function_name(&self) -> Option<AstFunctionName> {
-        self.syntax().children().find_map(AstFunctionName::cast)
+        support::child(self.syntax())
     }
-
-    pub fn argument_list(&self) -> Option<AstParameterList> {
-        self.syntax().children().find_map(AstParameterList::cast)
-    }
-
-    pub fn statements(&self) -> Option<AstStatementList> {
-        if let Some(body) = self.body() {
-            return body.statement_list();
-        }
-        None
-    }
-
     pub fn parameter_list(&self) -> Option<AstParameterList> {
-        self.syntax().children().find_map(AstParameterList::cast)
+        support::child(self.syntax())
+    }
+    pub fn statements(&self) -> Option<AstStatementList> {
+        self.body().and_then(|b| b.statement_list())
     }
 }
 
@@ -144,43 +156,30 @@ ast_node!(AstCircomProgram, CircomProgram);
 
 impl AstCircomProgram {
     pub fn pragma(&self) -> Option<AstPragma> {
-        self.syntax().children().find_map(AstPragma::cast)
+        support::child(self.syntax())
     }
     pub fn libs(&self) -> Vec<AstInclude> {
-        self.syntax()
-            .children()
-            .filter_map(AstInclude::cast)
-            .collect()
+        support::children(self.syntax()).collect()
     }
-
     pub fn template_list(&self) -> Vec<AstTemplateDef> {
-        self.syntax()
-            .children()
-            .filter_map(AstTemplateDef::cast)
-            .collect()
+        support::children(self.syntax()).collect()
     }
-
     pub fn function_list(&self) -> Vec<AstFunctionDef> {
-        self.syntax()
-            .children()
-            .filter_map(AstFunctionDef::cast)
-            .collect()
+        support::children(self.syntax()).collect()
     }
-
-    pub fn get_template_by_name(
-        &self,
-        ast_template_name: &AstTemplateName,
-    ) -> Option<AstTemplateDef> {
-        for template in self.template_list() {
-            if let Some(template_name) = template.name() {
-                if template_name.same_name(ast_template_name) {
-                    return Some(template);
-                }
-            }
-        }
-        None
+    pub fn main_component(&self) -> Option<AstMainComponent> {
+        support::child(self.syntax())
+    }
+    /// The template definition whose name matches `wanted`, compared by source text.
+    pub fn get_template_by_name(&self, wanted: &AstTemplateName) -> Option<AstTemplateDef> {
+        let wanted = wanted.identifier()?;
+        self.template_list()
+            .into_iter()
+            .find(|t| t.identifier().is_some_and(|id| id.text() == wanted.text()))
     }
 }
+
+// --- component call / string / include / main --------------------------------
 
 ast_node!(AstComponentCall, ComponentCall);
 
@@ -194,10 +193,16 @@ impl AstComponentCall {
 }
 
 ast_node!(AstCircomString, CircomString);
+
 impl AstCircomString {
+    /// String contents with exactly the surrounding `"` quotes stripped (never panics on a
+    /// short/malformed token).
     pub fn value(&self) -> String {
-        let text = &self.syntax().text().to_string();
-        text[1..text.len() - 1].to_string()
+        let text = self.syntax().text().to_string();
+        match text.strip_prefix('"').and_then(|t| t.strip_suffix('"')) {
+            Some(inner) => inner.to_string(),
+            None => text,
+        }
     }
 }
 
@@ -206,5 +211,18 @@ ast_node!(AstInclude, IncludeKw);
 impl AstInclude {
     pub fn lib(&self) -> Option<AstCircomString> {
         support::child(self.syntax())
+    }
+}
+
+ast_node!(AstMainComponent, MainComponent);
+
+impl AstMainComponent {
+    /// The instantiation on the right of `=` (e.g. `Surface(4, 2)`).
+    pub fn instantiation(&self) -> Option<AstExpression> {
+        support::child(self.syntax())
+    }
+    /// Names in the optional `{public […]}` clause (empty when absent).
+    pub fn public_signals(&self) -> Vec<AstIdentifier> {
+        support::children(self.syntax()).collect()
     }
 }

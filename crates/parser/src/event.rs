@@ -4,6 +4,6 @@ use crate::token_kind::TokenKind;
 pub enum Event {
     Open { kind: TokenKind },
     Close,
-    TokenPosition(usize),
+    Token(usize),
     ErrorReport(String),
 }

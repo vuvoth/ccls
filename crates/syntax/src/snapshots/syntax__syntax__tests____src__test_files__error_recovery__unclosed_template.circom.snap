@@ -1,0 +1,50 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ CircomProgram 0..61
+|      TemplateDef 0..61
+|     |      TemplateKw 0..8
+|     |     |      TemplateKw 0..8 "template"
+|     |      WhiteSpace 8..9
+|     |     |      WhiteSpace 8..9 " "
+|     |      TemplateName 9..10
+|     |     |      Identifier 9..10
+|     |     |     |      Identifier 9..10 "T"
+|     |      WhiteSpace 10..11
+|     |     |      WhiteSpace 10..11 " "
+|     |      ParameterList 11..13
+|     |     |      LParen 11..12
+|     |     |     |      LParen 11..12 "("
+|     |     |      RParen 12..13
+|     |     |     |      RParen 12..13 ")"
+|     |      WhiteSpace 13..14
+|     |     |      WhiteSpace 13..14 " "
+|     |      Block 14..61
+|     |     |      LCurly 14..15
+|     |     |     |      LCurly 14..15 "{"
+|     |     |      EndLine 15..16
+|     |     |     |      EndLine 15..16 "\n"
+|     |     |      WhiteSpace 16..20
+|     |     |     |      WhiteSpace 16..20 "    "
+|     |     |      StatementList 20..36
+|     |     |     |      InputSignalDecl 20..34
+|     |     |     |     |      SignalHeader 20..33
+|     |     |     |     |     |      SignalKw 20..26
+|     |     |     |     |     |     |      SignalKw 20..26 "signal"
+|     |     |     |     |     |      WhiteSpace 26..27
+|     |     |     |     |     |     |      WhiteSpace 26..27 " "
+|     |     |     |     |     |      InputKw 27..32
+|     |     |     |     |     |     |      InputKw 27..32 "input"
+|     |     |     |     |     |      WhiteSpace 32..33
+|     |     |     |     |     |     |      WhiteSpace 32..33 " "
+|     |     |     |     |      ComplexIdentifier 33..34
+|     |     |     |     |     |      Identifier 33..34
+|     |     |     |     |     |     |      Identifier 33..34 "a"
+|     |     |     |      Semicolon 34..35
+|     |     |     |     |      Semicolon 34..35 ";"
+|     |     |     |      EndLine 35..36
+|     |     |     |     |      EndLine 35..36 "\n"
+|     |     |      Error 36..61
+|     |     |     |      Error 36..61
+|     |     |     |     |      Error 36..61 "expect RCurly but got EOF"

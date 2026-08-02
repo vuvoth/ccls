@@ -1,25 +1,26 @@
 use std::{fs, path::PathBuf};
 
-use crate::{
-    database::{FileDB, SemanticDB},
-    handler::goto_definition::lookup_node_wrap_token,
-};
 use anyhow::Result;
 use dashmap::DashMap;
-use lsp_server::{RequestId, Response};
-use lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, GotoDefinitionParams,
-    GotoDefinitionResponse, Location, Url,
+use lsp_server::{Notification, Request, RequestId, Response};
+use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument, Notification as _};
+use lsp_types::request::{
+    Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest, References,
+    Rename, Request as _,
 };
-
+use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::AstCircomProgram;
-use syntax::syntax::SyntaxTreeBuilder;
+use syntax::syntax::syntax_tree;
 use syntax::syntax_node::SyntaxToken;
 
-use crate::handler::goto_definition::{lookup_definition, lookup_token_at_postion};
+use crate::database::{FileDB, SemanticDB};
+use crate::handler;
+use crate::handler::goto_definition::{lookup_definition, lookup_node_wrap_token};
 
+/// A text document notification (`textDocument/didOpen` or `textDocument/didChange`) normalized to
+/// its full text + URI, regardless of which notification carried it.
 #[derive(Debug)]
 pub struct TextDocument {
     text: String,
@@ -44,15 +45,18 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
     }
 }
 
-/// state of all (circom) source file
+/// Server-wide state shared by every request/notification handler.
+///
+/// Three keyed maps (all keyed by the file URI string):
+/// - `ast_map`  — the parsed program AST,
+/// - `file_map` — the `FileDB` (offset/line bookkeeping),
+/// - `db`       — the semantic database (template/function/signal/variable/component info).
 pub struct GlobalState {
-    /// key: file id (from file url) - value: ast of its content (source code)
+    /// key: file URI - value: AST of its content.
     pub ast_map: DashMap<String, AstCircomProgram>,
-
-    /// key: file id (from file url) - value: file content (+ end lines)
+    /// key: file URI - value: file content bookkeeping (offset/line conversion).
     pub file_map: DashMap<String, FileDB>,
-
-    /// key: file id (from file url) - value: database (template in4, function in4...)
+    /// Semantic database, keyed internally by `FileId`.
     pub db: SemanticDB,
 }
 
@@ -71,176 +75,112 @@ impl GlobalState {
         }
     }
 
+    /// Dispatch an LSP request to its handler, selected by method name.
+    ///
+    /// Each arm deserializes the params, delegates to `handler::<feature>::handle`, and wraps the
+    /// typed result into a success `Response`. Adding a new request = one new arm here + a handler
+    /// module + a capability entry. Returns `Ok(None)` for methods the server does not handle.
+    pub fn handle_request(&self, req: Request) -> Result<Option<Response>> {
+        let id = req.id.clone();
+        match req.method.as_str() {
+            GotoDefinition::METHOD => dispatch(self, id, req, handler::goto_definition::handle),
+            HoverRequest::METHOD => dispatch(self, id, req, handler::hover::handle),
+            Completion::METHOD => dispatch(self, id, req, handler::completion::handle),
+            References::METHOD => dispatch(self, id, req, handler::references::handle),
+            DocumentSymbolRequest::METHOD => {
+                dispatch(self, id, req, handler::document_symbol::handle)
+            }
+            Formatting::METHOD => dispatch(self, id, req, handler::formatting::handle),
+            Rename::METHOD => dispatch(self, id, req, handler::rename::handle),
+            _ => Ok(None),
+        }
+    }
+
+    /// Dispatch an LSP notification by method name. Only document open/change are handled; any
+    /// other notification is ignored.
+    pub fn handle_notification(&mut self, not: Notification) -> Result<()> {
+        match not.method.as_str() {
+            DidOpenTextDocument::METHOD => {
+                let params: DidOpenTextDocumentParams = serde_json::from_value(not.params)?;
+                self.handle_update(&TextDocument::from(params))?;
+            }
+            DidChangeTextDocument::METHOD => {
+                let params: DidChangeTextDocumentParams = serde_json::from_value(not.params)?;
+                self.handle_update(&TextDocument::from(params))?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Resolve every declaration of the symbol carried by `token`, searching the current file first
+    /// and then any `include`d library when the token sits in a component declaration/call.
     pub fn lookup_definition(
         &self,
         root: &FileDB,
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
-        // look up token in current file
         let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
         let mut result = lookup_definition(root, ast, semantic_data, token);
 
+        // A string literal resolves within the current file only (the include path itself).
         if token.kind() == TokenKind::CircomString {
-            eprintln!("___ definition inside current file");
             return result;
         }
 
-        // if can not find that token in current file,
-        // and if token in a component call / declaration
-        // continue looking up in libs
-        let p = root.get_path();
-
-        if lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
-            || lookup_node_wrap_token(TokenKind::ComponentCall, token).is_some()
-        {
+        // For a component declaration/call, also search the libraries it may instantiate.
+        let parent = root.get_path();
+        let is_component_use = lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
+            || lookup_node_wrap_token(TokenKind::ComponentCall, token).is_some();
+        if is_component_use {
             for lib in ast.libs() {
-                let lib_abs_path = PathBuf::from(lib.lib().unwrap().value());
-                let lib_path = p.parent().unwrap().join(lib_abs_path).clone();
-                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
+                let Some(lib_abs) = lib.lib() else { continue };
+                let lib_path = parent.parent().unwrap().join(lib_abs.value());
+                let lib_url = Url::from_file_path(&lib_path).unwrap();
 
-                if let Some(file_lib) = self.file_map.get(&lib_url.to_string()) {
-                    let ast_lib = self.ast_map.get(&lib_url.to_string()).unwrap();
-                    if let Some(semantic_data_lib) = self.db.semantic.get(&file_lib.file_id) {
-                        let lib_result =
-                            lookup_definition(&file_lib, &ast_lib, semantic_data_lib, token);
-                        result.extend(lib_result);
-                    }
-                }
+                let Some(file_lib) = self.file_map.get(&lib_url.to_string()) else {
+                    continue;
+                };
+                let Some(ast_lib) = self.ast_map.get(&lib_url.to_string()) else {
+                    continue;
+                };
+                let Some(semantic_lib) = self.db.semantic.get(&file_lib.file_id) else {
+                    continue;
+                };
+                result.extend(lookup_definition(&file_lib, &ast_lib, semantic_lib, token));
             }
         }
 
         result
     }
 
-    pub fn goto_definition_handler(&self, id: RequestId, params: GotoDefinitionParams) -> Response {
-        // path to the file that contains the element we want to get definition
-        // eg: file:///mnt/d/language-server/test-circom/program2.circom
-        let uri = params.text_document_position_params.text_document.uri;
-
-        // reference to the abtract syntax tree for the file from that uri
-        // eg: Ref { k: 0x56136e3ce100, v: 0x56136e3ce118 }
-        // ast.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
-        // ast.value() = AstCircomProgram { syntax: CircomProgram@0..2707 }
-        let ast = self.ast_map.get(&uri.to_string()).unwrap();
-
-        // information of the file contains the element we want to get definition
-        // eg: Ref { k: 0x56136e3bf5a0, v: 0x56136e3bf5b8 }
-        // file.key() = "file:///mnt/d/language-server/test-circom/program2.circom"
-        // file.value() =
-        // FileDB {
-        //     file_id: FileId(17547606022754654883),
-        //     file_path: Url {
-        //         scheme: "file",
-        //         cannot_be_a_base: false,
-        //         username: "",
-        //         password: None,
-        //         host: None,
-        //         port: None,
-        //         path: "/mnt/d/language-server/test-circom/program2.circom",
-        //         query: None,
-        //         fragment: None
-        //     },
-        //     end_line_vec: [2, 44, ..., 2701]
-        // }
-        let file = self.file_map.get(&uri.to_string()).unwrap();
-
-        let mut locations = Vec::new();
-
-        // extract token from ast at position (file, params position)
-        // eg: token = Identifier@2205..2207 "e2"
-        if let Some(token) =
-            lookup_token_at_postion(&file, &ast, params.text_document_position_params.position)
-        {
-            locations = self.lookup_definition(&file, &ast, &token);
-            // locations of declarations of that element
-            // it may returns more than 1 location if exist same name declarations
-            // eg:
-            // [
-            //     Location {
-            //         uri: Url {
-            //             scheme: "file",
-            //             cannot_be_a_base: false,
-            //             username: "",
-            //             password: None,
-            //             host: None,
-            //             port: None,
-            //             path: "/mnt/d/language-server/test-circom/program2.circom",
-            //             query: None,
-            //             fragment: None
-            //         },
-            //         range: Range {
-            //             start: Position { line: 75, character: 8 },
-            //             end: Position { line: 75, character: 14 }
-            //         }
-            //     }
-            // ]
-        };
-
-        let result: Option<GotoDefinitionResponse> = Some(GotoDefinitionResponse::Array(locations));
-
-        let result = serde_json::to_value(result).unwrap();
-        // serialize result into JSON format
-        // eg:
-        // Array [
-        //     Object {
-        //         "range": Object {
-        //             "end": Object {
-        //                 "character": Number(14),
-        //                 "line": Number(75)
-        //             },
-        //             "start": Object {
-        //                 "character": Number(8),
-        //                 "line": Number(75)
-        //             }
-        //         },
-        //         "uri": String("file:///mnt/d/language-server/test-circom/program2.circom")
-        //     }
-        // ]
-
-        Response {
-            id,
-            result: Some(result),
-            error: None,
-        }
-    }
-
-    /// update a file of (circom) source code
-    /// parse new code --> syntax tree
-    /// remove old data of that file in semantic database
-    /// add new data (circom_program_semantic) + related libs into database
-    /// update corresponding file-map and ast-map in global-state
+    /// Re-parse an updated document: build its syntax tree + semantic data, then do the same for
+    /// every `include`d library, and refresh the file/ast maps.
     pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
         let text = &text_document.text;
         let url = &text_document.uri.to_string();
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(text);
+        let syntax = syntax_tree(text);
         let file_db = FileDB::create(text, text_document.uri.clone());
         let file_id = file_db.file_id;
 
-        let p: PathBuf = file_db.get_path();
+        let parent: PathBuf = file_db.get_path();
         if let Some(ast) = AstCircomProgram::cast(syntax) {
             self.db.semantic.remove(&file_id);
             self.db.circom_program_semantic(&file_db, &ast);
 
             for lib in ast.libs() {
                 if let Some(lib_abs_path) = lib.lib() {
-                    let lib_path = p.parent().unwrap().join(lib_abs_path.value()).clone();
-                    let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
-                    if let Ok(src) = fs::read_to_string(lib_path) {
-                        let text_doc = TextDocument {
-                            text: src,
-                            uri: lib_url.clone(),
-                        };
-                        let lib_file = FileDB::create(&text_doc.text, lib_url.clone());
-                        let syntax = SyntaxTreeBuilder::syntax_tree(&text_doc.text);
-
-                        if let Some(lib_ast) = AstCircomProgram::cast(syntax) {
+                    let lib_path = parent.parent().unwrap().join(lib_abs_path.value());
+                    let lib_url = Url::from_file_path(&lib_path).unwrap();
+                    if let Ok(src) = fs::read_to_string(&lib_path) {
+                        let lib_file = FileDB::create(&src, lib_url.clone());
+                        if let Some(lib_ast) = AstCircomProgram::cast(syntax_tree(&src)) {
                             self.db.semantic.remove(&lib_file.file_id);
                             self.db.circom_program_semantic(&lib_file, &lib_ast);
                             self.ast_map.insert(lib_url.to_string(), lib_ast);
                         }
-
                         self.file_map.insert(lib_url.to_string(), lib_file);
                     }
                 }
@@ -252,4 +192,26 @@ impl GlobalState {
 
         Ok(())
     }
+}
+
+/// Deserialize a request's params, run its handler against `state`, and wrap the typed result into
+/// a success `Response`. Kept generic so [`GlobalState::handle_request`] stays a flat
+/// one-line-per-feature dispatch table — adding a request is one arm + one handler module.
+fn dispatch<P, R>(
+    state: &GlobalState,
+    id: RequestId,
+    req: Request,
+    handle: fn(&GlobalState, P) -> Result<R>,
+) -> Result<Option<Response>>
+where
+    P: serde::de::DeserializeOwned,
+    R: serde::Serialize,
+{
+    let params: P = serde_json::from_value(req.params)?;
+    let result = handle(state, params)?;
+    Ok(Some(Response {
+        id,
+        result: Some(serde_json::to_value(&result)?),
+        error: None,
+    }))
 }

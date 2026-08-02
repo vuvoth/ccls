@@ -1,11 +1,9 @@
 use std::cell::Cell;
 
-use crate::{
-    event::Event, grammar::entry::Scope, input::Input, output::Output, token_kind::TokenKind,
-};
+use crate::{event::Event, grammar::entry::Scope, lexer::Token, token_kind::TokenKind};
 
 pub struct Parser<'a> {
-    pub(crate) input: &'a Input<'a>,
+    pub(crate) tokens: &'a [Token<'a>],
     pos: usize,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
@@ -25,14 +23,14 @@ pub enum ParserError {
 impl<'a> Parser<'a> {
     pub fn wrap_trivial_tokens(&mut self) -> TokenKind {
         loop {
-            let kind = self.input.kind_of(self.pos);
+            let kind = self.kind_of(self.pos);
 
             if !kind.is_trivial() {
                 return kind;
             }
 
             self.fuel.set(256);
-            self.events.push(Event::TokenPosition(self.pos));
+            self.events.push(Event::Token(self.pos));
             self.skip();
         }
     }
@@ -79,18 +77,9 @@ impl<'a> Parser<'a> {
     pub fn advance(&mut self) {
         // assert!(!self.eof());
         self.fuel.set(256);
-        let token = Event::TokenPosition(self.pos);
+        let token = Event::Token(self.pos);
         self.events.push(token);
         self.skip();
-    }
-
-    pub fn advance_with_token(&mut self, index: usize) {
-        // assert!(token.kind != TokenKind::EOF);
-        if self.input.kind_of(index) != TokenKind::EOF {
-            self.fuel.set(256);
-            let token = Event::TokenPosition(index);
-            self.events.push(token);
-        }
     }
 
     pub fn advance_with_error(&mut self, _error: &str) {
@@ -113,13 +102,26 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a Input) -> Self {
+    pub fn new(tokens: &'a [Token<'a>]) -> Self {
         Self {
-            input,
+            tokens,
             pos: 0,
             fuel: Cell::new(256),
             events: Vec::new(),
         }
+    }
+
+    /// Kind of the token at `pos`, or [`TokenKind::EOF`] past the end of input.
+    fn kind_of(&self, pos: usize) -> TokenKind {
+        self.tokens.get(pos).map_or(TokenKind::EOF, |t| t.kind)
+    }
+
+    /// The token at the current position after skipping leading trivia, or `None` at end of input.
+    /// Grammar-facing accessor: gives callers the current token's text/range without index
+    /// arithmetic. Trivia is wrapped (emitted into the event stream) exactly as `current()` does.
+    pub fn current_token(&mut self) -> Option<&'a Token<'a>> {
+        self.current();
+        self.tokens.get(self.pos)
     }
 
     pub fn current(&mut self) -> TokenKind {
@@ -135,9 +137,9 @@ impl<'a> Parser<'a> {
             panic!("parser made no progress (fuel exhausted); likely a grammar bug");
         }
         self.fuel.set(self.fuel.get() - 1);
-        if self.pos < self.input.size() {
+        if self.pos < self.tokens.len() {
             self.pos += 1;
-            return self.input.kind_of(self.pos);
+            return self.kind_of(self.pos);
         }
 
         TokenKind::EOF
@@ -211,14 +213,14 @@ impl<'a> Parser<'a> {
 }
 
 impl Parser<'_> {
-    pub fn parsing_with_scope(input: &Input, scope: Scope) -> Output {
-        let mut p = Parser::new(input);
+    pub fn parsing_with_scope(tokens: &[Token], scope: Scope) -> Vec<Event> {
+        let mut p = Parser::new(tokens);
         scope.parse(&mut p);
-        Output::from(p.events)
+        p.events
     }
 
-    pub fn parsing(input: &Input) -> Output {
+    pub fn parsing(tokens: &[Token]) -> Vec<Event> {
         let c = Scope::CircomProgram;
-        Parser::parsing_with_scope(input, c)
+        Parser::parsing_with_scope(tokens, c)
     }
 }

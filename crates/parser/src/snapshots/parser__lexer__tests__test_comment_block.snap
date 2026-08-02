@@ -1,0 +1,64 @@
+---
+source: crates/parser/src/lexer.rs
+expression: "&tokens"
+---
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 0
+    end: 1
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 1
+    end: 9
+- kind: BlockComment
+  text: /*a + b == 10*/
+  range:
+    start: 9
+    end: 24
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 24
+    end: 25
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 25
+    end: 33
+- kind: Identifier
+  text: a
+  range:
+    start: 33
+    end: 34
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 34
+    end: 35
+- kind: Add
+  text: +
+  range:
+    start: 35
+    end: 36
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 36
+    end: 37
+- kind: Number
+  text: "10"
+  range:
+    start: 37
+    end: 39
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 39
+    end: 40
+- kind: WhiteSpace
+  text: "    "
+  range:
+    start: 40
+    end: 44

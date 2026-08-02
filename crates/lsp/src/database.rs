@@ -12,7 +12,7 @@ use rowan::{ast::AstNode, TextSize};
 use syntax::{
     abstract_syntax_tree::{
         AstCircomProgram, AstComponentDecl, AstFunctionDef, AstInputSignalDecl,
-        AstOutputSignalDecl, AstSignalDecl, AstTemplateDef, AstVarDecl,
+        AstOutputSignalDecl, AstSignalDecl, AstTemplateDef, AstVarDecl, Named,
     },
     syntax_node::{SyntaxNode, SyntaxToken},
 };
@@ -342,7 +342,7 @@ impl SemanticDB {
 
         if let Some(statements) = ast_template.statements() {
             for signal in statements.find_children::<AstInputSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
+                if let Some(name) = signal.identifier() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -356,7 +356,7 @@ impl SemanticDB {
                 }
             }
             for signal in statements.find_children::<AstOutputSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
+                if let Some(name) = signal.identifier() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -371,7 +371,7 @@ impl SemanticDB {
             }
 
             for signal in statements.find_children::<AstSignalDecl>() {
-                if let Some(name) = signal.signal_identifier().unwrap().name() {
+                if let Some(name) = signal.identifier() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -386,7 +386,7 @@ impl SemanticDB {
             }
 
             for var in statements.find_children::<AstVarDecl>() {
-                if let Some(name) = var.var_identifier().unwrap().name() {
+                if let Some(name) = var.identifier() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::TemplateData((
@@ -401,19 +401,17 @@ impl SemanticDB {
             }
 
             for component in statements.find_children::<AstComponentDecl>() {
-                if let Some(component_var) = component.component_identifier() {
-                    if let Some(name) = component_var.name() {
-                        self.insert(
-                            file_db.file_id,
-                            SemanticInfo::TemplateData((
-                                template_id,
-                                TemplateDataInfo::Component((
-                                    name.syntax().token_id(),
-                                    file_db.range(component.syntax()),
-                                )),
+                if let Some(name) = component.identifier() {
+                    self.insert(
+                        file_db.file_id,
+                        SemanticInfo::TemplateData((
+                            template_id,
+                            TemplateDataInfo::Component((
+                                name.syntax().token_id(),
+                                file_db.range(component.syntax()),
                             )),
-                        );
-                    }
+                        )),
+                    );
                 }
             }
         }
@@ -441,7 +439,7 @@ impl SemanticDB {
             // function does not contains signal decalrations --> skip signals
 
             for var in statements.find_children::<AstVarDecl>() {
-                if let Some(name) = var.var_identifier().unwrap().name() {
+                if let Some(name) = var.identifier() {
                     self.insert(
                         file_db.file_id,
                         SemanticInfo::FunctionData((
@@ -456,19 +454,17 @@ impl SemanticDB {
             }
 
             for component in statements.find_children::<AstComponentDecl>() {
-                if let Some(component_var) = component.component_identifier() {
-                    if let Some(name) = component_var.name() {
-                        self.insert(
-                            file_db.file_id,
-                            SemanticInfo::FunctionData((
-                                function_id,
-                                FunctionDataInfo::Component((
-                                    name.syntax().token_id(),
-                                    file_db.range(component.syntax()),
-                                )),
+                if let Some(name) = component.identifier() {
+                    self.insert(
+                        file_db.file_id,
+                        SemanticInfo::FunctionData((
+                            function_id,
+                            FunctionDataInfo::Component((
+                                name.syntax().token_id(),
+                                file_db.range(component.syntax()),
                             )),
-                        );
-                    }
+                        )),
+                    );
                 }
             }
         }
@@ -561,7 +557,7 @@ mod tests {
 
     use std::path::Path;
 
-    use ::syntax::{abstract_syntax_tree::AstCircomProgram, syntax::SyntaxTreeBuilder};
+    use ::syntax::{abstract_syntax_tree::AstCircomProgram, syntax::syntax_tree};
     use lsp_types::{Position, Url};
 
     use rowan::ast::AstNode;
@@ -587,7 +583,7 @@ mod tests {
         "#
         .to_string();
 
-        let syntax = SyntaxTreeBuilder::syntax_tree(&source);
+        let syntax = syntax_tree(&source);
 
         if let Some(ast) = AstCircomProgram::cast(syntax) {
             let templates = ast.template_list();
