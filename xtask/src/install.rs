@@ -71,19 +71,19 @@ fn install_client(sh: &Shell, client_opt: ClientOpt) -> anyhow::Result<()> {
 
     // Package extension.
     if cfg!(unix) {
-        cmd!(sh, "npm --version")
+        cmd!(sh, "bun --version")
             .run()
-            .context("`npm` is required to build the VS Code plugin")?;
-        cmd!(sh, "npm ci").run()?;
+            .context("`bun` is required to build the VS Code plugin")?;
+        cmd!(sh, "bun install").run()?;
 
-        cmd!(sh, "npm run package --scripts-prepend-node-path").run()?;
+        cmd!(sh, "bun run package").run()?;
     } else {
-        cmd!(sh, "cmd.exe /c npm --version")
+        cmd!(sh, "cmd.exe /c bun --version")
             .run()
-            .context("`npm` is required to build the VS Code plugin")?;
-        cmd!(sh, "cmd.exe /c npm ci").run()?;
+            .context("`bun` is required to build the VS Code plugin")?;
+        cmd!(sh, "cmd.exe /c bun install").run()?;
 
-        cmd!(sh, "cmd.exe /c npm run package").run()?;
+        cmd!(sh, "cmd.exe /c bun run package").run()?;
     };
 
     // Find the appropriate VS Code binary.

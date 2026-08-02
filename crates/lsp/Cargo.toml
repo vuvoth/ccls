@@ -18,7 +18,6 @@ serde_json = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 anyhow = { workspace = true }
-dashmap = { workspace = true }
 path-absolutize = { workspace = true }
 
 [dev-dependencies]

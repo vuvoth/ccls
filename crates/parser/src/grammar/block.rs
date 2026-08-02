@@ -1,40 +1,24 @@
 use super::*;
 
-/*
-{
-    <declaration>/<statement>
-    <declaration>/<statement>
-    ....
-    <declaration>/<statement>
-}
-*/
+/// Parse a block `{ <declaration>|<statement> ... }` (grammar: `ParseBlock`).
 pub fn block(p: &mut Parser) {
-    p.inc_rcurly();
-
-    // TODO: why do not use expect for { and }
     if !p.at(LCurly) {
-        p.advance_with_error("Miss {");
+        // expected `{`
+        p.advance_with_error();
     } else {
         let m = p.open();
         p.expect(LCurly);
 
         let stmt_marker = p.open();
         while !p.at(RCurly) && !p.eof() {
-            let kind = p.current();
-            match kind {
-                SignalKw => {
-                    declaration::signal_declaration(p);
-                    p.expect(Semicolon);
-                }
-                VarKw => {
-                    declaration::var_declaration(p);
-                    p.expect(Semicolon);
-                }
-                ComponentKw => {
-                    declaration::component_declaration(p);
-                    p.expect(Semicolon);
-                }
-                _ => statement::statement(p),
+            if p.current().is_declaration_kw() {
+                // Single dispatch source: `declaration::declaration` (and its `input_or_output`
+                // bus-typed lookahead) is shared with the `for`-init path, so the declaration
+                // keyword set lives in exactly one place — `is_declaration_kw`.
+                declaration::declaration(p);
+                p.expect(Semicolon);
+            } else {
+                statement::statement(p);
             }
         }
 
@@ -42,7 +26,5 @@ pub fn block(p: &mut Parser) {
 
         p.expect(RCurly);
         p.close(m, Block);
-
-        p.dec_rcurly();
     }
 }

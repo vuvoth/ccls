@@ -6,3 +6,4 @@ Cargo.lock
 assets
 *.new
 *.pending-snap
+.kilo

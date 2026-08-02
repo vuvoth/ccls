@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  Block 0..456
 |      LCurly 0..1
@@ -206,13 +206,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      WhiteSpace 171..172
 |     |     |     |      WhiteSpace 171..172 " "
 |     |     |      AssignStatement 172..175
-|     |     |     |      Expression 172..175
-|     |     |     |     |      UnitInc 172..175
-|     |     |     |     |     |      ExpressionAtom 172..173
-|     |     |     |     |     |     |      Identifier 172..173
-|     |     |     |     |     |     |     |      Identifier 172..173 "i"
-|     |     |     |     |     |      UnitInc 173..175
-|     |     |     |     |     |     |      UnitInc 173..175 "++"
+|     |     |     |      Expression 172..173
+|     |     |     |     |      ExpressionAtom 172..173
+|     |     |     |     |     |      Identifier 172..173
+|     |     |     |     |     |     |      Identifier 172..173 "i"
+|     |     |     |      UnitInc 173..175
+|     |     |     |     |      UnitInc 173..175 "++"
 |     |     |      RParen 175..176
 |     |     |     |      RParen 175..176 ")"
 |     |     |      Block 176..218
@@ -308,13 +307,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      WhiteSpace 257..265 "        "
 |     |     |     |      StatementList 265..292
 |     |     |     |     |      AssignStatement 265..268
-|     |     |     |     |     |      Expression 265..268
-|     |     |     |     |     |     |      UnitInc 265..268
-|     |     |     |     |     |     |     |      ExpressionAtom 265..266
-|     |     |     |     |     |     |     |     |      Identifier 265..266
-|     |     |     |     |     |     |     |     |     |      Identifier 265..266 "r"
-|     |     |     |     |     |     |     |      UnitInc 266..268
-|     |     |     |     |     |     |     |     |      UnitInc 266..268 "++"
+|     |     |     |     |     |      Expression 265..266
+|     |     |     |     |     |     |      ExpressionAtom 265..266
+|     |     |     |     |     |     |     |      Identifier 265..266
+|     |     |     |     |     |     |     |     |      Identifier 265..266 "r"
+|     |     |     |     |     |      UnitInc 266..268
+|     |     |     |     |     |     |      UnitInc 266..268 "++"
 |     |     |     |     |      Semicolon 268..269
 |     |     |     |     |     |      Semicolon 268..269 ";"
 |     |     |     |     |      EndLine 269..271

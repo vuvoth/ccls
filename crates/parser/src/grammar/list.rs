@@ -1,11 +1,20 @@
 use crate::grammar::{expression::expression, *};
 
+/// One or more comma-separated expressions (grammar: a `Listable`/`TwoElemsListable` tail). Used by
+/// call argument lists, inline arrays, and tuple expressions (all share the same element syntax).
+pub(super) fn expression_list(p: &mut Parser) {
+    expression(p);
+    while p.eat(Comma) {
+        expression(p);
+    }
+}
+
 /**
  * grammar: "(expression-1, expression-2,..., expression-n)"
- * can be an empty ()
+ * can be an empty () — the parenthesized argument/expression list of a call. (This is NOT a tuple
+ * expression; a real `TupleExpr` node exists for the ≥2-element literal form.)
  */
-pub(super) fn tuple_expression(p: &mut Parser) {
-    // let m = p.open();
+pub(super) fn paren_list(p: &mut Parser) {
     p.expect(LParen);
 
     // expression-1, expression-2,..., expression-n)
@@ -19,8 +28,6 @@ pub(super) fn tuple_expression(p: &mut Parser) {
     }
 
     p.expect(RParen);
-
-    // p.close(m, ExpressionList);
 }
 
 /**

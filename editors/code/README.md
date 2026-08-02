@@ -8,7 +8,7 @@ Better support for circom.
 - Support circom 2 
 
 
-## What make it different? 
+## What makes it different?
 
 This can process invalid circom file :D. 
 
@@ -30,16 +30,21 @@ template Another() {
 }
 ```
 
+## Requirements
+
+- [Rust](https://www.rust-lang.org/) toolchain (to build the language server).
+- [bun](https://bun.sh) (to build the VS Code extension).
+
 ## Install 
-I remcoment install via those commands:
+I recommend installing via these commands:
 
 ```bash
-git clone https://github.com/vuvoth/ccls
-cd ccls 
-cargo xtask install --server 
+git clone https://github.com/vuvoth/circom-plus
+cd circom-plus
+cargo xtask install --server
 cargo xtask install --client
 ```
-This make install extension flow work more smooth. 
+This makes the extension install flow much smoother. 
 
 ## Bugs 
 

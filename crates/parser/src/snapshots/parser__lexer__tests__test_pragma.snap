@@ -1,0 +1,79 @@
+---
+source: crates/parser/src/lexer.rs
+expression: "&tokens"
+---
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 0
+    end: 1
+- kind: WhiteSpace
+  text: "        "
+  range:
+    start: 1
+    end: 9
+- kind: BlockComment
+  text: /* test pragma token kinds */
+  range:
+    start: 9
+    end: 38
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 38
+    end: 39
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 39
+    end: 40
+- kind: WhiteSpace
+  text: "    "
+  range:
+    start: 40
+    end: 44
+- kind: PragmaKw
+  text: pragma
+  range:
+    start: 44
+    end: 50
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 50
+    end: 51
+- kind: Circom
+  text: circom
+  range:
+    start: 51
+    end: 57
+- kind: WhiteSpace
+  text: " "
+  range:
+    start: 57
+    end: 58
+- kind: Version
+  text: 2.0.0
+  range:
+    start: 58
+    end: 63
+- kind: Semicolon
+  text: ;
+  range:
+    start: 63
+    end: 64
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 64
+    end: 65
+- kind: EndLine
+  text: "\n"
+  range:
+    start: 65
+    end: 66
+- kind: WhiteSpace
+  text: "    "
+  range:
+    start: 66
+    end: 70

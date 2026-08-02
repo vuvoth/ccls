@@ -9,7 +9,7 @@ macro_rules! test_syntax {
 
         let full_path = format!("{}{}", crate_path, $file_path);
         let source = std::fs::read_to_string(full_path).expect("Should not failed");
-        let syntax = crate::syntax::syntax_node_from_source(&source, $scope);
+        let syntax = $crate::syntax::syntax_node_from_source(&source, $scope);
         insta::assert_snapshot!($file_path, view_ast(&syntax));
     };
 }
@@ -40,15 +40,15 @@ pub fn view_ast(node: &SyntaxNode) -> String {
                     }
                 }
                 result.push('\n');
-                level = level + 1;
+                level += 1;
             }
 
             WalkEvent::Leave(_it) => {
-                level = level - 1;
+                level -= 1;
             }
         }
     }
-    return result;
+    result
 }
 
 fn level_str(level: u32) -> String {

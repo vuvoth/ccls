@@ -1,4 +1,4 @@
-use list::tuple_identifier;
+use definition::definition_body;
 
 use crate::grammar::*;
 
@@ -8,15 +8,7 @@ pub fn function_parse(p: &mut Parser) {
 
     p.expect(FunctionKw);
 
-    let fn_name_marker = p.open();
-    p.expect(Identifier);
-    p.close(fn_name_marker, FunctionName);
-
-    let parameter_marker = p.open();
-    tuple_identifier(p);
-    p.close(parameter_marker, ParameterList);
-
-    block::block(p);
+    definition_body(p, FunctionName);
 
     p.close(m, FunctionDef);
 }

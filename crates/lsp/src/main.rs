@@ -1,34 +1,29 @@
-use global_state::GlobalState;
 use std::error::Error;
+use std::path::PathBuf;
 
-use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
-use lsp_types::{request::GotoDefinition, InitializeParams, ServerCapabilities};
-use lsp_types::{OneOf, TextDocumentSyncCapability, TextDocumentSyncKind};
+use lsp_server::{Connection, Message};
+use lsp_types::{
+    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind,
+};
 
-use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId};
+use crate::global_state::GlobalState;
 
-use crate::global_state::TextDocument;
-
-pub mod database;
+pub mod file_db;
 pub mod global_state;
 pub mod handler;
+pub mod resolver;
+pub mod semantic;
+pub mod source_db;
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
-    // Note that  we must have our logging only write out to stderr.
-    eprintln!("starting generic LSP server");
+    // All logging must go to stderr — stdout is the LSP message channel.
+    eprintln!("starting ccls (circom language server)");
 
-    // Create the transport. Includes the stdio (stdin and stdout) versions but this could
-    // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = Connection::stdio();
 
-    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
-        definition_provider: Some(OneOf::Left(true)),
-        ..Default::default()
-    })
-    .unwrap();
-
+    let server_capabilities =
+        serde_json::to_value(server_capabilities()).expect("ServerCapabilities is serializable");
     let initialization_params = match connection.initialize(server_capabilities) {
         Ok(it) => it,
         Err(e) => {
@@ -41,71 +36,98 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     main_loop(connection, initialization_params)?;
     io_threads.join()?;
 
-    // Shut down gracefully.
     eprintln!("shutting down server");
     Ok(())
 }
 
+/// Advertise the LSP features this server handles.
+///
+/// `definition` is fully implemented; `hover`/`completion`/`references`/`documentSymbol`/
+/// `formatting` are registered as placeholders — the client routes them to the server, which
+/// currently returns an empty result until each is implemented in `handler::*`. `rename` is fully
+/// implemented and advertises `prepareSupport` so the client consults the server (not its own
+/// textual word check) before opening the rename box — keywords/strings never become renamable.
+fn server_capabilities() -> ServerCapabilities {
+    ServerCapabilities {
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        definition_provider: Some(OneOf::Left(true)),
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
+        completion_provider: Some(CompletionOptions {
+            trigger_characters: Some(vec![".".to_string()]),
+            ..Default::default()
+        }),
+        references_provider: Some(OneOf::Left(true)),
+        document_symbol_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(OneOf::Left(true)),
+        rename_provider: Some(OneOf::Right(lsp_types::RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: Default::default(),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Receive messages over the LSP transport and route them to `GlobalState`. Requests are answered
+/// with a `Response`; notifications mutate state; responses from the client are ignored.
 fn main_loop(
     connection: Connection,
     params: serde_json::Value,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
-    let _params: InitializeParams = serde_json::from_value(params).unwrap();
+    let params: InitializeParams = serde_json::from_value(params)?;
 
-    let mut global_state = GlobalState::new();
+    // Capture workspace roots so `include` resolution can be confined to them (path-traversal
+    // defense). Without roots the server refuses to load any include rather than read arbitrarily.
+    let mut state = GlobalState::new(workspace_roots(&params));
 
     for msg in &connection.receiver {
         match msg {
             Message::Request(req) => {
+                // The `shutdown` request is handled by the transport itself.
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
-                match cast::<GotoDefinition>(req) {
-                    Ok((id, params)) => {
-                        let resp = global_state.goto_definition_handler(id, params);
-                        connection.sender.send(Message::Response(resp))?;
-                        continue;
-                    }
-                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
-                    Err(ExtractError::MethodMismatch(req)) => req,
-                };
-            }
-
-            Message::Response(_resp) => {}
-            Message::Notification(not) => {
-                match cast_notification::<DidOpenTextDocument>(not.clone()) {
-                    Ok(params) => {
-                        global_state.handle_update(&TextDocument::from(params))?;
-                    }
-                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
-                    Err(ExtractError::MethodMismatch(_not)) => (),
-                };
-
-                match cast_notification::<DidChangeTextDocument>(not.clone()) {
-                    Ok(params) => {
-                        global_state.handle_update(&TextDocument::from(params))?;
-                    }
-                    Err(err @ ExtractError::JsonError { .. }) => panic!("{err:?}"),
-                    Err(ExtractError::MethodMismatch(_)) => {}
+                if let Some(resp) = state.handle_request(req)? {
+                    connection.sender.send(Message::Response(resp))?;
                 }
+            }
+            Message::Response(_) => {}
+            Message::Notification(not) => {
+                state.handle_notification(not)?;
             }
         }
     }
     Ok(())
 }
 
-fn cast<R>(req: Request) -> Result<(RequestId, R::Params), ExtractError<Request>>
-where
-    R: lsp_types::request::Request,
-    R::Params: serde::de::DeserializeOwned,
-{
-    req.extract(R::METHOD)
-}
-
-fn cast_notification<R>(not: Notification) -> Result<R::Params, ExtractError<Notification>>
-where
-    R: lsp_types::notification::Notification,
-    R::Params: serde::de::DeserializeOwned,
-{
-    not.extract(R::METHOD)
+/// Workspace root folders from the `initialize` handshake, in priority order: modern clients send
+/// `workspace_folders`; older clients send a single `root_uri`. Each is converted from its `file:`
+/// URI to a path and canonicalized (so the Vfs's pure containment check compares canonical vs
+/// canonical). Non-`file:` roots and roots that can't be canonicalized are dropped.
+fn workspace_roots(params: &InitializeParams) -> Vec<PathBuf> {
+    let raw: Vec<PathBuf> = if let Some(folders) = &params.workspace_folders {
+        let roots: Vec<PathBuf> = folders
+            .iter()
+            .filter_map(|f| f.uri.to_file_path().ok())
+            .collect();
+        if !roots.is_empty() {
+            roots
+        } else {
+            params
+                .root_uri
+                .as_ref()
+                .and_then(|uri| uri.to_file_path().ok())
+                .map(|root| vec![root])
+                .unwrap_or_default()
+        }
+    } else {
+        params
+            .root_uri
+            .as_ref()
+            .and_then(|uri| uri.to_file_path().ok())
+            .map(|root| vec![root])
+            .unwrap_or_default()
+    };
+    raw.into_iter()
+        .filter_map(|r| r.canonicalize().ok())
+        .collect()
 }
