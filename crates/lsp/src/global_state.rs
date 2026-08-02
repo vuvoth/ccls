@@ -162,11 +162,23 @@ impl GlobalState {
             .collect()
     }
 
-    /// Resolve `token` to the declaration(s) it refers to, file-tagged. In-file first; then, for a
-    /// component declaration/call, each loaded include's top-level by name (cross-file resolution is
-    /// file-scope only — template/function names; a signal/var/param in a lib is only reachable via
-    /// member access, a separate problem). The shared resolution core for goto-definition, rename,
-    /// and references.
+    /// The [`FileId`]s of every include loaded for `origin` (resolved via the source db's confined
+    /// include loader). Shared by [`Self::resolve_use`] (cross-file component resolution) and
+    /// [`Self::resolve_template_file`] (member completion) so the include walk lives in one place.
+    fn loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
+        let Some(ast) = self.source_db.ast(origin.file_id) else {
+            return Vec::new();
+        };
+        ast.libs()
+            .into_iter()
+            .filter_map(|inc| inc.lib())
+            .filter_map(|path| {
+                self.source_db
+                    .id_for_include(&origin.file_path, &path.value())
+            })
+            .collect()
+    }
+
     /// Resolve `token` to the declaration(s) it refers to, file-tagged. In-file first; then, for a
     /// component declaration/call, each loaded include's top-level by name (cross-file resolution is
     /// file-scope only — template/function names; a signal/var/param in a lib is only reachable via
@@ -183,36 +195,47 @@ impl GlobalState {
             .map(|s| (origin.file_id, s))
             .collect();
 
+        // A component declaration/call also resolves to template/function defs in loaded includes.
         let is_component_use = token_ancestors(token)
             .any(|n| AstComponentDecl::can_cast(n.kind()) || AstComponentCall::can_cast(n.kind()));
         if is_component_use {
             let name = token.text();
-            if let Some(ast) = self.source_db.ast(origin.file_id) {
-                for include in ast.libs() {
-                    let Some(path) = include.lib() else {
-                        continue;
-                    };
-                    let Some(lib_id) = self
-                        .source_db
-                        .id_for_include(&origin.file_path, &path.value())
-                    else {
-                        continue;
-                    };
-                    let lib_table = self.source_db.symbol_table(lib_id);
-                    for sym in lib_table.lookup_top_level(name) {
-                        out.push((
-                            lib_id,
-                            ResolvedSymbol {
-                                kind: sym.kind,
-                                name: sym.name.clone(),
-                                def_range: sym.def_range,
-                            },
-                        ));
-                    }
+            for lib_id in self.loaded_includes(origin) {
+                let lib_table = self.source_db.symbol_table(lib_id);
+                for sym in lib_table.lookup_top_level(name) {
+                    out.push((
+                        lib_id,
+                        ResolvedSymbol {
+                            kind: sym.kind,
+                            name: sym.name.clone(),
+                            def_range: sym.def_range,
+                        },
+                    ));
                 }
             }
         }
         out
+    }
+
+    /// The file that defines the top-level unit `name` (template/function/bus): `origin` itself if
+    /// it declares `name`, else the first loaded include that does. Used by member completion to
+    /// locate a component's instantiated template (which may live in an included library).
+    pub(crate) fn resolve_template_file(&self, origin: &FileDB, name: &str) -> Option<FileId> {
+        if !self
+            .source_db
+            .symbol_table(origin.file_id)
+            .lookup_top_level(name)
+            .is_empty()
+        {
+            return Some(origin.file_id);
+        }
+        self.loaded_includes(origin).into_iter().find(|lib_id| {
+            !self
+                .source_db
+                .symbol_table(*lib_id)
+                .lookup_top_level(name)
+                .is_empty()
+        })
     }
 
     /// Every occurrence of `target` **in its defining file** (`target.0`), as tokens. Rename and

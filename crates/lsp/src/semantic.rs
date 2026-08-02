@@ -34,17 +34,25 @@ pub enum SymbolKind {
 
 /// One declaration. One symbol == one definition [`Range`] (the former `Vec<Range>` merge was an
 /// artifact of `hash(text)` collapsing same-named decls into one id).
+///
+/// `type_name` is set only for [`SymbolKind::Component`] — the name of the template it instantiates
+/// (`component c = T();` → `Some("T")`); it's the component's "type" used by member completion.
 #[derive(Debug, Clone)]
 pub struct Symbol {
     pub kind: SymbolKind,
     pub name: String,
     pub def_range: Range,
+    pub type_name: Option<String>,
 }
 
 /// A template/function/bus body scope. `range` is the whole-unit **byte** range used for
-/// cursor-containment: the scope whose `range` contains the token's start offset is the scope.
+/// cursor-containment; `name`/`kind` identify which unit the scope belongs to so a template's signal
+/// members can be looked up by name (member completion: a component's members are its template's
+/// signals).
 #[derive(Debug, Clone)]
 struct Scope {
+    name: String,
+    kind: SymbolKind,
     range: TextRange,
     symbols: HashMap<String, Vec<Symbol>>,
 }
@@ -138,9 +146,12 @@ impl SymbolTable {
                 kind,
                 name: name.to_string(),
                 def_range,
+                type_name: None,
             });
 
         let mut scope = Scope {
+            name: name.to_string(),
+            kind,
             range: scope_range,
             symbols: HashMap::new(),
         };
@@ -188,6 +199,32 @@ impl SymbolTable {
             .map(|s| s.symbols.values().flatten().collect::<Vec<_>>())
             .unwrap_or_default()
     }
+
+    /// The instantiated template name of the component `name` in the scope at `offset`, or `None`
+    /// (member completion: the receiver's type). Used to look up a component's members.
+    pub fn component_type_at(&self, offset: TextSize, name: &str) -> Option<&str> {
+        let scope = self.scope_at(offset)?;
+        scope
+            .symbols
+            .get(name)?
+            .iter()
+            .find(|s| s.kind == SymbolKind::Component)
+            .and_then(|s| s.type_name.as_deref())
+    }
+
+    /// The signal members of the template named `template_name` — its declared input/output/
+    /// intermediate signals. Empty if `template_name` isn't a template in this file (a component's
+    /// members are exactly its template's signals; params/vars/components of the template are not
+    /// members).
+    pub fn members_of(&self, template_name: &str) -> Vec<&Symbol> {
+        self.scopes
+            .iter()
+            .find(|s| s.name == template_name && s.kind == SymbolKind::Template)
+            .into_iter()
+            .flat_map(|s| s.symbols.values().flatten())
+            .filter(|s| s.kind == SymbolKind::Signal)
+            .collect()
+    }
 }
 
 /// Index one named declaration (`signal`/`var`/`component`) into `symbols` keyed by its
@@ -209,6 +246,7 @@ fn index_decl<N: Named>(
             kind,
             name,
             def_range: file_db.range(decl.syntax()),
+            type_name: None,
         });
         return;
     }
@@ -219,6 +257,7 @@ fn index_decl<N: Named>(
             kind,
             name,
             def_range: file_db.range(id.syntax()),
+            type_name: None,
         });
     }
 }
@@ -238,6 +277,7 @@ fn index_params(
             kind: SymbolKind::Param,
             name,
             def_range: file_db.range(param.syntax()),
+            type_name: None,
         });
     }
 }
@@ -271,13 +311,29 @@ fn index_vars(
     }
 }
 
-/// Index `component` declarations as [`SymbolKind::Component`].
+/// Index `component` declarations as [`SymbolKind::Component`], recording the instantiated template
+/// name (`component c = T();` → `type_name = Some("T")`) for member completion. Components have no
+/// tuple form in circom, so the symbol is built directly (not via `index_decl`).
 fn index_components(
     symbols: &mut HashMap<String, Vec<Symbol>>,
     file_db: &FileDB,
     statements: &AstStatementList,
 ) {
     for component in statements.find_children::<AstComponentDecl>() {
-        index_decl(symbols, file_db, SymbolKind::Component, &component);
+        let Some(id) = component.identifier() else {
+            continue;
+        };
+        let name = id.syntax().text().to_string();
+        // `component c = T();` — the template `T` is this component's "type".
+        let type_name = component
+            .template()
+            .and_then(|t| t.name())
+            .map(|n| n.syntax().text().to_string());
+        symbols.entry(name.clone()).or_default().push(Symbol {
+            kind: SymbolKind::Component,
+            name,
+            def_range: file_db.range(component.syntax()),
+            type_name,
+        });
     }
 }

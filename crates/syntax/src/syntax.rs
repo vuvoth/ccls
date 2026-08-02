@@ -88,12 +88,13 @@ fn build_green(tokens: &[Token], events: Vec<Event>, builder: &mut GreenNodeBuil
                     builder.finish_node();
                 }
             }
-            Event::ErrorReport(m) => {
-                // `error_report` already opened the outer `Error` node; emit the message as a
-                // nested `Error { token }` so the shape is `Error { Error { <msg> } }`, matching
-                // the old `build_rec` error path exactly.
+            Event::ErrorReport(_) => {
+                // A zero-width `Error` node marks the error position. The message is diagnostic
+                // metadata, NOT source text: emitting it as a token (`builder.token(Error, &msg)`)
+                // would make rowan size the node by the message length, inflating its byte range
+                // past EOF on terminal errors (e.g. `c.` at end of input) and breaking
+                // offset/range math. `has_error`/`parses_clean` key off the node kind, not text.
                 builder.start_node(TokenKind::Error.into());
-                builder.token(TokenKind::Error.into(), m.as_str());
                 builder.finish_node();
             }
         }

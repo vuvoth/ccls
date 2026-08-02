@@ -1,8 +1,11 @@
-//! Autocompletion: the names visible at the cursor plus reserved keywords.
+//! Autocompletion: the names visible at the cursor plus reserved keywords, and **member
+//! completion** (`c.<signal>`) for component instances.
 //!
 //! Rides the shared cursor prologue ([`GlobalState::cursor_context`]) and the already-cached
-//! per-file [`SymbolTable`]. Returns a static `is_incomplete: false` list — the client filters by
-//! the word being typed, so there's no server-side prefix extraction.
+//! per-file [`SymbolTable`]. Member mode detects a `receiver.<partial>` shape by scanning the source
+//! prefix, resolves the receiver's instantiated template (in-file or via include), and offers that
+//! template's signals. Normal mode returns a static `is_incomplete: false` list — the client filters
+//! by the word being typed, so there's no server-side prefix extraction.
 
 use std::collections::HashSet;
 
@@ -10,8 +13,9 @@ use anyhow::Result;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, CompletionParams, CompletionResponse,
 };
+use rowan::TextSize;
 
-use crate::global_state::GlobalState;
+use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::SymbolKind;
 use crate::source_db::SourceDatabase;
 
@@ -54,6 +58,21 @@ pub fn handle(state: &GlobalState, params: CompletionParams) -> Result<Option<Co
         return Ok(None);
     };
     let table = state.source_db.symbol_table(ctx.id);
+
+    // Member completion: cursor sits in a `receiver.<partial>` shape. Resolve the receiver's
+    // instantiated template and offer its signals. Falls through to normal completion if there's no
+    // such shape, the receiver isn't a component, or its template can't be found.
+    let prefix = ctx.file_db.text();
+    let byte = u32::from(ctx.offset) as usize;
+    let prefix = prefix.get(..byte).unwrap_or(prefix);
+    if let Some((receiver, recv_off)) = parse_member_receiver(prefix) {
+        if let Some(items) = member_items(state, &ctx, receiver, recv_off) {
+            return Ok(Some(CompletionResponse::List(CompletionList {
+                is_incomplete: false,
+                items,
+            })));
+        }
+    }
 
     let mut seen: HashSet<&str> = HashSet::new();
     let mut items: Vec<CompletionItem> = Vec::new();
@@ -103,12 +122,74 @@ fn map_kind(kind: SymbolKind) -> CompletionItemKind {
     }
 }
 
+/// A circom identifier byte (`[A-Za-z0-9_$]`). Member detection scans ASCII identifier runs, so a
+/// byte check is correct (identifiers are ASCII) and stays on UTF-8 char boundaries.
+fn is_ident_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_' || b == b'$'
+}
+
+/// If the source `prefix` (text up to the cursor) ends in a `receiver.<partial-member>` shape,
+/// return the receiver name and its starting byte offset (for scope lookup). `None` otherwise.
+fn parse_member_receiver(prefix: &str) -> Option<(&str, TextSize)> {
+    let bytes = prefix.as_bytes();
+    // skip a trailing partial member (identifier chars), possibly empty (cursor right after `.`)
+    let mut cur = bytes.len();
+    while cur > 0 && is_ident_byte(bytes[cur - 1]) {
+        cur -= 1;
+    }
+    // require a `.` immediately before the (possibly empty) member
+    if cur == 0 || bytes[cur - 1] != b'.' {
+        return None;
+    }
+    let end = cur - 1; // the dot
+    let mut start = end;
+    while start > 0 && is_ident_byte(bytes[start - 1]) {
+        start -= 1;
+    }
+    if start == end {
+        return None; // no receiver identifier before the dot
+    }
+    let receiver = std::str::from_utf8(&bytes[start..end]).ok()?;
+    Some((receiver, TextSize::from(start as u32)))
+}
+
+/// Member completion items for `receiver`: resolve its component type, locate the instantiated
+/// template (in-file or via include), and return its signal members. `None` if the receiver isn't a
+/// component or its template can't be resolved.
+fn member_items(
+    state: &GlobalState,
+    ctx: &CursorContext,
+    receiver: &str,
+    recv_off: TextSize,
+) -> Option<Vec<CompletionItem>> {
+    // `symbol_table` returns an owned table; bind it so the `&str` type name (a borrow of it) lives
+    // long enough for `resolve_template_file` / `members_of` below.
+    let table = state.source_db.symbol_table(ctx.id);
+    let ty = table.component_type_at(recv_off, receiver)?;
+    let template_file = state.resolve_template_file(&ctx.file_db, ty)?;
+    Some(
+        state
+            .source_db
+            .symbol_table(template_file)
+            .members_of(ty)
+            .into_iter()
+            .map(|s| CompletionItem {
+                label: s.name.clone(),
+                kind: Some(CompletionItemKind::FIELD),
+                ..Default::default()
+            })
+            .collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
 
     use lsp_types::{Position, Url};
+    use rowan::TextSize;
 
+    use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
 
     use super::handle;
@@ -120,6 +201,13 @@ mod tests {
         let mut state = GlobalState::new(Vec::new());
         state.source_db.set_document(url, source.to_string());
         state
+    }
+
+    /// Position at the byte offset just past the last occurrence of `needle`.
+    fn position_after_last(source: &str, needle: &str) -> Position {
+        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
+        let idx = source.rfind(needle).unwrap_or(0) + needle.len();
+        file.position(TextSize::from(idx as u32))
     }
 
     fn labels(state: &GlobalState, url: &Url, position: Position) -> HashSet<String> {
@@ -226,5 +314,49 @@ mod tests {
         let before = names.len();
         names.dedup();
         assert_eq!(names.len(), before, "no duplicate completion labels");
+    }
+
+    /// `c.` offers the instantiated template's signals (and only those — member mode).
+    #[test]
+    fn member_completion_offers_template_signals_test() {
+        let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal input b;\n    signal output c;\n}\ntemplate Main() {\n    component m = T();\n    m.\n}\n";
+        let url = Url::from_file_path("/tmp/m.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // Cursor right after the `m.` member-access dot.
+        let got = labels(&state, &url, position_after_last(source, "m."));
+
+        for signal in ["a", "b", "c"] {
+            assert!(
+                got.contains(signal),
+                "template signal {signal:?} should be offered"
+            );
+        }
+        // Member mode returns ONLY the template's signals — no keywords, no template name.
+        assert!(
+            !got.contains("signal") && !got.contains("template") && !got.contains("T"),
+            "member mode must not fall through to keyword/global completion: {got:?}"
+        );
+    }
+
+    /// A receiver that isn't a component (`var v; v.`) falls through to normal completion (no
+    /// member items) — proves member mode doesn't fire for non-components.
+    #[test]
+    fn member_completion_non_component_falls_through_test() {
+        let source = "pragma circom 2.0.0;\ntemplate T() { signal input a; }\ntemplate Main() {\n    var v = 0;\n    v.\n}\n";
+        let url = Url::from_file_path("/tmp/n.circom").unwrap();
+        let state = state_with(&url, source);
+
+        let got = labels(&state, &url, position_after_last(source, "v."));
+        // Fell through to normal completion → keywords present, T's signal "a" absent (a is local to
+        // T's body, not visible in Main).
+        assert!(
+            got.contains("signal"),
+            "non-component receiver falls through to normal completion"
+        );
+        assert!(
+            !got.contains("a"),
+            "T's signal must not leak into Main via a non-component receiver"
+        );
     }
 }

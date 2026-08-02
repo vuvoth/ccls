@@ -45,6 +45,12 @@ impl FileDB {
         PathBuf::from(p)
     }
 
+    /// The document's source text (read-only). Carried so offset/position can map UTF-16 ↔ bytes and
+    /// completion can scan a `receiver.` prefix.
+    pub fn text(&self) -> &str {
+        &self.content
+    }
+
     /// Byte offset of an LSP [`Position`]. LSP `character` is a **UTF-16** code-unit count, so it is
     /// converted by walking the line's code points from the line start (not by adding it as a raw
     /// byte offset — that is only correct for pure ASCII). A `character` past the line end is
