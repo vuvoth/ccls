@@ -359,4 +359,73 @@ mod tests {
             "T's signal must not leak into Main via a non-component receiver"
         );
     }
+
+    /// Scope is per-template: completing inside A offers A's symbols, never B's (and vice-versa).
+    #[test]
+    fn completion_scope_is_per_template_test() {
+        let source = "pragma circom 2.0.0;\ntemplate A() {\n    signal input aa;\n}\ntemplate B() {\n    signal input bb;\n}\n";
+        let url = Url::from_file_path("/tmp/s.circom").unwrap();
+        let state = state_with(&url, source);
+
+        let in_a = labels(&state, &url, Position::new(2, 4)); // inside A's body
+        let in_b = labels(&state, &url, Position::new(5, 4)); // inside B's body
+
+        assert!(in_a.contains("aa"), "A's signal offered inside A");
+        assert!(!in_a.contains("bb"), "B's signal must not leak into A");
+
+        assert!(in_b.contains("bb"), "B's signal offered inside B");
+        assert!(!in_b.contains("aa"), "A's signal must not leak into B");
+
+        // Template/function names are file-global: B's *name* is offered inside A (you can write
+        // `component x = B()` there), even though B's *signals* are not.
+        assert!(
+            in_a.contains("B"),
+            "sibling template name is visible across templates"
+        );
+    }
+
+    /// Cross-file member completion: `component c = Lib();` where `Lib` is in an `include`d file —
+    /// `c.` must offer `Lib`'s signals (resolved via the workspace include loader).
+    #[test]
+    fn member_completion_cross_file_template_test() {
+        use std::fs;
+
+        let base = std::env::temp_dir().join(format!("ccls_xfile_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(
+            ws.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal input lin;\n    signal output lout;\n}\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate Main() {\n    component c = Lib();\n    c.\n}\n";
+        let main_path = ws.join("main.circom");
+        fs::write(&main_path, main_src).unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        // workspace root set so the `include` is loaded (path-traversal confinement).
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        let _ = state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+        let _ = state.source_db.load_include(&main_url, "lib.circom");
+
+        let got = labels(&state, &main_url, position_after_last(main_src, "c."));
+
+        assert!(
+            got.contains("lin"),
+            "Lib's input signal offered via the include"
+        );
+        assert!(
+            got.contains("lout"),
+            "Lib's output signal offered via the include"
+        );
+        // Member mode returns only the template's signals — no keywords leak in.
+        assert!(
+            !got.contains("signal"),
+            "cross-file member mode must not fall through: {got:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
 }
