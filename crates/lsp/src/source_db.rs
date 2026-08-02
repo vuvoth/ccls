@@ -338,10 +338,59 @@ mod tests {
         let url = url_for("fdb");
         let (id, _) = db.set_document(&url, "a\nb\nc".to_string()).unwrap();
         let first = db.file_db(id);
-        // end_line_vec records byte offsets of '\n' -> [1, 3].
-        assert_eq!(first.end_line_vec, vec![1, 3]);
+        // newline_offsets records byte offsets of '\n' -> [1, 3].
+        assert_eq!(first.newline_offsets, vec![1, 3]);
         // Re-query returns the cached FileDB (clone of the same value).
         let again = db.file_db(id);
-        assert_eq!(first.end_line_vec, again.end_line_vec);
+        assert_eq!(first.newline_offsets, again.newline_offsets);
+    }
+
+    /// The symbol table builds lazily from the cached parse, is memoized (same `Arc` on repeat),
+    /// is non-empty for a real program, and is dropped on a content change.
+    #[test]
+    fn symbol_table_memoized_and_non_empty_test() {
+        let mut db = ContentCacheDb::new();
+        let url = url_for("sym");
+        let src = "pragma circom 2.0.0;
+template Multiplier2() {
+    signal input a;
+    signal input b;
+    signal output c;
+    c <== a * b;
+}
+"
+        .to_string();
+        let (id, _) = db.set_document(&url, src).unwrap();
+
+        let first = db.symbol_table(id);
+        // Non-empty: the file top-level carries the `Multiplier2` template, and its body has
+        // params/signals. Member counts are the real correctness signal here.
+        assert!(
+            !first.lookup_top_level("Multiplier2").is_empty(),
+            "template name should be indexed in the file top-level"
+        );
+
+        // Memoized: a repeat query returns the same `Arc` (no rebuild).
+        let again = db.symbol_table(id);
+        assert!(
+            Arc::ptr_eq(&first, &again),
+            "repeat symbol_table query must hit the cache"
+        );
+
+        // A content change drops the cached table (a new `Arc` is built).
+        let (_, changed) = db
+            .set_document(&url, "pragma circom 2.1.0;\n".to_string())
+            .unwrap();
+        assert!(changed, "different text is a real change");
+        let rebuilt = db.symbol_table(id);
+        assert!(
+            !Arc::ptr_eq(&first, &rebuilt),
+            "content change must invalidate the cached symbol table"
+        );
+        // The new (now template-less) program has an empty file top-level.
+        assert!(
+            rebuilt.lookup_top_level("Multiplier2").is_empty(),
+            "the edited program has no Multiplier2 template"
+        );
     }
 }

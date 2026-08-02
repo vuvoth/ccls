@@ -229,7 +229,6 @@ pub enum TokenKind {
     // Component
     ComponentDecl,
     ComponentCall,
-    SignalOfComponent,
     // Expression
     ExpressionAtom,
     Expression,
@@ -238,8 +237,7 @@ pub enum TokenKind {
     Block,
     ParameterList,
     Call,
-    TenaryConditional,
-    Statement,
+    TernaryConditional,
     StatementList,
     ArrayQuery,
     ParserError,
@@ -259,9 +257,10 @@ pub enum TokenKind {
 /// All core circom infix operators are **left-associative**, so `infix()` returns
 /// `(lbp, lbp + 1)`; there are no right-associative infix operators in core circom.
 pub const BP_POSTFIX: u16 = 250;
-/// Prefix `!`/`~`/`-` sits between `**` (`BP_POWER`) and `*` (`BP_MUL`), so `-a ** b` parses as
-/// `-(a ** b)` and `-a * b` as `(-a) * b` (grammar tiers `Expression2`/`Expression3`/`Expression4`).
-pub const BP_PREFIX: u16 = 175;
+/// Prefix `!`/`~`/`-` sits **between** postfix (`BP_POSTFIX`) and `**` (`BP_POWER`): the official
+/// grammar tiers `Expression2` (prefix) are TIGHTER than `Expression3` (`**`), so `-a ** b` parses
+/// as `(-a) ** b` (not `-(a ** b)`), and `-a.b` as `-(a.b)` (postfix binds tighter still).
+pub const BP_PREFIX: u16 = 200;
 pub const BP_POWER: u16 = 181;
 pub const BP_MUL: u16 = 171;
 pub const BP_ADD: u16 = 161;
@@ -303,11 +302,6 @@ impl From<TokenKind> for rowan::SyntaxKind {
 }
 
 impl TokenKind {
-    // a + 10 --> a and 10 are literals
-    pub fn is_literal(self) -> bool {
-        matches!(self, Self::Number | Self::HexNumber | Self::Identifier)
-    }
-
     // Infix binding powers `(lbp, rbp)`. Returns `None` for non-infix tokens.
     //
     // The ladder follows the official circom grammar (lang.lalrpop Expression4..Expression12).

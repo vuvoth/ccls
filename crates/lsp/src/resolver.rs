@@ -32,7 +32,7 @@ pub struct ResolvedSymbol {
 
 /// Resolve `token` against `table`: look up `token.text()` in the body scope containing the token's
 /// start offset, and also in the file top-level (so a template name used in `component mul = T()`
-/// and a unit's own name token both resolve). Returns one [`ResolvedSymbol`] per matching `Symbol`.
+/// and a scope's own name token both resolve). Returns one [`ResolvedSymbol`] per matching `Symbol`.
 ///
 /// The body and file name spaces are disjoint (bodies carry params/signals/vars/components; the
 /// file carries template/function names), so the two lookups never duplicate the same declaration.
@@ -42,18 +42,18 @@ pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> 
     let name = token.text();
     let offset: TextSize = token.text_range().start();
 
-    let unit_hits = table.lookup_in_unit(offset, name);
-    let file_hits = table.lookup_file(name);
+    let scope_symbols = table.lookup_in_scope(offset, name);
+    let top_level_symbols = table.lookup_top_level(name);
 
-    let mut out = Vec::with_capacity(unit_hits.len() + file_hits.len());
-    for sym in unit_hits.iter().chain(file_hits.iter()) {
-        out.push(ResolvedSymbol {
+    let mut resolved = Vec::with_capacity(scope_symbols.len() + top_level_symbols.len());
+    for sym in scope_symbols.iter().chain(top_level_symbols.iter()) {
+        resolved.push(ResolvedSymbol {
             kind: sym.kind,
             name: sym.name.clone(),
             def_range: sym.def_range,
         });
     }
-    out
+    resolved
 }
 
 #[cfg(test)]
@@ -105,7 +105,11 @@ mod tests {
     ) -> SyntaxToken {
         tokens_with_text(ast, text)
             .into_iter()
-            .find(|t| t.parent().and_then(|p| p.ancestors().find_map(N::cast)).is_none())
+            .find(|t| {
+                t.parent()
+                    .and_then(|p| p.ancestors().find_map(N::cast))
+                    .is_none()
+            })
             .unwrap_or_else(|| tokens_with_text(ast, text).remove(0))
     }
 
@@ -134,7 +138,10 @@ template T() {
             .find(|s| s.kind == SymbolKind::Signal)
             .unwrap();
         // The definition range is the whole `signal input a;` statement, which starts on line 3.
-        assert_eq!(signal.def_range.start.line, 2, "decl is on line 3 (0-indexed 2)");
+        assert_eq!(
+            signal.def_range.start.line, 2,
+            "decl is on line 3 (0-indexed 2)"
+        );
         assert_eq!(signal.name, "a");
     }
 
@@ -246,7 +253,11 @@ template Main() {
         // Pick the `in1` wrapped by a `ComponentCall` node (`mul.in1`), not the free-standing one.
         let token = tokens_with_text(&ast, "in1")
             .into_iter()
-            .find(|t| t.parent().and_then(|p| p.ancestors().find_map(AstComponentCall::cast)).is_some())
+            .find(|t| {
+                t.parent()
+                    .and_then(|p| p.ancestors().find_map(AstComponentCall::cast))
+                    .is_some()
+            })
             .expect("a `mul.in1` ComponentCall token should exist");
 
         let resolved = resolve(&table, &token);

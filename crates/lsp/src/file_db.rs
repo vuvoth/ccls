@@ -11,31 +11,31 @@ use syntax::syntax_node::SyntaxNode;
 pub use vfs::FileId;
 
 /// Per-file offset/line bookkeeping over a document's source text. Carries the [`FileId`] (owned by
-/// the VFS), the canonical `file:` URL, and a vector of byte offsets of every `\n` so positions and
-/// offsets can be converted in either direction. The range helper turns a syntax node's byte range
-/// into an LSP [`Range`].
+/// the VFS), the canonical `file:` URL, and the byte offsets of every `\n` so positions and offsets
+/// can be converted in either direction. The range helper turns a syntax node's byte range into an
+/// LSP [`Range`].
 #[derive(Clone)]
 pub struct FileDB {
     pub file_id: FileId,
     pub file_path: Url,
-    pub end_line_vec: Vec<u32>,
+    pub newline_offsets: Vec<u32>,
 }
 
 impl FileDB {
     pub(crate) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
-        let mut file_utils = Self {
+        let mut file_db = Self {
             file_id,
             file_path,
-            end_line_vec: Vec::new(),
+            newline_offsets: Vec::new(),
         };
 
-        for (id, c) in content.chars().enumerate() {
+        for (offset, c) in content.chars().enumerate() {
             if c == '\n' {
-                file_utils.end_line_vec.push(id as u32);
+                file_db.newline_offsets.push(offset as u32);
             }
         }
 
-        file_utils
+        file_db
     }
 
     pub fn get_path(&self) -> PathBuf {
@@ -43,17 +43,17 @@ impl FileDB {
         PathBuf::from(p)
     }
 
-    pub fn off_set(&self, position: Position) -> TextSize {
-        if position.line == 0 || self.end_line_vec.is_empty() {
+    pub fn offset(&self, position: Position) -> TextSize {
+        if position.line == 0 || self.newline_offsets.is_empty() {
             return position.character.into();
         }
         // Clamp a line past EOF to the last known line instead of indexing out of range.
-        let idx = (position.line as usize).min(self.end_line_vec.len()) - 1;
-        (self.end_line_vec[idx] + position.character + 1).into()
+        let idx = (position.line as usize).min(self.newline_offsets.len()) - 1;
+        (self.newline_offsets[idx] + position.character + 1).into()
     }
 
-    pub fn position(&self, off_set: TextSize) -> Position {
-        let line = match self.end_line_vec.binary_search(&(off_set.into())) {
+    pub fn position(&self, offset: TextSize) -> Position {
+        let line = match self.newline_offsets.binary_search(&(offset.into())) {
             Ok(l) => l,
             Err(l) => l,
         };
@@ -61,9 +61,9 @@ impl FileDB {
         Position::new(
             line as u32,
             if line > 0 {
-                (u32::from(off_set)) - self.end_line_vec[line - 1] - 1
+                (u32::from(offset)) - self.newline_offsets[line - 1] - 1
             } else {
-                off_set.into()
+                offset.into()
             },
         )
     }
@@ -86,43 +86,43 @@ mod tests {
     use super::{FileDB, FileId};
 
     #[test]
-    fn off_set_test() {
-        let str = r#"
+    fn offset_test() {
+        let source = r#"
 one
 two
 three
        "#;
 
-        let file_utils = FileDB::new(
+        let file_db = FileDB::new(
             FileId(1),
-            str,
+            source,
             Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
         );
 
         let position = Position::new(0, 1);
 
-        assert_eq!(file_utils.off_set(position), 1.into());
+        assert_eq!(file_db.offset(position), 1.into());
 
         let position = Position::new(1, 1);
 
-        assert_eq!(file_utils.off_set(position), 2.into());
+        assert_eq!(file_db.offset(position), 2.into());
     }
 
     #[test]
     fn position_test() {
-        let str = r#"
+        let source = r#"
         one
         two
         three
                "#;
 
-        // 0, 4, 8
-        let file_utils = FileDB::new(
+        // newline byte offsets: 0, 12, 24 (the leading `\n` then the indented lines)
+        let file_db = FileDB::new(
             FileId(1),
-            str,
+            source,
             Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
         );
-        assert_eq!(Position::new(1, 1), file_utils.position(2.into()));
-        assert_eq!(Position::new(0, 0), file_utils.position(0.into()));
+        assert_eq!(Position::new(1, 1), file_db.position(2.into()));
+        assert_eq!(Position::new(0, 0), file_db.position(0.into()));
     }
 }

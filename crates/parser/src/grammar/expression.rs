@@ -33,7 +33,7 @@ fn circom_expression(p: &mut Parser) {
 /// `cond ? if_true : if_false`. The branches are parsed at the `||` level so a nested ternary is
 /// rejected (matching the grammar — `a ? b : c ? d : e` is a syntax error in circom).
 ///
-/// The whole form is wrapped in a single `TenaryConditional` node (the event/marker model cannot
+/// The whole form is wrapped in a single `TernaryConditional` node (the event/marker model cannot
 /// reliably double-wrap an already-parsed operand, and circom's own AST models this as one
 /// `InlineSwitchOp`).
 fn ternary_conditional(p: &mut Parser, cond: Marker) {
@@ -52,7 +52,7 @@ fn ternary_conditional(p: &mut Parser, cond: Marker) {
     expression_rec(p, TERNARY_BRANCH_BP);
     p.close(if_false, Expression);
 
-    p.close(m, TenaryConditional);
+    p.close(m, TernaryConditional);
 }
 
 /// Precedence-climbing (Pratt) core. Returns the marker bounding the parsed expression, or

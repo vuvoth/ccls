@@ -5,7 +5,7 @@ use rowan::{ast::AstNode, TextSize};
 use syntax::abstract_syntax_tree::{AstCircomProgram, AstInclude};
 use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
-    use crate::file_db::FileDB;
+use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
 use crate::source_db::SourceDatabase;
 
@@ -30,11 +30,11 @@ pub fn handle(
     let Some(ast) = state.source_db.ast(id) else {
         return Ok(None);
     };
-    let file = state.source_db.file_db(id);
+    let file_db = state.source_db.file_db(id);
 
-    let offset = file.off_set(position);
+    let offset = file_db.offset(position);
     let locations = match token_at_offset(&ast, offset) {
-        Some(token) => state.lookup_definition(&file, &ast, &token),
+        Some(token) => state.lookup_definition(&file_db, &ast, &token),
         None => Vec::new(),
     };
     Ok(Some(GotoDefinitionResponse::Array(locations)))
@@ -56,7 +56,7 @@ pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<Synta
 
 /// The token's wrapping nodes: its parent followed by all of that parent's ancestors. Mirrors
 /// `parent_ancestors()`, which is absent on `SyntaxToken` in this rowan version.
-pub fn ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
+pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
     token
         .parent()
         .into_iter()
@@ -66,18 +66,18 @@ pub fn ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
 // If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.
 // Routed here (never the resolver) because the resolver only handles `Identifier` tokens — a
 // `CircomString` carries a path, not a symbol name.
-pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
-    let Some(ast_include) = ancestors(token).find_map(AstInclude::cast) else {
+pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
+    let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
     };
-    let Some(abs_lib) = ast_include.lib() else {
+    let Some(include_path) = include_stmt.lib() else {
         return Vec::new();
     };
-    let path = file.get_path();
+    let path = file_db.get_path();
     let Some(parent_dir) = path.parent() else {
         return Vec::new();
     };
-    let lib_path = parent_dir.join(abs_lib.value());
+    let lib_path = parent_dir.join(include_path.value());
     // Absolutize so the returned location URL is canonical and matches the FileId the source db
     // interns for the same include (otherwise a `"../lib.circom"` include resolves to a
     // non-canonical URL like `/a/b/../lib.circom` that won't match the interned `/a/lib.circom`).
@@ -101,7 +101,7 @@ mod tests {
         syntax::syntax_tree,
     };
 
-use crate::file_db::FileDB;
+    use crate::file_db::FileDB;
 
     use super::token_at_offset;
 
@@ -118,7 +118,7 @@ use crate::file_db::FileDB;
     fn goto_decl_test() {
         let file_path = "/src/test_files/handler/templates.circom";
         let source = get_source_from_path(file_path);
-        let file = FileDB::new(
+        let file_db = FileDB::new(
             vfs::FileId(0),
             &source,
             Url::from_file_path(Path::new("/tmp")).unwrap(),
@@ -135,17 +135,20 @@ use crate::file_db::FileDB;
                 .find_children::<AstInputSignalDecl>();
             let signal_name = inputs[0].signal_identifier().unwrap().name().unwrap();
 
-            let tmp = signal_name.syntax().text_range().start();
+            let signal_offset = signal_name.syntax().text_range().start();
 
-            if let Some(token) = token_at_offset(&program_ast, file.off_set(file.position(tmp))) {
-                let wrap_token = super::ancestors(&token).find_map(AstTemplateDef::cast);
+            if let Some(token) = token_at_offset(
+                &program_ast,
+                file_db.offset(file_db.position(signal_offset)),
+            ) {
+                let template_def = super::token_ancestors(&token).find_map(AstTemplateDef::cast);
 
-                let string_syntax_node = match wrap_token {
+                let node_text = match template_def {
                     None => "None".to_string(),
-                    Some(template_def) => format!("{}", template_def.syntax()),
+                    Some(def) => format!("{}", def.syntax()),
                 };
 
-                insta::assert_snapshot!("test_lookup_node_wrap_token", string_syntax_node);
+                insta::assert_snapshot!("test_lookup_node_wrap_token", node_text);
             }
         }
     }

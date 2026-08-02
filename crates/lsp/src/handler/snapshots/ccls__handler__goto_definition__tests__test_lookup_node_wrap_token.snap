@@ -1,6 +1,6 @@
 ---
 source: crates/lsp/src/handler/goto_definition.rs
-expression: string_syntax_node
+expression: node_text
 ---
 template X() {
             signal x[100];

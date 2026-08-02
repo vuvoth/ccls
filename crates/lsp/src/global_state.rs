@@ -13,7 +13,7 @@ use syntax::syntax_node::SyntaxToken;
 
 use crate::file_db::FileDB;
 use crate::handler;
-use crate::handler::goto_definition::{ancestors, jump_to_lib};
+use crate::handler::goto_definition::{jump_to_lib, token_ancestors};
 use crate::resolver;
 use crate::source_db::{ContentCacheDb, SourceDatabase};
 
@@ -116,7 +116,7 @@ impl GlobalState {
     /// and then any `include`d library when the token sits in a component declaration/call.
     pub fn lookup_definition(
         &self,
-        root: &FileDB,
+        file_db: &FileDB,
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
@@ -124,16 +124,16 @@ impl GlobalState {
         // the current file only). Hoisted to the top so the resolver stays pure / URL-agnostic and
         // never sees `CircomString` tokens.
         if token.kind() == TokenKind::CircomString {
-            return jump_to_lib(root, token);
+            return jump_to_lib(file_db, token);
         }
 
         // In-file resolution: the symbol table builds lazily on first query (never an `unwrap` —
         // a failed parse yields an empty table).
-        let table = self.source_db.symbol_table(root.file_id);
-        let main_symbols = resolver::resolve(&table, token);
-        let mut result: Vec<Location> = main_symbols
+        let table = self.source_db.symbol_table(file_db.file_id);
+        let file_symbols = resolver::resolve(&table, token);
+        let mut locations: Vec<Location> = file_symbols
             .into_iter()
-            .map(|s| Location::new(root.file_path.clone(), s.def_range))
+            .map(|s| Location::new(file_db.file_path.clone(), s.def_range))
             .collect();
 
         // For a component declaration/call, also search the libraries it may instantiate. Cross-file
@@ -141,27 +141,29 @@ impl GlobalState {
         // only reachable via member-access (e.g. `c.signal`), which is a separate problem and out of
         // scope. Resolution is by name in each lib's own table — never reusing the main-file token's
         // identity (the bug that made the legacy `hash(text)` index structurally return `None` here).
-        let is_component_use = ancestors(token)
+        let is_component_use = token_ancestors(token)
             .any(|n| AstComponentDecl::can_cast(n.kind()) || AstComponentCall::can_cast(n.kind()));
         if is_component_use {
             let name = token.text();
-            for lib in ast.libs() {
-                let Some(lib_abs) = lib.lib() else { continue };
+            for include in ast.libs() {
+                let Some(include_path) = include.lib() else {
+                    continue;
+                };
                 let Some(lib_id) = self
                     .source_db
-                    .id_for_include(&root.file_path, &lib_abs.value())
+                    .id_for_include(&file_db.file_path, &include_path.value())
                 else {
                     continue;
                 };
                 let lib_table = self.source_db.symbol_table(lib_id);
                 let lib_file = self.source_db.file_db(lib_id);
-                for sym in lib_table.lookup_file(name) {
-                    result.push(Location::new(lib_file.file_path.clone(), sym.def_range));
+                for sym in lib_table.lookup_top_level(name) {
+                    locations.push(Location::new(lib_file.file_path.clone(), sym.def_range));
                 }
             }
         }
 
-        result
+        locations
     }
 
     /// Register an updated document: set its text (dropping its derived caches) and load every
@@ -189,11 +191,13 @@ impl GlobalState {
         // Includes: read from disk once, then serve from cache on subsequent keystrokes. The
         // symbol table for the main file (and its libs) builds lazily on first query.
         if let Some(ast) = self.source_db.ast(id) {
-            for lib in ast.libs() {
-                let Some(lib_abs) = lib.lib() else { continue };
+            for include in ast.libs() {
+                let Some(include_path) = include.lib() else {
+                    continue;
+                };
                 let _ = self
                     .source_db
-                    .load_include(&text_document.uri, &lib_abs.value());
+                    .load_include(&text_document.uri, &include_path.value());
             }
         }
 

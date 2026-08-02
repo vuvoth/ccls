@@ -11,7 +11,7 @@
     var add_after_mul = a + b * c;
     // ** is left-associative in circom: a ** b ** c == (a ** b) ** c
     var power_left = a ** b ** c;
-    // prefix - is looser than ** : -a ** b == -(a ** b)
+    // prefix - is TIGHTER than ** (grammar Expression2 < Expression3): -a ** b == (-a) ** b
     var prefix_vs_power = -a ** b;
     // || looser than && : a || b && c == a || (b && c)
     var bool_precedence = a || b && c;

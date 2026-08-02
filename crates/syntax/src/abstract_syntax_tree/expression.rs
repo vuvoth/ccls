@@ -56,9 +56,9 @@ impl AstArrayQuery {
     }
 }
 
-ast_node!(AstTenaryConditional, TenaryConditional);
+ast_node!(AstTernaryConditional, TernaryConditional);
 
-impl AstTenaryConditional {
+impl AstTernaryConditional {
     /// The three branches in order: `[0]` condition, `[1]` then-branch, `[2]` else-branch.
     pub fn branches(&self) -> Vec<AstExpression> {
         support::children(self.syntax()).collect()
