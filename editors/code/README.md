@@ -39,8 +39,8 @@ template Another() {
 I recommend installing via these commands:
 
 ```bash
-git clone https://github.com/vuvoth/circom-plus
-cd circom-plus
+git clone https://github.com/vuvoth/ccls
+cd ccls
 cargo xtask install --server
 cargo xtask install --client
 ```
