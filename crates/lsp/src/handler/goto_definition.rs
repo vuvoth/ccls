@@ -17,6 +17,7 @@ use syntax::syntax_node::SyntaxToken;
 
 use crate::database::{FileDB, SemanticData, TokenId};
 use crate::global_state::GlobalState;
+use crate::source_db::SourceDatabase;
 
 use anyhow::Result;
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse};
@@ -32,12 +33,14 @@ pub fn handle(
     let uri = params.text_document_position_params.text_document.uri;
     let position = params.text_document_position_params.position;
 
-    let Some(ast) = state.ast_map.get(&uri.to_string()) else {
+    // Resolve URI → FileId → (ast, file_db) through the content cache.
+    let Some(id) = state.source_db.id_for_url(&uri) else {
         return Ok(None);
     };
-    let Some(file) = state.file_map.get(&uri.to_string()) else {
+    let Some(ast) = state.source_db.ast(id) else {
         return Ok(None);
     };
+    let file = state.source_db.file_db(id);
 
     let locations = match lookup_token_at_position(&file, &ast, position) {
         Some(token) => state.lookup_definition(&file, &ast, &token),
@@ -93,22 +96,24 @@ pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<A
 // if token in an include statement
 // add lib path (location of source code of that library) into result
 pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
-    if let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) {
-        if let Some(ast_include) = AstInclude::cast(include_lib) {
-            if let Some(abs_lib_ans) = ast_include.lib() {
-                let lib_path = file
-                    .get_path()
-                    .parent()
-                    .unwrap()
-                    .join(abs_lib_ans.value())
-                    .clone();
-                let lib_url = Url::from_file_path(lib_path.clone()).unwrap();
-                return vec![Location::new(lib_url, Range::default())];
-            }
-        }
-    }
-
-    Vec::new()
+    let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) else {
+        return Vec::new();
+    };
+    let Some(ast_include) = AstInclude::cast(include_lib) else {
+        return Vec::new();
+    };
+    let Some(abs_lib) = ast_include.lib() else {
+        return Vec::new();
+    };
+    let path = file.get_path();
+    let Some(parent_dir) = path.parent() else {
+        return Vec::new();
+    };
+    let lib_path = parent_dir.join(abs_lib.value());
+    let Ok(lib_url) = Url::from_file_path(&lib_path) else {
+        return Vec::new();
+    };
+    vec![Location::new(lib_url, Range::default())]
 }
 
 pub fn lookup_definition(
@@ -281,7 +286,11 @@ mod tests {
     fn goto_decl_test() {
         let file_path = "/src/test_files/handler/templates.circom";
         let source = get_source_from_path(file_path);
-        let file = FileDB::create(&source, Url::from_file_path(Path::new("/tmp")).unwrap());
+        let file = FileDB::new(
+            vfs::FileId(0),
+            &source,
+            Url::from_file_path(Path::new("/tmp")).unwrap(),
+        );
 
         let syntax_node = syntax_tree(&source);
 

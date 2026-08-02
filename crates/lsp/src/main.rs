@@ -11,6 +11,8 @@ use crate::global_state::GlobalState;
 pub mod database;
 pub mod global_state;
 pub mod handler;
+pub mod semantic;
+pub mod source_db;
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // All logging must go to stderr — stdout is the LSP message channel.

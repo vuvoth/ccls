@@ -17,6 +17,11 @@ use syntax::{
     syntax_node::{SyntaxNode, SyntaxToken},
 };
 
+// File identity is owned by the `vfs` crate (a path-interned `u32` index), so aliased paths
+// collapse to one id via interning rather than via a path hash. Re-exported here for callers
+// that still reach it via `crate::database::FileId`.
+pub use vfs::FileId;
+
 /**
 * We will store
 * Open data -> Parse -> output -> Syntax -> analyzer -> db{
@@ -37,10 +42,6 @@ use syntax::{
 
 }
 */
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub struct FileId(pub u64);
-
 #[derive(Clone)]
 pub struct FileDB {
     pub file_id: FileId,
@@ -48,21 +49,8 @@ pub struct FileDB {
     pub end_line_vec: Vec<u32>,
 }
 
-use path_absolutize::*;
-
 impl FileDB {
-    pub fn create(content: &str, file_path: Url) -> Self {
-        let mut hasher = DefaultHasher::new();
-        file_path
-            .to_file_path()
-            .unwrap()
-            .absolutize()
-            .unwrap()
-            .hash(&mut hasher);
-        Self::new(FileId(hasher.finish()), content, file_path)
-    }
-
-    pub(super) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
+    pub(crate) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
         let mut file_utils = Self {
             file_id,
             file_path,
@@ -84,10 +72,12 @@ impl FileDB {
     }
 
     pub fn off_set(&self, position: Position) -> TextSize {
-        if position.line == 0 {
+        if position.line == 0 || self.end_line_vec.is_empty() {
             return position.character.into();
         }
-        (self.end_line_vec[position.line as usize - 1] + position.character + 1).into()
+        // Clamp a line past EOF to the last known line instead of indexing out of range.
+        let idx = (position.line as usize).min(self.end_line_vec.len()) - 1;
+        (self.end_line_vec[idx] + position.character + 1).into()
     }
 
     pub fn position(&self, off_set: TextSize) -> Position {
@@ -566,13 +556,6 @@ mod tests {
 
     use super::TokenId;
 
-    #[test]
-    fn file_id_test() {
-        let file_1 = FileDB::create("a", Url::from_file_path(Path::new("/a/../a/c")).unwrap());
-        let file_2 = FileDB::create("a", Url::from_file_path(Path::new("/a/c")).unwrap());
-
-        assert_eq!(file_1.file_id, file_2.file_id);
-    }
     #[test]
     fn token_id_hash_test() {
         let source: String = r#"pragma circom 2.0.0;

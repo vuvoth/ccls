@@ -1,7 +1,4 @@
-use std::{fs, path::PathBuf};
-
 use anyhow::Result;
-use dashmap::DashMap;
 use lsp_server::{Notification, Request, RequestId, Response};
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument, Notification as _};
 use lsp_types::request::{
@@ -10,14 +7,13 @@ use lsp_types::request::{
 };
 use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
-use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::AstCircomProgram;
-use syntax::syntax::syntax_tree;
 use syntax::syntax_node::SyntaxToken;
 
 use crate::database::{FileDB, SemanticDB};
 use crate::handler;
 use crate::handler::goto_definition::{lookup_definition, lookup_node_wrap_token};
+use crate::source_db::{ContentCacheDb, SourceDatabase};
 
 /// A text document notification (`textDocument/didOpen` or `textDocument/didChange`) normalized to
 /// its full text + URI, regardless of which notification carried it.
@@ -47,16 +43,13 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 
 /// Server-wide state shared by every request/notification handler.
 ///
-/// Three keyed maps (all keyed by the file URI string):
-/// - `ast_map`  — the parsed program AST,
-/// - `file_map` — the `FileDB` (offset/line bookkeeping),
-/// - `db`       — the semantic database (template/function/signal/variable/component info).
+/// - `source_db` — the content-addressed [`SourceDatabase`]: file text, cached parse trees, file
+///   DBs, and (Phase B) symbol tables. Replaces the per-file `ast_map`/`file_map` maps; includes
+///   are read from disk once and then served from cache across keystrokes.
+/// - `db` — the legacy semantic index (template/function/signal/variable/component info). Kept for
+///   goto-definition until Phase B replaces it with the symbol table.
 pub struct GlobalState {
-    /// key: file URI - value: AST of its content.
-    pub ast_map: DashMap<String, AstCircomProgram>,
-    /// key: file URI - value: file content bookkeeping (offset/line conversion).
-    pub file_map: DashMap<String, FileDB>,
-    /// Semantic database, keyed internally by `FileId`.
+    pub source_db: ContentCacheDb,
     pub db: SemanticDB,
 }
 
@@ -69,8 +62,7 @@ impl Default for GlobalState {
 impl GlobalState {
     pub fn new() -> Self {
         Self {
-            ast_map: DashMap::new(),
-            file_map: DashMap::new(),
+            source_db: ContentCacheDb::new(),
             db: SemanticDB::new(),
         }
     }
@@ -136,16 +128,23 @@ impl GlobalState {
         if is_component_use {
             for lib in ast.libs() {
                 let Some(lib_abs) = lib.lib() else { continue };
-                let lib_path = parent.parent().unwrap().join(lib_abs.value());
-                let lib_url = Url::from_file_path(&lib_path).unwrap();
+                let Some(parent_dir) = parent.parent() else {
+                    continue;
+                };
+                let lib_path = parent_dir.join(lib_abs.value());
+                let Ok(lib_url) = Url::from_file_path(&lib_path) else {
+                    continue;
+                };
 
-                let Some(file_lib) = self.file_map.get(&lib_url.to_string()) else {
+                // Resolve through the cache: the lib was loaded once in `handle_update`.
+                let Some(lib_id) = self.source_db.id_for_url(&lib_url) else {
                     continue;
                 };
-                let Some(ast_lib) = self.ast_map.get(&lib_url.to_string()) else {
+                let Some(ast_lib) = self.source_db.ast(lib_id) else {
                     continue;
                 };
-                let Some(semantic_lib) = self.db.semantic.get(&file_lib.file_id) else {
+                let file_lib = self.source_db.file_db(lib_id);
+                let Some(semantic_lib) = self.db.semantic.get(&lib_id) else {
                     continue;
                 };
                 result.extend(lookup_definition(&file_lib, &ast_lib, semantic_lib, token));
@@ -155,40 +154,42 @@ impl GlobalState {
         result
     }
 
-    /// Re-parse an updated document: build its syntax tree + semantic data, then do the same for
-    /// every `include`d library, and refresh the file/ast maps.
+    /// Index an updated document into the caches: register its text (dropping its derived caches) +
+    /// load every `include` once, then rebuild the semantic index for it and its includes.
+    ///
+    /// Non-`file:` URIs (untitled/git docs), missing parent dirs, and unreadable includes are
+    /// skipped rather than crashing the server.
     pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
-        let text = &text_document.text;
-        let url = &text_document.uri.to_string();
+        let Some(id) = self
+            .source_db
+            .set_document(&text_document.uri, text_document.text.clone())
+        else {
+            // Non-`file:` scheme (untitled/git) — nothing to index.
+            return Ok(());
+        };
 
-        let syntax = syntax_tree(text);
-        let file_db = FileDB::create(text, text_document.uri.clone());
-        let file_id = file_db.file_id;
-
-        let parent: PathBuf = file_db.get_path();
-        if let Some(ast) = AstCircomProgram::cast(syntax) {
-            self.db.semantic.remove(&file_id);
+        // Rebuild the semantic index for the main file. The parse itself comes from the cache.
+        if let Some(ast) = self.source_db.ast(id) {
+            let file_db = self.source_db.file_db(id);
+            self.db.semantic.remove(&id);
             self.db.circom_program_semantic(&file_db, &ast);
 
+            // Includes: read from disk once, then serve from cache on subsequent keystrokes.
             for lib in ast.libs() {
-                if let Some(lib_abs_path) = lib.lib() {
-                    let lib_path = parent.parent().unwrap().join(lib_abs_path.value());
-                    let lib_url = Url::from_file_path(&lib_path).unwrap();
-                    if let Ok(src) = fs::read_to_string(&lib_path) {
-                        let lib_file = FileDB::create(&src, lib_url.clone());
-                        if let Some(lib_ast) = AstCircomProgram::cast(syntax_tree(&src)) {
-                            self.db.semantic.remove(&lib_file.file_id);
-                            self.db.circom_program_semantic(&lib_file, &lib_ast);
-                            self.ast_map.insert(lib_url.to_string(), lib_ast);
-                        }
-                        self.file_map.insert(lib_url.to_string(), lib_file);
-                    }
+                let Some(lib_abs) = lib.lib() else { continue };
+                let Some(lib_id) = self
+                    .source_db
+                    .load_include(&text_document.uri, &lib_abs.value())
+                else {
+                    continue;
+                };
+                if let Some(lib_ast) = self.source_db.ast(lib_id) {
+                    let lib_file = self.source_db.file_db(lib_id);
+                    self.db.semantic.remove(&lib_id);
+                    self.db.circom_program_semantic(&lib_file, &lib_ast);
                 }
             }
-            self.ast_map.insert(url.to_string(), ast);
         }
-
-        self.file_map.insert(url.to_string(), file_db);
 
         Ok(())
     }
@@ -214,4 +215,75 @@ where
         result: Some(serde_json::to_value(&result)?),
         error: None,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use lsp_types::Url;
+
+    use super::{GlobalState, TextDocument};
+
+    /// A `TextDocument` built straight from a URI + text (fields are private, but this test module
+    /// is inside `global_state`).
+    fn doc(uri: &Url, text: String) -> TextDocument {
+        TextDocument {
+            text,
+            uri: uri.clone(),
+        }
+    }
+
+    /// Absolute path to a fixture under `src/test_files/`, resolved from `CARGO_MANIFEST_DIR`.
+    fn fixture_uri(rel: &str) -> Url {
+        let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let path = Path::new(&crate_path).join(format!("src/test_files/handler/{rel}"));
+        Url::from_file_path(&path).unwrap()
+    }
+
+    /// Regression test for the Phase A win: editing the main file must never re-read or re-parse an
+    /// unchanged `include`. We observe `parse_count` for the library — it must stay at 1 across two
+    /// `didChange`s of the main file.
+    #[test]
+    fn include_parsed_once_across_keystrokes_test() {
+        let main_uri = fixture_uri("with_include/main.circom");
+        let lib_uri = fixture_uri("with_include/lib.circom");
+        let src = std::fs::read_to_string(main_uri.to_file_path().unwrap()).unwrap();
+
+        let mut state = GlobalState::new();
+
+        // First open: main + lib each parse once.
+        state.handle_update(&doc(&main_uri, src.clone())).unwrap();
+        let lib_id = state
+            .source_db
+            .id_for_url(&lib_uri)
+            .expect("include should be loaded on first open");
+        assert_eq!(
+            state.source_db.parse_count(lib_id),
+            1,
+            "lib parsed exactly once on first load"
+        );
+
+        // Second didChange of the main file (text differs) — the lib is unchanged, so it must be a
+        // cache hit: not re-read (load_include short-circuits) and not re-parsed.
+        let src2 = format!("{src}\n// a trailing edit\n");
+        state.handle_update(&doc(&main_uri, src2)).unwrap();
+        assert_eq!(
+            state.source_db.parse_count(lib_id),
+            1,
+            "lib must not reparse on a main-file keystroke"
+        );
+    }
+
+    /// A non-`file:` document (untitled) is skipped without panicking and isn't indexed.
+    #[test]
+    fn handle_update_skips_non_file_uri_test() {
+        let mut state = GlobalState::new();
+        let untitled = Url::parse("untitled:Untitled-1").unwrap();
+        // Must not panic, and must not register the document.
+        state
+            .handle_update(&doc(&untitled, "pragma circom 2.0.0;".to_string()))
+            .unwrap();
+        assert!(state.source_db.id_for_url(&untitled).is_none());
+    }
 }
