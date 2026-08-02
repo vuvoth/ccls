@@ -11,10 +11,9 @@ use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 // reach it via `crate::file_db::FileId`.
 pub use vfs::FileId;
 
-/// Per-file offset/line bookkeeping over a document's source text. Carries the [`FileId`] (owned by
-/// the VFS), the canonical `file:` URL, the byte offsets of every `\n`, and the source text (for
-/// UTF-16↔byte conversion — LSP positions are UTF-16 code-unit counts, not bytes). The range helper
-/// turns a syntax node's byte range into an LSP [`Range`].
+/// Per-file offset/line bookkeeping. Carries the [`FileId`] (VFS-owned), the `file:` URL, the byte
+/// offsets of every `\n`, and the source text (LSP positions are UTF-16 code-unit counts, not
+/// bytes).
 #[derive(Clone)]
 pub struct FileDB {
     pub file_id: FileId,
@@ -51,10 +50,9 @@ impl FileDB {
         &self.content
     }
 
-    /// Byte offset of an LSP [`Position`]. LSP `character` is a **UTF-16** code-unit count, so it is
-    /// converted by walking the line's code points from the line start (not by adding it as a raw
-    /// byte offset — that is only correct for pure ASCII). A `character` past the line end is
-    /// clamped to the line's last position.
+    /// Byte offset of an LSP [`Position`]. `character` is a UTF-16 code-unit count, so walk the
+    /// line's code points from the line start (adding it as a raw byte offset is only correct for
+    /// ASCII). A `character` past line end is clamped.
     pub fn offset(&self, position: Position) -> TextSize {
         let target = position.character;
         let line_start = self.line_start_byte(position.line);
@@ -74,8 +72,8 @@ impl FileDB {
         (result as u32).into()
     }
 
-    /// LSP [`Position`] of a byte `offset`. The line is found from the newline table (byte-based,
-    /// exact); the `character` is the count of UTF-16 code units from the line start to `offset`.
+    /// LSP [`Position`] of byte `offset`: line from the newline table (byte-exact); `character` is
+    /// UTF-16 units from the line start.
     pub fn position(&self, offset: TextSize) -> Position {
         let offset = u32::from(offset) as usize;
         let line = match self.newline_offsets.binary_search(&(offset as u32)) {
@@ -165,9 +163,8 @@ mod tests {
         assert_eq!(Position::new(0, 0), file_db.position(0.into()));
     }
 
-    /// LSP `character` is a UTF-16 code-unit count. A multi-byte character earlier on a line must
-    /// shift the byte offset correctly (the old code added `character` as a raw byte offset, which
-    /// was only correct for ASCII).
+    /// `character` is UTF-16: a multi-byte char earlier on a line must shift the byte offset (old
+    /// code added `character` as a raw byte offset, only correct for ASCII).
     #[test]
     fn utf16_offset_round_trip_test() {
         // "é" is 2 bytes in UTF-8 / 1 UTF-16 unit; "😀" is 4 bytes / 2 UTF-16 units (surrogate pair).

@@ -1,10 +1,8 @@
 //! Symbol rename: rewrite every occurrence of the symbol under the cursor to `new_name`.
 //!
-//! Rides the shared resolution/occurrence core ([`GlobalState::resolve_use`] +
-//! [`GlobalState::find_occurrences`]) — no per-handler occurrence-walk, so it stays thin. An
-//! occurrence is found by *resolving* each candidate identifier (not text-matching), which makes
-//! shadowing correct. Rename is **in-file** (the symbol's defining file); cross-file rename is a
-//! follow-up that needs a workspace symbol graph.
+//! Rides [`GlobalState::resolve_use`] + [`GlobalState::find_occurrences`] — occurrences are found
+//! by *resolving* each candidate (not text-matching), so shadowing is correct. In-file (the
+//! symbol's defining file); cross-file rename is a follow-up.
 
 use std::collections::HashMap;
 
@@ -17,10 +15,8 @@ use crate::global_state::GlobalState;
 use crate::resolver::identifier_at;
 use crate::source_db::SourceDatabase;
 
-/// Entry point for the `textDocument/rename` request.
-///
-/// Returns `None` (no edits) when the cursor isn't on a renamable `Identifier`, `new_name` isn't a
-/// legal circom identifier, or the file is unknown to the server. Never errors.
+/// Entry point for `textDocument/rename`. Returns `None` (no edits) when the cursor isn't on a
+/// renamable `Identifier`, `new_name` isn't a legal circom identifier, or the file is unknown.
 pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
     let uri = params.text_document_position.text_document.uri;
     let position = params.text_document_position.position;
@@ -38,8 +34,8 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
         return Ok(None);
     };
 
-    // The declaration the cursor is on. An unresolved token (e.g. a component-call field like
-    // `c.x`, which the flat resolver deliberately doesn't resolve) has nothing to rename.
+    // The declaration under the cursor. An unresolved token (e.g. a component-call field like
+    // `c.x`, deliberately unresolved) has nothing to rename.
     let Some(target) = state.resolve_use(&ctx.file_db, &token).into_iter().next() else {
         return Ok(None);
     };

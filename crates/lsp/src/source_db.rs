@@ -1,19 +1,10 @@
-//! Salsa-shaped source database over a real in-memory [`vfs::Vfs`].
+//! Salsa-shaped source database over an in-memory [`vfs::Vfs`].
 //!
-//! This is the foundation for [`crate::global_state::GlobalState`]. Each method of
-//! [`SourceDatabase`] is designed to map 1:1 onto a salsa `#[salsa::input]` / `#[salsa::tracked]`
-//! query, so adopting salsa later is an implementation swap rather than a redesign.
-//!
-//! Responsibilities are split cleanly (rust-analyzer style):
-//! - **[`vfs::Vfs`]** owns "what files exist and what's their text" + a change log.
-//! - **[`ContentCacheDb`]** owns "what we derived from that text" (parse tree, file DB, symbol
-//!   table), invalidating those caches by *draining the VFS change log*.
-//!
-//! The two guarantees this preserves (see the plan):
-//! 1. `include`s are read from disk + re-parsed **once** and then served from cache, instead of on
-//!    every keystroke of the main file.
-//! 2. A client resending unchanged text records no change, so it never blows the caches or forces a
-//!    pointless reparse.
+//! Each [`SourceDatabase`] method maps 1:1 to a future salsa query, so adopting salsa is an
+//! implementation swap. Split (rust-analyzer style): [`Vfs`] owns file existence + text + change
+//! log; [`ContentCacheDb`] owns derived caches (parse/file DB/symbol table), invalidated by
+//! *draining the VFS change log*. Guarantees: includes read + parsed **once** then cached; a client
+//! resending unchanged text records no change (no reparse).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -30,15 +21,11 @@ use vfs::{ChangedFile, Vfs, VfsPath};
 use crate::file_db::{FileDB, FileId};
 use crate::semantic::SymbolTable;
 
-/// Source-level queries over a set of open files. Every method is keyed by [`FileId`] and either
-/// returns an input (`file_text`) or a content-derived value (`parse`/`ast`/`file_db`/
-/// `symbol_table`).
-///
-/// All methods take `&self`: salsa queries are `&self` with memoization handled by the runtime, and
-/// the cache impl below mirrors that via interior mutability. Callers always receive owned values,
-/// so no borrow is held across a query.
+/// Source-level queries over open files, keyed by [`FileId`] — inputs (`file_text`) or
+/// content-derived values (`parse`/`ast`/`file_db`/`symbol_table`). All `&self` with memoization
+/// via interior mutability; callers get owned values (no borrow across a query).
 pub trait SourceDatabase {
-    /// The full text of `id`. This is the single `#[salsa::input]`; everything else is derived.
+    /// The full text of `id` — the single `#[salsa::input]`; everything else is derived.
     fn file_text(&self, id: FileId) -> Arc<str>;
     /// The syntax tree for `id`'s text (memoized).
     fn parse(&self, id: FileId) -> SyntaxNode;
@@ -46,28 +33,26 @@ pub trait SourceDatabase {
     fn ast(&self, id: FileId) -> Option<AstCircomProgram>;
     /// Offset/line bookkeeping for `id` (memoized).
     fn file_db(&self, id: FileId) -> FileDB;
-    /// The lexical symbol table for `id` (memoized). Built lazily on first query from the cached
-    /// parse, and dropped by the change-log invalidation on any edit of `id`.
+    /// The lexical symbol table for `id` (memoized); built lazily on first query, dropped by the
+    /// change-log invalidation on any edit.
     fn symbol_table(&self, id: FileId) -> Arc<SymbolTable>;
 }
 
-/// All lazily-computed caches live behind a single `RefCell` so a query method only ever takes one
-/// short-lived borrow (read for the hit check, write for the miss fill) — never nested.
-///
-/// Invalidation is change-log-driven (eager): a mutation drains [`Vfs::take_changes`] and removes
-/// only the changed ids from each cache, so editing file A never recomputes file B's cache. There
-/// is no per-entry content hash — the change log is the single invalidation signal.
+/// Lazily-computed caches behind one `RefCell` so a query takes only one short-lived borrow (read
+/// for hit-check, write for miss-fill) — never nested. Invalidation is change-log-driven: a
+/// mutation drains [`Vfs::take_changes`] and drops only changed ids, so editing file A never
+/// recomputes file B. No per-entry content hash — the change log is the only signal.
 struct Caches {
     parse: HashMap<FileId, SyntaxNode>,
     file_db: HashMap<FileId, FileDB>,
     symbol_table: HashMap<FileId, Arc<SymbolTable>>,
-    /// Number of actual (cache-miss) parses per file. Test-only observable proving memoization.
-    /// Not touched by invalidation: it counts total parses, not cached vs. uncached.
+    /// Cache-miss parses per file (test-only memoization proof). Not touched by invalidation — it
+    /// counts total parses, not cache state.
     parse_count: HashMap<FileId, usize>,
 }
 
-/// [`SourceDatabase`] backed by a [`Vfs`] + derived caches. The server is single-threaded, so
-/// `RefCell` is sufficient for the cache fills behind `&self` query methods.
+/// [`SourceDatabase`] backed by a [`Vfs`] + derived caches. Single-threaded server ⇒ `RefCell`
+/// suffices for fills behind `&self`.
 pub struct ContentCacheDb {
     vfs: Vfs,
     caches: RefCell<Caches>,
@@ -92,32 +77,30 @@ impl ContentCacheDb {
         }
     }
 
-    /// Set the workspace roots used to confine `include` resolution. Delegates to the [`Vfs`],
-    /// which owns the (canonicalized) roots and the pure containment check.
+    /// Set the workspace roots confining `include` resolution (delegated to the [`Vfs`], which owns
+    /// them + the pure containment check).
     pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
         self.vfs.set_workspace_roots(roots);
     }
 
-    /// Read-only handle to the underlying [`Vfs`] (e.g. so `jump_to_lib` can apply the same
-    /// containment check that `load_include` does).
+    /// Read-only [`Vfs`] handle (e.g. so `jump_to_lib` applies the same containment check as
+    /// `load_include`).
     pub(crate) fn vfs(&self) -> &Vfs {
         &self.vfs
     }
 
-    /// Convert a `file:`-scheme URL to its absolutized [`VfsPath`]. Returns `None` for non-`file:`
-    /// schemes (untitled/git docs) or paths that can't be absolutized. Single source of truth for
-    /// the URI→path step so interning and lookup can never disagree (a split here would intern
-    /// under one key and look up under another, silently breaking resolution).
+    /// Convert a `file:` URL to its absolutized [`VfsPath`], or `None` for non-`file:` schemes or
+    /// non-absolutizable paths. Single source for the URI→path step so interning and lookup can't
+    /// disagree (a split would intern under one key and look up another, silently breaking
+    /// resolution).
     fn url_to_vpath(url: &Url) -> Option<VfsPath> {
         let path = url.to_file_path().ok()?;
         VfsPath::from_abs_path(&path)
     }
 
-    /// Resolve a relative include `rel` against `parent_url`'s directory to an absolutized
-    /// [`VfsPath`]. Shared by [`Self::load_include`] (load-or-serve), [`Self::id_for_include`]
-    /// (serve-only), and the goto-definition path so all three agree on the resolved path — an
-    /// include `"../lib.circom"` resolves to the same canonical path whether it's being loaded,
-    /// looked up, or jumped to.
+    /// Resolve a relative include `rel` against `parent_url`'s dir to an absolutized [`VfsPath`].
+    /// Shared by [`Self::load_include`], [`Self::id_for_include`], and goto-def so all three agree
+    /// on the resolved path.
     fn resolve_include(parent_url: &Url, rel: &str) -> Option<VfsPath> {
         let parent_path = parent_url.to_file_path().ok()?;
         let parent_dir = parent_path.parent()?;
@@ -125,26 +108,21 @@ impl ContentCacheDb {
         VfsPath::from_abs_path(&lib_path)
     }
 
-    /// The `FileId` for `url`, computed only from its absolutized path so aliased paths
-    /// (`/a/../a/c` vs `/a/c`) collapse to one id via interning. Returns `None` for non-`file:`
-    /// schemes (untitled/git docs) or paths that can't be absolutized — callers skip indexing
-    /// those.
+    /// The `FileId` for `url`, from its absolutized path (so aliased paths collapse to one id).
+    /// `None` for non-`file:` schemes or non-absolutizable paths — callers skip indexing those.
     pub fn id_for_url(&self, url: &Url) -> Option<FileId> {
         self.vfs.file_id(&Self::url_to_vpath(url)?)
     }
 
-    /// The already-interned `FileId` for an include, without reading disk. Returns `None` if the
-    /// path can't be resolved or the include hasn't been loaded yet. Used by cross-file
-    /// goto-definition (the include is loaded once in `handle_update`).
+    /// The already-interned `FileId` for an include, without reading disk. `None` if unresolvable
+    /// or not yet loaded. Used by cross-file goto-def (the include loads once in `handle_update`).
     pub fn id_for_include(&self, parent_url: &Url, rel: &str) -> Option<FileId> {
         let vpath = Self::resolve_include(parent_url, rel)?;
         self.vfs.file_id(&vpath)
     }
 
-    /// Register a document or update its text. Returns `(FileId, changed)`: `changed` is `false`
-    /// when the text was identical to what's already stored (a no-op — no change recorded, no
-    /// cache drop), letting the caller skip pointless reindexing on a client resending unchanged
-    /// content. Returns `None` if `url` is non-`file:`.
+    /// Register/update a document's text. Returns `(FileId, changed)`; `changed` is `false` when
+    /// text was identical (no-op — no change recorded, no cache drop). `None` for non-`file:` URLs.
     pub fn set_document(&mut self, url: &Url, text: String) -> Option<(FileId, bool)> {
         let vpath = Self::url_to_vpath(url)?;
         let id = self.vfs.set_file_contents(vpath, Some(Arc::from(text)));
@@ -153,28 +131,24 @@ impl ContentCacheDb {
         Some((id, changed))
     }
 
-    /// Resolve a relative include `rel` against `parent_url`'s directory and load it from disk
-    /// **once**. On every subsequent call the already-interned `FileId` is returned without
-    /// touching the filesystem — so a keystroke in the main file never re-reads its includes.
-    ///
-    /// Returns `None` (and is skipped) for non-`file:` schemes, a missing parent dir, an unreadable
-    /// file, or a path that can't be absolutized.
+    /// Load a relative include from disk **once**, then serve the interned `FileId` from cache — a
+    /// keystroke in the main file never re-reads its includes. `None` (skipped) for non-`file:`
+    /// schemes, missing parent dir, unreadable file, or non-absolutizable path.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
         let vpath = Self::resolve_include(parent_url, rel)?;
 
         // Security: confine the resolved include to a workspace root. `canonicalize` (the one disk
-        // stat — kept in this LSP layer so the Vfs stays I/O-free) resolves `..`, `.`, and symlinks
-        // to a real absolute path; the Vfs's pure `is_confined` then checks it's inside a root. An
-        // include that escapes (`include "/etc/passwd"`, `include "../../.ssh/id_rsa"`, or a
-        // symlink under the root pointing out) is refused instead of reading an arbitrary
-        // process-readable file. This is the single read boundary; the lookup/jump paths only ever
-        // surface includes loaded (and thus confined) here.
+        // stat — kept in this LSP layer so Vfs stays I/O-free) resolves `..`/`.`/symlinks to a real
+        // absolute path; `is_confined` then checks it's inside a root. Escapes (`include
+        // "/etc/passwd"`, `../../.ssh/id_rsa`, or a root symlink pointing out) are refused. This is
+        // the single read boundary; lookup/jump paths only surface includes loaded (and thus
+        // confined) here.
         let canonical = vpath.as_path().canonicalize().ok()?;
         if !self.vfs.is_confined(&canonical) {
             return None;
         }
 
-        // Already loaded — serve the cached id, never re-read on the main file's keystroke.
+        // Already loaded — serve the cached id (never re-read).
         if let Some(id) = self.vfs.file_id(&vpath) {
             return Some(id);
         }
@@ -185,9 +159,8 @@ impl ContentCacheDb {
         Some(id)
     }
 
-    /// Drain the VFS change log and drop every changed id's derived caches (other files are
-    /// untouched). `parse_count` is intentionally preserved — it tracks total parses, not cache
-    /// state. Returns the drained changes so callers can tell whether a specific id changed.
+    /// Drain the VFS change log and drop every changed id's derived caches (others untouched).
+    /// `parse_count` is intentionally preserved — it tracks total parses, not cache state.
     fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
         let changes = self.vfs.take_changes();
         if !changes.is_empty() {
@@ -201,8 +174,8 @@ impl ContentCacheDb {
         changes
     }
 
-    /// Reconstruct the `file:` URL for `id` from its absolutized VFS path. Safe because `id` was
-    /// interned from a `file:`-scheme URL at registration time.
+    /// Reconstruct the `file:` URL for `id` from its VFS path. Safe — `id` was interned from a
+    /// `file:`-scheme URL at registration.
     fn url_for(&self, id: FileId) -> Url {
         let vpath = self
             .vfs
@@ -232,7 +205,7 @@ impl SourceDatabase for ContentCacheDb {
     }
 
     fn parse(&self, id: FileId) -> SyntaxNode {
-        // Hit check under a short-lived shared borrow; the guard is dropped at the end of the block.
+        // Hit check under a short-lived shared borrow (dropped at block end).
         {
             let caches = self.caches.borrow();
             if let Some(cached) = caches.parse.get(&id) {
@@ -262,8 +235,8 @@ impl SourceDatabase for ContentCacheDb {
 
         let text = self.file_text(id);
         let url = self.url_for(id);
-        // `id` and `url` were both validated as `file:`-scheme at registration time, so `new`
-        // (which skips re-hashing) is safe here.
+        // `id` and `url` were validated as `file:`-scheme at registration, so `new` (skips
+        // re-hashing) is safe.
         let file_db = FileDB::new(id, &text, url);
         self.caches.borrow_mut().file_db.insert(id, file_db.clone());
         file_db
@@ -277,8 +250,8 @@ impl SourceDatabase for ContentCacheDb {
             }
         }
 
-        // Lazy Phase B index: build the per-file `SymbolTable` from the cached parse + file DB.
-        // A file whose text fails to parse to a program root yields an empty table (no `unwrap`).
+        // Build the per-file `SymbolTable` from the cached parse + file DB; a non-program parse
+        // yields an empty table (no `unwrap`).
         let table = match self.ast(id) {
             Some(ast) => {
                 let file_db = self.file_db(id);
@@ -388,8 +361,8 @@ template Multiplier2() {
         let (id, _) = db.set_document(&url, src).unwrap();
 
         let first = db.symbol_table(id);
-        // Non-empty: the file top-level carries the `Multiplier2` template, and its body has
-        // params/signals. Member counts are the real correctness signal here.
+        // Non-empty: top-level carries `Multiplier2`; member counts are the real correctness
+        // signal.
         assert!(
             !first.lookup_top_level("Multiplier2").is_empty(),
             "template name should be indexed in the file top-level"

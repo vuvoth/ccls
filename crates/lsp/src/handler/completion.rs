@@ -1,11 +1,7 @@
-//! Autocompletion: the names visible at the cursor plus reserved keywords, and **member
-//! completion** (`c.<signal>`) for component instances.
-//!
-//! Rides the shared cursor prologue ([`GlobalState::cursor_context`]) and the already-cached
-//! per-file [`SymbolTable`]. Member mode detects a `receiver.<partial>` shape by scanning the source
-//! prefix, resolves the receiver's instantiated template (in-file or via include), and offers that
-//! template's signals. Normal mode returns a static `is_incomplete: false` list — the client filters
-//! by the word being typed, so there's no server-side prefix extraction.
+//! Autocompletion: names visible at the cursor plus reserved keywords, and member completion
+//! (`c.<signal>`) for components. Member mode detects `receiver.<partial>` by scanning the source
+//! prefix, resolves the receiver's template (in-file or via include), and offers its signals.
+//! Normal mode returns `is_incomplete: false` (the client filters by the typed word).
 
 use std::collections::HashSet;
 
@@ -19,9 +15,8 @@ use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::SymbolKind;
 use crate::source_db::SourceDatabase;
 
-/// Reserved circom keywords offered as completions. Mirrors the lexer keywords in
-/// `token_kind.rs`; a constant list keeps completion allocation-free and drift is low (keywords
-/// change rarely).
+/// Reserved circom keywords (mirror the lexer keywords in `token_kind.rs`). A constant list keeps
+/// completion allocation-free; drift is low (keywords change rarely).
 const KEYWORDS: &[&str] = &[
     "pragma",
     "include",
@@ -46,10 +41,8 @@ const KEYWORDS: &[&str] = &[
     "assert",
 ];
 
-/// Entry point for the `textDocument/completion` request.
-///
-/// Suggests the in-scope body symbols + the file's top-level names + reserved keywords, deduped by
-/// name. Returns `None` for an unknown file (no completions).
+/// Entry point for `textDocument/completion`. Suggests in-scope body symbols + file top-level
+/// names + keywords, deduped by name. `None` for an unknown file.
 pub fn handle(state: &GlobalState, params: CompletionParams) -> Result<Option<CompletionResponse>> {
     let uri = params.text_document_position.text_document.uri;
     let position = params.text_document_position.position;
@@ -59,9 +52,9 @@ pub fn handle(state: &GlobalState, params: CompletionParams) -> Result<Option<Co
     };
     let table = state.source_db.symbol_table(ctx.id);
 
-    // Member completion: cursor sits in a `receiver.<partial>` shape. Resolve the receiver's
-    // instantiated template and offer its signals. Falls through to normal completion if there's no
-    // such shape, the receiver isn't a component, or its template can't be found.
+    // Member completion: cursor in a `receiver.<partial>` shape — resolve the receiver's template
+    // and offer its signals. Falls through to normal completion if no such shape, not a component,
+    // or template unfound.
     let prefix = ctx.file_db.text();
     let byte = u32::from(ctx.offset) as usize;
     let prefix = prefix.get(..byte).unwrap_or(prefix);
@@ -122,14 +115,14 @@ fn map_kind(kind: SymbolKind) -> CompletionItemKind {
     }
 }
 
-/// A circom identifier byte (`[A-Za-z0-9_$]`). Member detection scans ASCII identifier runs, so a
-/// byte check is correct (identifiers are ASCII) and stays on UTF-8 char boundaries.
+/// A circom identifier byte (`[A-Za-z0-9_$]`). ASCII identifier runs ⇒ a byte check is correct and
+/// stays on UTF-8 boundaries.
 fn is_ident_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_' || b == b'$'
 }
 
-/// If the source `prefix` (text up to the cursor) ends in a `receiver.<partial-member>` shape,
-/// return the receiver name and its starting byte offset (for scope lookup). `None` otherwise.
+/// If `prefix` (text up to cursor) ends in `receiver.<partial-member>`, return the receiver name
+/// and its start byte offset; else `None`.
 fn parse_member_receiver(prefix: &str) -> Option<(&str, TextSize)> {
     let bytes = prefix.as_bytes();
     // skip a trailing partial member (identifier chars), possibly empty (cursor right after `.`)
@@ -153,17 +146,15 @@ fn parse_member_receiver(prefix: &str) -> Option<(&str, TextSize)> {
     Some((receiver, TextSize::from(start as u32)))
 }
 
-/// Member completion items for `receiver`: resolve its component type, locate the instantiated
-/// template (in-file or via include), and return its signal members. `None` if the receiver isn't a
-/// component or its template can't be resolved.
+/// Member completion for `receiver`: resolve its component type, locate the template (in-file or
+/// via include), return its signal members. `None` if not a component or template unresolved.
 fn member_items(
     state: &GlobalState,
     ctx: &CursorContext,
     receiver: &str,
     recv_off: TextSize,
 ) -> Option<Vec<CompletionItem>> {
-    // `symbol_table` returns an owned table; bind it so the `&str` type name (a borrow of it) lives
-    // long enough for `resolve_template_file` / `members_of` below.
+    // Bind the owned table so the `&str` type name outlives `resolve_template_file` / `members_of`.
     let table = state.source_db.symbol_table(ctx.id);
     let ty = table.component_type_at(recv_off, receiver)?;
     let template_file = state.resolve_template_file(&ctx.file_db, ty)?;
@@ -339,8 +330,7 @@ mod tests {
         );
     }
 
-    /// A receiver that isn't a component (`var v; v.`) falls through to normal completion (no
-    /// member items) — proves member mode doesn't fire for non-components.
+    /// A non-component receiver (`var v; v.`) falls through to normal completion.
     #[test]
     fn member_completion_non_component_falls_through_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input a; }\ntemplate Main() {\n    var v = 0;\n    v.\n}\n";
@@ -348,8 +338,7 @@ mod tests {
         let state = state_with(&url, source);
 
         let got = labels(&state, &url, position_after_last(source, "v."));
-        // Fell through to normal completion → keywords present, T's signal "a" absent (a is local to
-        // T's body, not visible in Main).
+        // Fell through → keywords present; T's signal "a" is local to T, not visible in Main.
         assert!(
             got.contains("signal"),
             "non-component receiver falls through to normal completion"
@@ -377,7 +366,7 @@ mod tests {
         assert!(!in_b.contains("aa"), "A's signal must not leak into B");
 
         // Template/function names are file-global: B's *name* is offered inside A (you can write
-        // `component x = B()` there), even though B's *signals* are not.
+        // `component x = B()` there), unlike B's *signals*.
         assert!(
             in_a.contains("B"),
             "sibling template name is visible across templates"

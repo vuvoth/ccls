@@ -20,8 +20,7 @@ use crate::handler::goto_definition::jump_to_lib;
 use crate::resolver::{self, token_ancestors, ResolvedSymbol};
 use crate::source_db::{ContentCacheDb, SourceDatabase};
 
-/// A text document notification (`textDocument/didOpen` or `textDocument/didChange`) normalized to
-/// its full text + URI, regardless of which notification carried it.
+/// A didOpen/didChange notification normalized to its full text + URI.
 #[derive(Debug)]
 pub struct TextDocument {
     text: String,
@@ -39,8 +38,8 @@ impl From<DidOpenTextDocumentParams> for TextDocument {
 
 impl From<DidChangeTextDocumentParams> for TextDocument {
     fn from(value: DidChangeTextDocumentParams) -> Self {
-        // A `didChange` may legally carry an empty `contentChanges` array; index it safely rather
-        // than panicking (a panic would kill the single-threaded server).
+        // `didChange` may carry an empty `contentChanges`; index safely (a panic kills the
+        // single-threaded server).
         let text = value
             .content_changes
             .into_iter()
@@ -54,21 +53,15 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
     }
 }
 
-/// Server-wide state shared by every request/notification handler.
-///
-/// `source_db` is the content-addressed [`SourceDatabase`]: file text, cached parse trees, file
-/// DBs, and the per-file [`crate::semantic::SymbolTable`]. Includes are read from disk once and then
-/// served from cache across keystrokes; the symbol table builds lazily on first query and is
-/// invalidated by the change-log drop on edit.
+/// Server-wide state shared by every handler. `source_db` caches text, parses, file DBs, and
+/// per-file `SymbolTable`s (lazy-built, invalidated on edit); includes load from disk once then
+/// cache.
 pub struct GlobalState {
     pub source_db: ContentCacheDb,
 }
 
-/// A resolved cursor location: the document, its parse, its offset bookkeeping, and the byte offset
-/// of the cursor. The shared prologue of every read-handler (goto-definition, rename, references,
-/// hover, completion) — each opens `id_for_url → ast → file_db → offset` identically, so it lives
-/// here once. Handlers use the fields they need (completion uses `id`+`offset`; goto/rename/
-/// references also use `ast`).
+/// A resolved cursor location (id, parse, file DB, byte offset) — the shared prologue of every
+/// read-handler (`id_for_url → ast → file_db → offset`).
 pub(crate) struct CursorContext {
     pub id: FileId,
     pub ast: AstCircomProgram,
@@ -83,17 +76,16 @@ impl Default for GlobalState {
 }
 
 impl GlobalState {
-    /// Construct with the workspace `roots` used to confine `include` resolution. The roots are
-    /// canonicalized and stored on the source db; an empty list means no include is ever loaded
-    /// (fail-closed against path traversal).
+    /// Construct with workspace `roots` confining `include` resolution. Empty roots ⇒ no include
+    /// ever loads (fail-closed against path traversal).
     pub fn new(roots: Vec<PathBuf>) -> Self {
         let mut source_db = ContentCacheDb::new();
         source_db.set_workspace_roots(roots);
         Self { source_db }
     }
 
-    /// Resolve `(uri, position)` to a [`CursorContext`] — the shared open-document prologue.
-    /// Returns `None` for an unknown file or one that fails to parse.
+    /// Resolve `(uri, position)` to a [`CursorContext`], or `None` if the file is unknown or fails
+    /// to parse.
     pub(crate) fn cursor_context(
         &self,
         uri: &Url,
@@ -111,11 +103,8 @@ impl GlobalState {
         })
     }
 
-    /// Dispatch an LSP request to its handler, selected by method name.
-    ///
-    /// Each arm deserializes the params, delegates to `handler::<feature>::handle`, and wraps the
-    /// typed result into a success `Response`. Adding a new request = one new arm here + a handler
-    /// module + a capability entry. Returns `Ok(None)` for methods the server does not handle.
+    /// Dispatch an LSP request to its handler by method name; `Ok(None)` for unhandled methods.
+    /// Add a request = one arm here + a handler module + a capability entry.
     pub fn handle_request(&self, req: Request) -> Result<Option<Response>> {
         let id = req.id.clone();
         match req.method.as_str() {
@@ -132,26 +121,24 @@ impl GlobalState {
         }
     }
 
-    /// Dispatch an LSP notification by method name. Only document open/change are handled; any
-    /// other notification is ignored.
+    /// Dispatch an LSP notification; only document open/change are handled.
     pub fn handle_notification(&mut self, not: Notification) -> Result<()> {
         match not.method.as_str() {
             DidOpenTextDocument::METHOD => {
                 let params: DidOpenTextDocumentParams = serde_json::from_value(not.params)?;
-                self.handle_update(&TextDocument::from(params))?;
+                self.handle_update(TextDocument::from(params))?;
             }
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = serde_json::from_value(not.params)?;
-                self.handle_update(&TextDocument::from(params))?;
+                self.handle_update(TextDocument::from(params))?;
             }
             _ => {}
         }
         Ok(())
     }
 
-    /// Resolve the token's definition(s) to LSP [`Location`]s — the goto-definition shaper. An
-    /// include-path string routes to [`jump_to_lib`]; any other token resolves (possibly
-    /// cross-file) via [`Self::resolve_use`] and each result is tagged with its owning file's URL.
+    /// Goto-definition shaper: an include-path string routes to [`jump_to_lib`]; any other token
+    /// resolves via [`Self::resolve_use`] (possibly cross-file), file-tagged.
     pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
             return jump_to_lib(file_db, token, self.source_db.vfs());
@@ -162,9 +149,8 @@ impl GlobalState {
             .collect()
     }
 
-    /// The [`FileId`]s of every include loaded for `origin` (resolved via the source db's confined
-    /// include loader). Shared by [`Self::resolve_use`] (cross-file component resolution) and
-    /// [`Self::resolve_template_file`] (member completion) so the include walk lives in one place.
+    /// The [`FileId`]s of every include loaded for `origin`. Shared by [`Self::resolve_use`] and
+    /// [`Self::resolve_template_file`] so the include walk lives in one place.
     fn loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
         let Some(ast) = self.source_db.ast(origin.file_id) else {
             return Vec::new();
@@ -179,11 +165,9 @@ impl GlobalState {
             .collect()
     }
 
-    /// Resolve `token` to the declaration(s) it refers to, file-tagged. In-file first; then, for a
-    /// component declaration/call, each loaded include's top-level by name (cross-file resolution is
-    /// file-scope only — template/function names; a signal/var/param in a lib is only reachable via
-    /// member access, a separate problem). The shared resolution core for goto-definition, rename,
-    /// and references.
+    /// Resolve `token` to its file-tagged declaration(s): in-file first; then, for a component
+    /// decl/call, each loaded include's top-level by name. Cross-file is file-scope only
+    /// (template/function names) — the shared core for goto-def, rename, references.
     pub(crate) fn resolve_use(
         &self,
         origin: &FileDB,
@@ -218,9 +202,9 @@ impl GlobalState {
         out
     }
 
-    /// The file that defines the top-level unit `name` (template/function/bus): `origin` itself if
-    /// it declares `name`, else the first loaded include that does. Used by member completion to
-    /// locate a component's instantiated template (which may live in an included library).
+    /// The file defining top-level `name`: `origin` if it declares it, else the first loaded
+    /// include that does. Used by member completion to find a component's template (may live in a
+    /// lib).
     pub(crate) fn resolve_template_file(&self, origin: &FileDB, name: &str) -> Option<FileId> {
         if !self
             .source_db
@@ -239,13 +223,11 @@ impl GlobalState {
         })
     }
 
-    /// Every occurrence of `target` **in its defining file** (`target.0`), as tokens. Rename and
-    /// references are in-file by design: each file's `SymbolTable` indexes only that file's own
-    /// declarations, so a token resolves unambiguously within its file. Cross-file rename (a
-    /// top-level symbol's usages in `include`d files, or renaming from a cross-file usage) needs a
-    /// workspace symbol graph and is a follow-up — *not* name/`def_range` matching across files,
-    /// which would both miss genuine cross-file usages and risk colliding when two files define a
-    /// same-named symbol at the same line:column.
+    /// Occurrences of `target` in its defining file, as tokens. In-file by design: each
+    /// `SymbolTable` indexes only its own file, so a token resolves unambiguously. Cross-file rename
+    /// is deferred — it needs a workspace symbol graph, not name/`def_range` matching across files
+    /// (that both misses real cross-file usages and can collide when two files define a same-named
+    /// symbol at the same line:column).
     pub(crate) fn find_occurrences(
         &self,
         target: &(FileId, ResolvedSymbol),
@@ -258,18 +240,15 @@ impl GlobalState {
         resolver::occurrences_in(ast.syntax(), &table, sym)
     }
 
-    /// Register an updated document: set its text (dropping its derived caches) and load every
-    /// `include` once so the libraries are in the VFS for cross-file resolution.
-    ///
-    /// There is no eager semantic index anymore — the symbol table builds lazily on the first
-    /// query and is invalidated by the change-log cache drop in [`SourceDatabase`]. A no-op update
-    /// (the client resent identical text) short-circuits before the include walk. Non-`file:` URIs
-    /// (untitled/git docs), missing parent dirs, and unreadable includes are skipped rather than
-    /// crashing the server.
-    pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
+    /// Register an updated document: set its text (dropping derived caches) and load each `include`
+    /// once. No eager index — the symbol table builds lazily and invalidates on edit; a no-op
+    /// (identical text) short-circuits; non-`file:` URIs and unreadable includes are skipped, not
+    /// crashed. Takes the document by value so `text` moves (not clones) — drops one `String` clone
+    /// per keystroke.
+    pub fn handle_update(&mut self, text_document: TextDocument) -> Result<()> {
         let Some((id, changed)) = self
             .source_db
-            .set_document(&text_document.uri, text_document.text.clone())
+            .set_document(&text_document.uri, text_document.text)
         else {
             // Non-`file:` scheme (untitled/git) — nothing to index.
             return Ok(());
@@ -280,8 +259,7 @@ impl GlobalState {
             return Ok(());
         }
 
-        // Includes: read from disk once, then serve from cache on subsequent keystrokes. The
-        // symbol table for the main file (and its libs) builds lazily on first query.
+        // Includes load from disk once then cache; symbol tables build lazily on first query.
         if let Some(ast) = self.source_db.ast(id) {
             for include in ast.libs() {
                 let Some(include_path) = include.lib() else {
@@ -297,9 +275,8 @@ impl GlobalState {
     }
 }
 
-/// Deserialize a request's params, run its handler against `state`, and wrap the typed result into
-/// a success `Response`. Kept generic so [`GlobalState::handle_request`] stays a flat
-/// one-line-per-feature dispatch table — adding a request is one arm + one handler module.
+/// Deserialize params, run the handler, wrap the result in a success `Response`. Generic so
+/// [`GlobalState::handle_request`] stays a flat one-line-per-feature table.
 fn dispatch<P, R>(
     state: &GlobalState,
     id: RequestId,
@@ -329,8 +306,8 @@ mod tests {
 
     use super::{GlobalState, TextDocument};
 
-    /// A `TextDocument` built straight from a URI + text (fields are private, but this test module
-    /// is inside `global_state`).
+    /// A `TextDocument` from URI + text (private fields, but this test module is inside
+    /// `global_state`).
     fn doc(uri: &Url, text: String) -> TextDocument {
         TextDocument {
             text,
@@ -345,18 +322,16 @@ mod tests {
         Url::from_file_path(&path).unwrap()
     }
 
-    /// Regression test for the cache win: editing the main file must never re-read or re-parse an
-    /// unchanged `include`. We observe `parse_count` for the library — it must stay at 1 across a
-    /// `didChange` of the main file. (Indexing is now lazy: the lib is parsed the first time a query
-    /// needs it, not eagerly on open, so this triggers that parse with an explicit `ast` query.)
+    /// Editing the main file must never re-read or re-parse an unchanged `include`:
+    /// `parse_count` for the lib stays at 1 across a main-file `didChange`. (Indexing is lazy — the
+    /// lib parses on first query, triggered here by an explicit `ast` query.)
     #[test]
     fn include_parsed_once_across_keystrokes_test() {
         let main_uri = fixture_uri("with_include/main.circom");
         let lib_uri = fixture_uri("with_include/lib.circom");
         let src = std::fs::read_to_string(main_uri.to_file_path().unwrap()).unwrap();
 
-        // The include must resolve inside a workspace root (path-traversal confinement), so seed
-        // the state with the fixture's directory as the root.
+        // Seed the fixture dir as a workspace root (path-traversal confinement for the include).
         let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let root = Path::new(&crate_path)
             .join("src/test_files/handler/with_include")
@@ -364,15 +339,15 @@ mod tests {
             .unwrap();
         let mut state = GlobalState::new(vec![root]);
 
-        // First open: registers main + loads the lib text into the VFS (no parse yet — indexing is
-        // lazy, so the lib isn't parsed until a query needs it).
-        state.handle_update(&doc(&main_uri, src.clone())).unwrap();
+        // First open: registers main + loads lib text into the VFS (no parse yet — indexing is
+        // lazy).
+        state.handle_update(doc(&main_uri, src.clone())).unwrap();
         let lib_id = state
             .source_db
             .id_for_url(&lib_uri)
             .expect("include should be loaded on first open");
 
-        // Simulate the first query that touches the lib (e.g. a cross-file goto-def): it parses once.
+        // First query touching the lib parses it once.
         let _ = state.source_db.ast(lib_id);
         assert_eq!(
             state.source_db.parse_count(lib_id),
@@ -380,10 +355,10 @@ mod tests {
             "lib parsed exactly once on first query"
         );
 
-        // Second didChange of the main file (text differs) — the lib is unchanged, so it must be a
-        // cache hit: not re-read (load_include short-circuits) and not re-parsed.
+        // Second main-file didChange (text differs) — the lib is a cache hit: not re-read or
+        // re-parsed.
         let src2 = format!("{src}\n// a trailing edit\n");
-        state.handle_update(&doc(&main_uri, src2)).unwrap();
+        state.handle_update(doc(&main_uri, src2)).unwrap();
         assert_eq!(
             state.source_db.parse_count(lib_id),
             1,
@@ -398,7 +373,7 @@ mod tests {
         let untitled = Url::parse("untitled:Untitled-1").unwrap();
         // Must not panic, and must not register the document.
         state
-            .handle_update(&doc(&untitled, "pragma circom 2.0.0;".to_string()))
+            .handle_update(doc(&untitled, "pragma circom 2.0.0;".to_string()))
             .unwrap();
         assert!(state.source_db.id_for_url(&untitled).is_none());
     }

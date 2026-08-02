@@ -18,15 +18,15 @@ use rowan::TextSize;
 use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
-use crate::semantic::SymbolTable;
+use crate::semantic::{Symbol, SymbolTable};
 
 pub use crate::semantic::SymbolKind;
 
 // --- cursor/token navigation (shared by goto-definition, references, rename) -----------------
 
-/// The first `Identifier` or `CircomString` token covering `offset`, or `None`. A thin wrapper
-/// over [`rowan::SyntaxNode::token_at_offset`] that picks a semantically meaningful token — every
-/// other token kind (whitespace, punctuation, keywords) has nothing to resolve/rename.
+/// The first `Identifier`/`CircomString` token covering `offset`, or `None`. Wraps
+/// [`rowan::SyntaxNode::token_at_offset`] to pick a semantically meaningful token (others have
+/// nothing to resolve).
 pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
     ast.syntax().token_at_offset(offset).find_map(|token| {
         let kind = token.kind();
@@ -38,8 +38,8 @@ pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<Synta
     })
 }
 
-/// The token's wrapping nodes: its parent followed by all of that parent's ancestors. Mirrors
-/// `parent_ancestors()`, which is absent on `SyntaxToken` in this rowan version.
+/// The token's wrapping nodes: parent then all ancestors. Mirrors `parent_ancestors()` (absent on
+/// `SyntaxToken` in this rowan version).
 pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
     token
         .parent()
@@ -47,18 +47,16 @@ pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> 
         .flat_map(|p| p.ancestors().collect::<Vec<_>>())
 }
 
-/// The `Identifier` token covering `offset`, or `None` — `token_at_offset` narrowed to identifiers
-/// only. Shared by handlers that operate on a renamable/referenceable symbol (rename, references,
-/// hover); `goto_definition` keeps `token_at_offset` because it also accepts include-path strings.
+/// The `Identifier` token covering `offset`, or `None` (`token_at_offset` narrowed). Shared by
+/// rename/references/hover; `goto_definition` uses `token_at_offset` (it also accepts include-path
+/// strings).
 pub fn identifier_at(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
     let token = token_at_offset(ast, offset)?;
     (token.kind() == TokenKind::Identifier).then_some(token)
 }
 
-/// A resolved reference: what the token means, and where it is defined. A single declaration
-/// per symbol (the former `Vec<Range>` was an artifact of `hash(text)` collapsing same-named decls
-/// into one id). It is URL-agnostic — the caller tags each range with its owning file when shaping
-/// [`lsp_types::Location`]s.
+/// A resolved reference — what the token means and where defined (one declaration per symbol;
+/// URL-agnostic, the caller tags each range with its file).
 #[derive(Debug, Clone)]
 pub struct ResolvedSymbol {
     pub kind: SymbolKind,
@@ -67,38 +65,51 @@ pub struct ResolvedSymbol {
     pub decl_range: Range,
 }
 
-/// Resolve `token` against `table`: look up `token.text()` in the body scope containing the token's
-/// start offset, and also in the file top-level (so a template name used in `component mul = T()`
-/// and a scope's own name token both resolve). Returns one [`ResolvedSymbol`] per matching `Symbol`.
-///
-/// The body and file name spaces are disjoint (bodies carry params/signals/vars/components; the
-/// file carries template/function names), so the two lookups never duplicate the same declaration.
-/// Only `Identifier` tokens are resolved here — the include-path `CircomString` is routed to
-/// `jump_to_lib` by the handler, never the resolver.
+/// Symbols named `name` visible at `offset`: the body scope containing it, then the file top-level.
+/// Shared by [`resolve`] and [`resolves_to`] so the lookup source set lives in one place.
+fn lookup_all<'a>(
+    table: &'a SymbolTable,
+    offset: TextSize,
+    name: &str,
+) -> impl Iterator<Item = &'a Symbol> {
+    table
+        .lookup_in_scope(offset, name)
+        .iter()
+        .chain(table.lookup_top_level(name).iter())
+}
+
+/// Resolve `token` to its declaration(s) via [`lookup_all`]. Only `Identifier` tokens are resolved
+/// here — `CircomString` include-paths are routed to `jump_to_lib` by the handler.
 pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> {
     let name = token.text();
     let offset: TextSize = token.text_range().start();
 
-    let scope_symbols = table.lookup_in_scope(offset, name);
-    let top_level_symbols = table.lookup_top_level(name);
-
-    let mut resolved = Vec::with_capacity(scope_symbols.len() + top_level_symbols.len());
-    for sym in scope_symbols.iter().chain(top_level_symbols.iter()) {
-        resolved.push(ResolvedSymbol {
+    lookup_all(table, offset, name)
+        .map(|sym| ResolvedSymbol {
             kind: sym.kind,
             name: sym.name.clone(),
             def_range: sym.def_range,
             decl_range: sym.decl_range,
-        });
-    }
-    resolved
+        })
+        .collect()
+}
+
+/// Allocation-free `resolve` membership check for [`occurrences_in`]'s per-candidate hot path: no
+/// `Vec`, no `String` clone. Same match keys (`kind` + `def_range`) as [`resolve`], so identical
+/// semantics.
+fn resolves_to(table: &SymbolTable, token: &SyntaxToken, target: &ResolvedSymbol) -> bool {
+    let name = token.text();
+    let offset = token.text_range().start();
+    let hit = |s: &Symbol| s.kind == target.kind && s.def_range == target.def_range;
+    lookup_all(table, offset, name).any(hit)
 }
 
 /// Every `Identifier` token in `root` that resolves (against `table`) to `target` — the
 /// declaration plus all its in-scope usages, excluding shadowed same-named tokens. Document order.
 ///
 /// Shared by `references` and `rename`: an occurrence is found by *resolving* each candidate (not
-/// text-matching), so a same-named token in a sibling/inner scope is correctly skipped.
+/// text-matching), so a same-named token in a sibling/inner scope is correctly skipped. Per-
+/// candidate work uses the allocation-free [`resolves_to`].
 pub fn occurrences_in(
     root: &SyntaxNode,
     table: &SymbolTable,
@@ -108,11 +119,7 @@ pub fn occurrences_in(
     root.descendants_with_tokens()
         .filter_map(|e| e.into_token())
         .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
-        .filter(|t| {
-            resolve(table, t)
-                .iter()
-                .any(|s| s.kind == target.kind && s.def_range == target.def_range)
-        })
+        .filter(|t| resolves_to(table, t, target))
         .collect()
 }
 
@@ -124,7 +131,8 @@ mod tests {
     use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
     use syntax::abstract_syntax_tree::{
-        AstCircomProgram, AstComponentCall, AstInputSignalDecl, AstVarDecl,
+        AstCircomProgram, AstComponentCall, AstComponentDecl, AstInputSignalDecl, AstSignalDecl,
+        AstVarDecl,
     };
     use syntax::syntax::syntax_tree;
     use syntax::syntax_node::{CircomLanguage, SyntaxToken};
@@ -134,8 +142,7 @@ mod tests {
 
     use super::{resolve, SymbolKind};
 
-    /// Build the (file_db, ast, symbol_table) triple the resolver runs against, from inline source.
-    /// Drops the legacy `SemanticDB` round-trip entirely — the table is built directly from the AST.
+    /// Build the (file_db, ast, symbol_table) triple from inline source.
     fn index(source: &str) -> (FileDB, AstCircomProgram, SymbolTable) {
         let file = FileDB::new(
             FileId(0),
@@ -157,8 +164,8 @@ mod tests {
             .collect()
     }
 
-    /// The first token named `text` that is **not** wrapped in a declaration node of type `N` —
-    /// i.e. a usage rather than its declaration. Falls back to the first token if none qualifies.
+    /// The first token named `text` **not** wrapped in a declaration node of type `N` (a usage, not
+    /// its declaration); falls back to the first token if none qualifies.
     fn usage_token<N: AstNode<Language = CircomLanguage>>(
         ast: &AstCircomProgram,
         text: &str,
@@ -324,6 +331,66 @@ template Main() {
         assert!(
             resolved.is_empty(),
             "component-call field is a no-op by design, got {resolved:?}"
+        );
+    }
+
+    /// Regression for single-pass `SymbolTable::build`: a signal, var, and component in one body
+    /// must all be indexed and resolve to their own `SymbolKind`.
+    #[test]
+    fn mixed_decl_kinds_indexed_in_single_walk_test() {
+        let source = "pragma circom 2.0.0;
+template Inner() { signal input x; signal output y; y <== x; }
+template T() {
+    signal s;
+    var v = 0;
+    component c = Inner();
+    s <== s + v;
+}
+";
+        let (_file, ast, table) = index(source);
+
+        let s = resolve(&table, &usage_token::<AstSignalDecl>(&ast, "s"));
+        assert!(
+            s.iter().any(|r| r.kind == SymbolKind::Signal),
+            "signal `s` should resolve, got {s:?}"
+        );
+
+        let v = resolve(&table, &usage_token::<AstVarDecl>(&ast, "v"));
+        assert!(
+            v.iter().any(|r| r.kind == SymbolKind::Variable),
+            "var `v` should resolve, got {v:?}"
+        );
+
+        // `c` has no usage, so `usage_token` falls back to its declaration token.
+        let c = resolve(&table, &usage_token::<AstComponentDecl>(&ast, "c"));
+        assert!(
+            c.iter().any(|r| r.kind == SymbolKind::Component),
+            "component `c` should resolve, got {c:?}"
+        );
+    }
+
+    /// Regression for single-pass `SymbolTable::build`: a same-name signal + var must both index —
+    /// a usage resolves to `{Signal, Variable}` regardless of insertion order.
+    #[test]
+    fn same_name_signal_and_var_both_resolve_test() {
+        let source = "pragma circom 2.0.0;
+template T() {
+    signal a;
+    var a = 0;
+    a <== a + 0;
+}
+";
+        let (_file, ast, table) = index(source);
+        // The signal decl's own name token resolves to every symbol named `a` in scope.
+        let token = tokens_with_text(&ast, "a").into_iter().next().unwrap();
+        let resolved = resolve(&table, &token);
+        assert!(
+            resolved.iter().any(|r| r.kind == SymbolKind::Signal),
+            "signal `a` still indexed: {resolved:?}"
+        );
+        assert!(
+            resolved.iter().any(|r| r.kind == SymbolKind::Variable),
+            "var `a` still indexed: {resolved:?}"
         );
     }
 }
