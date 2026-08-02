@@ -81,10 +81,9 @@ impl SymbolTable {
         }
 
         for function in ast.function_list() {
-            let Some(fn_name) = function.function_name() else {
+            let Some(name) = function.identifier() else {
                 continue;
             };
-            let name = fn_name.syntax().text().to_string();
             table.add_function(file_db, &function, &name);
         }
 
@@ -119,8 +118,8 @@ impl SymbolTable {
         self.scopes.push(scope);
     }
 
-    fn add_function(&mut self, file_db: &FileDB, function: &AstFunctionDef, name: &str) {
-        let name_str = name.to_string();
+    fn add_function(&mut self, file_db: &FileDB, function: &AstFunctionDef, name: &AstIdentifier) {
+        let name_str = name.syntax().text().to_string();
         let scope_range = function.syntax().text_range();
         let def_range = file_db.range(function.syntax());
 

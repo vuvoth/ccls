@@ -42,12 +42,18 @@ macro_rules! ast_node {
     };
 }
 
-pub mod ast;
+pub mod block;
+pub mod declaration;
+pub mod definition;
 pub mod expression;
+pub mod name;
+pub mod program;
 pub mod statement;
-pub mod template;
 
-pub use ast::*;
+pub use block::*;
+pub use declaration::*;
+pub use definition::*;
 pub use expression::*;
+pub use name::*;
+pub use program::*;
 pub use statement::*;
-pub use template::*;

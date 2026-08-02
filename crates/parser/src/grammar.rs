@@ -2,7 +2,9 @@ use crate::parser::Parser;
 use crate::token_kind::TokenKind::*;
 
 mod block;
+mod bus;
 mod declaration;
+mod definition;
 mod expression;
 mod function;
 mod include;
@@ -42,10 +44,12 @@ pub mod entry {
             match p.current() {
                 TemplateKw => template::template(p),
                 FunctionKw => function::function_parse(p),
+                BusKw => bus::bus_definition(p),
                 ComponentKw => main_component::main_component(p),
                 PragmaKw => pragma::pragma(p),
                 IncludeKw => include::include(p),
-                other => p.advance_with_error(&format!("invalid top-level token {:?}", other)),
+                // any other token is invalid at the top level
+                _ => p.advance_with_error(),
             }
         }
 

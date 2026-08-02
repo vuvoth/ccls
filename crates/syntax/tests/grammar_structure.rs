@@ -75,6 +75,16 @@ fn is_left_assoc(expr: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// True if ANY node of `ancestor` kind has a node of `desc` kind in its subtree. Used to verify
+/// that a token/keyword (each token is wrapped in a same-kind node by `build_green`) lands *inside*
+/// the expected construct rather than being orphaned. Checks all matching ancestors (a program may
+/// contain several, e.g. multiple `pragma` directives).
+fn node_has_descendant(root: &SyntaxNode, ancestor: TokenKind, desc: TokenKind) -> bool {
+    root.descendants()
+        .filter(|n| n.kind() == ancestor)
+        .any(|n| n.descendants().any(|d| d.kind() == desc))
+}
+
 // =====================================================================================
 // Expression precedence tiers (grammar Expression0..Expression13), tight→loose:
 //   postfix(1) > prefix(2) > **(3) > * / \ %(4) > + -(5) > << >>(6) > &(7) >
@@ -372,3 +382,205 @@ fn top_level_allows_any_order() {
 // The exhaustive inventory of grammar features we do NOT yet support lives in
 // `tests/grammar_gaps.rs` (each a complicated, realistic circom program, `#[ignore]`d so CI stays
 // green; run `cargo test --test grammar_gaps -- --ignored` to filter the full missing list).
+
+// =====================================================================================
+// New-feature structural conformance — verifies the parser produces the CORRECT node shape
+// (not merely that it parses without errors). `parses_clean` alone cannot catch a parser that
+// swallows tokens into the wrong nodes; these tests pin the expected structure.
+// =====================================================================================
+
+#[test]
+fn bus_definition_produces_busdef_node() {
+    // grammar ParseDefinition: `bus Name(params)? block`.
+    let root = program("pragma circom 2.0.0;\nbus Point(n) { signal input x; }");
+    assert!(
+        has_kind(&root, TokenKind::BusDef),
+        "must produce a BusDef node"
+    );
+    assert!(
+        node_has_descendant(&root, TokenKind::BusDef, TokenKind::BusName),
+        "BusDef must wrap the name in a BusName node"
+    );
+    // The bus body is a real Block, and its parameter list present.
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::BusDef,
+        TokenKind::Block
+    ));
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::BusDef,
+        TokenKind::ParameterList
+    ));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn bus_definition_optional_params() {
+    // grammar: params are optional — `bus B {}` (no parens) is valid.
+    let root = program("pragma circom 2.0.0;\nbus B { signal input x; }");
+    assert!(has_kind(&root, TokenKind::BusDef));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn template_optional_params() {
+    // grammar: template params are optional — `template T {}` is valid (latent-bug fix).
+    let root = program("pragma circom 2.0.0;\ntemplate T { signal output o; o <== 0; }");
+    assert!(has_kind(&root, TokenKind::TemplateDef));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn template_modifiers_are_inside_templatedef() {
+    // grammar fixed order: `template custom extern_c parallel Name`. The modifier keywords must be
+    // consumed INSIDE the TemplateDef (not orphaned as stray top-level tokens → errors).
+    let root = program(
+        "pragma circom 2.0.0;\ntemplate custom extern_c parallel G() { signal output o; o <== 0; }",
+    );
+    assert!(!has_error(&root), "modifier program must parse clean");
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::TemplateDef,
+        TokenKind::CustomKw
+    ));
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::TemplateDef,
+        TokenKind::ExternCKw
+    ));
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::TemplateDef,
+        TokenKind::ParallelKw
+    ));
+}
+
+#[test]
+fn parallel_expression_wraps_operand() {
+    // grammar Expression14: `parallel <expr>`. The ParallelKw token doubles as the wrapping node
+    // kind, so the RHS Expression's single child node must be ParallelKw.
+    let outer = outer_node(&with_expr("parallel acc"));
+    assert_eq!(outer.kind(), TokenKind::ParallelKw);
+    // No nested parallel: `parallel parallel x` is a syntax error (Expression14 → ParseExpression1).
+    assert!(
+        has_error(&with_expr("parallel parallel x")),
+        "nested parallel must error"
+    );
+}
+
+#[test]
+fn inline_array_expression_node() {
+    // grammar Expression1: `[a, b, c]` → an InlineArray node wrapping the element list.
+    let outer = outer_node(&with_expr("[a, b, c]"));
+    assert_eq!(outer.kind(), TokenKind::InlineArray);
+    // ≥1 element: the InlineArray must contain an Expression (the first element).
+    assert!(outer
+        .descendants()
+        .any(|d| d.kind() == TokenKind::Expression));
+    assert!(!has_error(&with_expr("[a, b, c]")));
+}
+
+#[test]
+fn tuple_expression_vs_grouping() {
+    // grammar Expression1: a paren list with ≥2 elements is a tuple; a single element is grouping.
+    assert_eq!(
+        outer_node(&with_expr("(a, b)")).kind(),
+        TokenKind::TupleExpr,
+        "(a, b) must be a TupleExpr"
+    );
+    // Grouping `(a)` keeps the pre-existing shape: the Expression wrapper's child is another
+    // Expression (the whole `(a)` including parens), NOT a TupleExpr.
+    assert_eq!(
+        outer_node(&with_expr("(a)")).kind(),
+        TokenKind::Expression,
+        "(a) must remain a grouping, not a TupleExpr"
+    );
+    assert!(!has_kind(&with_expr("(a)"), TokenKind::TupleExpr));
+}
+
+#[test]
+fn underscore_is_an_atom() {
+    // grammar Expression0: `_` is a placeholder variable — parses as an ExpressionAtom.
+    let root = with_expr("_");
+    assert!(
+        node_has_descendant(&root, TokenKind::ExpressionAtom, TokenKind::Underscore),
+        "`_` must be wrapped in an ExpressionAtom"
+    );
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn bus_typed_field_is_not_a_signal_decl() {
+    // grammar BusHeader (wire-first): `input <Bus> <field>` takes the bus-typed path, NOT the
+    // `signal` path. Evidence: an InputSignalDecl is produced WITHOUT a SignalHeader node, and the
+    // bus type identifier is consumed inside it.
+    let root = in_block("input B b;");
+    assert!(has_kind(&root, TokenKind::InputSignalDecl));
+    assert!(
+        !has_kind(&root, TokenKind::SignalHeader),
+        "`input B b;` must not be mis-parsed as a signal declaration"
+    );
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn bus_typed_field_with_args_and_output_direction() {
+    // `output V(k) v;` — bus-typed output field with instantiation args.
+    let root = in_block("output V(k) v;");
+    assert!(has_kind(&root, TokenKind::OutputSignalDecl));
+    assert!(!has_kind(&root, TokenKind::SignalHeader));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn pragma_custom_templates_structure() {
+    // grammar ParsePragma: `pragma custom_templates;` → a Pragma node containing the keyword.
+    let root = program("pragma circom 2.0.0;\npragma custom_templates;\n");
+    assert!(has_kind(&root, TokenKind::Pragma));
+    assert!(node_has_descendant(
+        &root,
+        TokenKind::Pragma,
+        TokenKind::CustomTemplatesKw
+    ));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn signal_declaration_unchanged_by_block_dispatch() {
+    // Regression: the new InputKw/OutputKw lookahead must still route `input signal …` to the
+    // ordinary signal path (producing a SignalHeader).
+    let root = in_block("input signal a;");
+    assert!(has_kind(&root, TokenKind::InputSignalDecl));
+    assert!(has_kind(&root, TokenKind::SignalHeader));
+    assert!(!has_error(&root));
+}
+
+#[test]
+fn deeply_nested_expression_is_bounded_not_crashed() {
+    // 20000 prefix operators (`!`) recurse ~20000 levels through `expression_rec`. Without the
+    // depth guard this overflows the stack on untrusted input; with it the parser bails at
+    // `MAX_EXPR_DEPTH` and reports an Error instead of crashing. (Prefix nesting is used rather
+    // than `[[[…]]]` because a postfix index chain builds a deep tree iteratively — a separate,
+    // pre-existing vector unchanged by this diff.)
+    let deep = format!("var x = {}a;", "!".repeat(20000));
+    let root = in_block(&deep);
+    assert!(
+        has_error(&root),
+        "depth guard must fire an error instead of recursing unboundedly"
+    );
+}
+
+#[test]
+fn for_init_input_routes_consistently_with_block() {
+    // Regression for the unified dispatch: `input B b` parses as a bus field both at block scope
+    // and inside a `for`-init (both go through `declaration::input_or_output`), never as a signal.
+    // In a `for`-init the field has no trailing `;` here (the loop adds it); use a parseable form.
+    let block = in_block("input B b;");
+    let for_init = in_block("for (input B b; 1 > 0; 1) {}");
+    assert!(has_kind(&block, TokenKind::InputSignalDecl));
+    assert!(!has_kind(&block, TokenKind::SignalHeader));
+    // The for-init should also take the bus path (no SignalHeader), even though for-init bus
+    // fields are unusual circom — what matters is the two sites agree.
+    assert!(!has_kind(&for_init, TokenKind::SignalHeader));
+}

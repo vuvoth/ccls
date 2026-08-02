@@ -1,10 +1,13 @@
-use list::tuple_identifier;
+use definition::definition_body;
 
 use crate::grammar::*;
 
 /**
  * template Identifier() {content}
  * template Identifier( param_1, ... , param_n ) { content }
+ *
+ * Optional modifiers precede the name in the fixed grammar order
+ * `template <"custom"?> <"extern_c"?> <"parallel"?> <IDENT> …`.
  */
 pub fn template(p: &mut Parser) {
     // assert!(p.at(TemplateKw));
@@ -12,15 +15,12 @@ pub fn template(p: &mut Parser) {
 
     p.expect(TemplateKw);
 
-    let name_marker = p.open();
-    p.expect(Identifier);
-    p.close(name_marker, TemplateName);
+    // Fixed-order optional modifiers (grammar ParseDefinition).
+    p.eat(CustomKw);
+    p.eat(ExternCKw);
+    p.eat(ParallelKw);
 
-    let parameter_marker = p.open();
-    tuple_identifier(p);
-    p.close(parameter_marker, ParameterList);
-
-    block::block(p);
+    definition_body(p, TemplateName);
 
     p.close(m, TemplateDef);
 }

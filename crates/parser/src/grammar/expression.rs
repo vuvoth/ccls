@@ -1,4 +1,4 @@
-use list::tuple_expression;
+use list::{expression_list, paren_list};
 
 use crate::parser::Marker;
 use crate::token_kind::TokenKind;
@@ -12,6 +12,12 @@ use super::*;
 const MIN_BINDING_POWER: u16 = 0;
 const TERNARY_BRANCH_BP: u16 = crate::token_kind::BP_BOOL_OR;
 
+/// Maximum expression-nesting depth. Generous for real circuits (which rarely exceed a few dozen
+/// levels) but small enough that recursion can never approach the OS stack limit (~8 MiB). Past
+/// this the parser stops recursing and reports an error, defending the language server against
+/// adversarial deeply-nested input (`[[[...]]]`, `parallel (parallel …)`, nested parens).
+const MAX_EXPR_DEPTH: u32 = 256;
+
 /// Parse a full expression, wrapping it in an `Expression` node.
 /// (grammar: `ParseExpression` → ternary / binary / atom)
 pub(super) fn expression(p: &mut Parser) {
@@ -20,13 +26,37 @@ pub(super) fn expression(p: &mut Parser) {
     p.close(m, Expression);
 }
 
-/// Parse an expression that may be a ternary `cond ? a : b`, or a plain binary/atom.
-/// (grammar: `Expression13 = Expression12 "?" Expression12 ":" Expression12`)
-fn circom_expression(p: &mut Parser) {
-    if let Some(cond) = expression_rec(p, MIN_BINDING_POWER) {
-        if p.at(MarkQuestion) {
-            ternary_conditional(p, cond);
-        }
+/// Parse an expression that may be a ternary `cond ? a : b`, a parallel-wrapped expression, or a
+/// plain binary/atom. Returns the marker bounding the parsed expression's outermost node, or `None`
+/// if no atom could be parsed (an error was already reported).
+///
+/// (grammar: `Expression14 = "parallel" <ParseExpression1>` wraps the `||`/ternary level — no
+/// nested `parallel`; `Expression13 = Expression12 "?" Expression12 ":" Expression12`.)
+///
+/// The `ParallelKw` token doubles as the wrapping node kind (the same dual token+node pattern used
+/// for prefix operators like `Sub`/`Not`).
+fn circom_expression(p: &mut Parser) -> Option<Marker> {
+    if p.at(ParallelKw) {
+        let m = p.open();
+        p.advance(); // consume `parallel`
+                     // The wrapped operand (an `Expression` node, like ternary branches), for uniform access.
+        let op = p.open();
+        expression_ternary(p);
+        p.close(op, Expression);
+        Some(p.close(m, ParallelKw))
+    } else {
+        expression_ternary(p)
+    }
+}
+
+/// `cond ? a : b` or a plain `||`-level expression. Nested `parallel` is rejected here (the atom
+/// arms do not recognize `ParallelKw`), matching the grammar.
+fn expression_ternary(p: &mut Parser) -> Option<Marker> {
+    let cond = expression_rec(p, MIN_BINDING_POWER)?;
+    if p.at(MarkQuestion) {
+        Some(ternary_conditional(p, cond))
+    } else {
+        Some(cond)
     }
 }
 
@@ -36,9 +66,9 @@ fn circom_expression(p: &mut Parser) {
 /// The whole form is wrapped in a single `TernaryConditional` node (the event/marker model cannot
 /// reliably double-wrap an already-parsed operand, and circom's own AST models this as one
 /// `InlineSwitchOp`).
-fn ternary_conditional(p: &mut Parser, cond: Marker) {
+fn ternary_conditional(p: &mut Parser, cond: Marker) -> Marker {
     // <condition> ? <if_true> : <if_false>  — wrap the already-parsed condition in the node.
-    let m = p.open_before(cond);
+    let m = p.precede(cond);
 
     p.expect(MarkQuestion);
 
@@ -52,7 +82,7 @@ fn ternary_conditional(p: &mut Parser, cond: Marker) {
     expression_rec(p, TERNARY_BRANCH_BP);
     p.close(if_false, Expression);
 
-    p.close(m, TernaryConditional);
+    p.close(m, TernaryConditional)
 }
 
 /// Precedence-climbing (Pratt) core. Returns the marker bounding the parsed expression, or
@@ -62,34 +92,49 @@ fn ternary_conditional(p: &mut Parser, cond: Marker) {
 /// in only when `lbp >= min_bp`. Left-associative operators recurse with `rbp = lbp + 1`, so a
 /// following same-precedence operator is NOT absorbed into the right operand (e.g.
 /// `a - b - c` groups as `(a - b) - c`).
+///
+/// Each call increments `p.depth` (decremented on return via the IIFE). Past `MAX_EXPR_DEPTH` it
+/// stops recursing and reports an error, bounding the C-stack on adversarial deeply-nested input.
+/// `fuel` cannot serve this role: it resets on every token emission, and recursive descent always
+/// emits, so a progressing-but-deep parse would never trip it.
 fn expression_rec(p: &mut Parser, min_bp: u16) -> Option<Marker> {
-    let mut lhs = parse_prefix_or_atom(p)?;
-
-    loop {
-        let kind = p.current();
-
-        if let Some((lbp, rbp)) = kind.infix() {
-            if lbp < min_bp {
-                break;
-            }
-            let m = p.open_before(lhs);
-            p.advance(); // consume the infix operator
-            expression_rec(p, rbp); // right operand at `rbp` (controls associativity)
-            lhs = p.close(m, kind);
-        } else if let Some(postfix_bp) = kind.postfix() {
-            if postfix_bp < min_bp {
-                break;
-            }
-            match parse_postfix(p, lhs, kind) {
-                Some(new_lhs) => lhs = new_lhs,
-                None => break, // error already reported; stop
-            }
-        } else {
-            break;
+    p.depth += 1;
+    let result = (|| {
+        if p.depth > MAX_EXPR_DEPTH {
+            p.error_report("expression nesting too deep".to_string());
+            return None;
         }
-    }
 
-    Some(lhs)
+        let mut lhs = parse_prefix_or_atom(p)?;
+
+        loop {
+            let kind = p.current();
+
+            if let Some((lbp, rbp)) = kind.infix() {
+                if lbp < min_bp {
+                    break;
+                }
+                let m = p.precede(lhs);
+                p.advance(); // consume the infix operator
+                expression_rec(p, rbp); // right operand at `rbp` (controls associativity)
+                lhs = p.close(m, kind);
+            } else if let Some(postfix_bp) = kind.postfix() {
+                if postfix_bp < min_bp {
+                    break;
+                }
+                match parse_postfix(p, lhs, kind) {
+                    Some(new_lhs) => lhs = new_lhs,
+                    None => break, // error already reported; stop
+                }
+            } else {
+                break;
+            }
+        }
+
+        Some(lhs)
+    })();
+    p.depth -= 1;
+    result
 }
 
 /// Parse a prefix expression (`!`, `~`, `-`) or fall through to an atom.
@@ -110,11 +155,11 @@ fn parse_prefix_or_atom(p: &mut Parser) -> Option<Marker> {
 /// marker, or `None` on an unexpected token (error already reported). Chaining is handled by the
 /// caller's loop. (grammar: `Expression1` postfix forms)
 fn parse_postfix(p: &mut Parser, lhs: Marker, kind: TokenKind) -> Option<Marker> {
-    let m = p.open_before(lhs);
+    let m = p.precede(lhs);
     match kind {
         LParen => {
             // function/template call: name(arg, ...)
-            tuple_expression(p);
+            paren_list(p);
             Some(p.close(m, Call))
         }
         LBracket => {
@@ -131,35 +176,60 @@ fn parse_postfix(p: &mut Parser, lhs: Marker, kind: TokenKind) -> Option<Marker>
             Some(p.close(m, ComponentCall))
         }
         _ => {
-            p.advance_with_error(&format!("expected a postfix token, found {:?}", kind));
+            // expected a postfix token, found `kind`
+            p.advance_with_error();
             None
         }
     }
 }
 
-/// Parse an expression atom: an identifier, a numeric literal (decimal or hex), or a
-/// parenthesized expression (which may itself contain a ternary).
-/// (grammar: `Expression0`)
+/// Parse an expression atom: an identifier, a numeric literal (decimal or hex), the `_`
+/// placeholder, a parenthesized expression (grouping or tuple), or an inline array literal.
+/// (grammar: `Expression0` + `Expression1` inline-array/tuple forms)
 fn expression_atom(p: &mut Parser) -> Option<Marker> {
     let kind = p.current();
     match kind {
-        Number | HexNumber | Identifier => {
+        Number | HexNumber | Identifier | Underscore => {
             let m = p.open();
             p.advance();
             Some(p.close(m, ExpressionAtom))
         }
+        LBracket => {
+            // inline array literal: [a, b, …] (grammar Expression1: `"[" <Listable> "]"`, ≥1 elem).
+            let m = p.open();
+            p.expect(LBracket);
+            expression_list(p);
+            p.expect(RBracket);
+            Some(p.close(m, InlineArray))
+        }
         LParen => {
-            // ( <expression> )  — a parenthesized expression is a full expression, so it may
-            // contain a ternary: `(a ? b : c)`. Use `circom_expression` (ternary-capable) rather
-            // than `expression_rec` (which stops at `?`).
+            // ( <expr> ) grouping, OR ( <expr>, <expr>, … ) tuple (≥2 elems, grammar Expression1).
+            // The first element is parsed ternary-capable (`circom_expression`) so `(a ? b : c)`
+            // groupings work; a following comma flips this into a `TupleExpr`.
             let m = p.open();
             p.expect(LParen);
-            circom_expression(p);
-            p.expect(RParen);
-            Some(p.close(m, Expression))
+            let first = circom_expression(p);
+            if p.nth(0) == Comma {
+                // tuple — wrap the first element in an `Expression` node so EVERY element is a
+                // uniform `Expression` child (the remaining elements come pre-wrapped from
+                // `expression_list`). `precede` wraps the already-parsed first operand in place.
+                if let Some(f) = first {
+                    let w = p.precede(f);
+                    p.close(w, Expression);
+                }
+                p.eat(Comma); // now consume the separator (and any leading trivia)
+                expression_list(p);
+                p.expect(RParen);
+                Some(p.close(m, TupleExpr))
+            } else {
+                // grouping — `( <expression> )`. Unchanged from the pre-tuple path.
+                p.expect(RParen);
+                Some(p.close(m, Expression))
+            }
         }
         _ => {
-            p.advance_with_error("invalid token");
+            // invalid token
+            p.advance_with_error();
             None
         }
     }

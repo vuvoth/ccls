@@ -3,7 +3,8 @@ use super::*;
 /// Parse a block `{ <declaration>|<statement> ... }` (grammar: `ParseBlock`).
 pub fn block(p: &mut Parser) {
     if !p.at(LCurly) {
-        p.advance_with_error("expected `{`");
+        // expected `{`
+        p.advance_with_error();
     } else {
         let m = p.open();
         p.expect(LCurly);
@@ -12,8 +13,15 @@ pub fn block(p: &mut Parser) {
         while !p.at(RCurly) && !p.eof() {
             let kind = p.current();
             match kind {
-                SignalKw | InputKw | OutputKw => {
+                SignalKw => {
                     declaration::signal_declaration(p);
+                    p.expect(Semicolon);
+                }
+                // `input`/`output` is either a signal declaration (`input signal …`) or a bus-typed
+                // field (`input <Bus> …`). The dispatch (and its `nth(1)` lookahead) lives in one
+                // place — `declaration::input_or_output` — shared with the `for`-init path.
+                InputKw | OutputKw => {
+                    declaration::input_or_output(p);
                     p.expect(Semicolon);
                 }
                 VarKw => {

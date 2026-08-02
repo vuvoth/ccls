@@ -5,15 +5,13 @@
 //! `Statement` wrapper would never cast. Statement nodes are instead queried by their concrete kind
 //! via `AstStatementList::find_children::<N>()`.
 
-use parser::token_kind::TokenKind::*;
-use rowan::ast::support;
-
-use crate::syntax_node::CircomLanguage;
-use crate::syntax_node::SyntaxNode;
 use parser::token_kind::TokenKind;
-use rowan::ast::AstNode;
+use parser::token_kind::TokenKind::*;
+use rowan::ast::{support, AstNode};
 
-use super::ast::AstBlock;
+use crate::syntax_node::{CircomLanguage, SyntaxNode};
+
+use super::block::AstBlock;
 use super::expression::AstExpression;
 
 ast_node!(AstIfStatement, IfStatement);

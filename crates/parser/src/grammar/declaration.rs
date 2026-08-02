@@ -1,6 +1,6 @@
 use super::{
     expression::expression,
-    list::{tuple_expression, tuple_identifier},
+    list::{paren_list, tuple_identifier},
     *,
 };
 use crate::parser::Parser;
@@ -168,7 +168,8 @@ intermediate and outputs signals right after their declaration
 pub(super) fn signal_declaration(p: &mut Parser) {
     // Accept `signal ...`, `input signal ...`, or `output signal ...` (grammar `SignalHeader`).
     if !p.at(SignalKw) && !p.at(InputKw) && !p.at(OutputKw) {
-        p.advance_with_error("expected a signal declaration");
+        // expected a signal declaration
+        p.advance_with_error();
         return;
     }
 
@@ -176,6 +177,24 @@ pub(super) fn signal_declaration(p: &mut Parser) {
     let io_signal = signal_header(p);
     let assign_able = io_signal != Some(true);
 
+    field_list(p, assign_able);
+
+    let close_kind = match io_signal {
+        Some(true) => InputSignalDecl,
+        Some(false) => OutputSignalDecl,
+        None => SignalDecl,
+    };
+
+    p.close(m, close_kind);
+}
+
+/// Comma-separated signal/field initializers, or the tuple form `(a, b, …)` (grammar
+/// `SignalSymbol` list / `TupleInitialization`). Shared by `signal_declaration` and the bus-typed
+/// field declaration.
+///
+/// `assign_able` is false for inputs (which cannot carry an initializer); when an inline signal
+/// assignment (`<==` / `<--` / `=`) follows the tuple/list it is parsed as the initializer.
+fn field_list(p: &mut Parser, assign_able: bool) {
     // tuple of signal
     // eg: signal (in1, in2, in3) <== tuple_value;
     if p.at(LParen) {
@@ -194,8 +213,51 @@ pub(super) fn signal_declaration(p: &mut Parser) {
             signal_init(p, assign_able);
         }
     }
+}
 
-    let close_kind = match io_signal {
+/// Bus-typed field declaration (grammar: `BusHeader`). Reached only via `input_or_output`, i.e.
+/// with a leading `input`/`output` keyword:
+///
+/// ```text
+/// <input|output> <BusType> ("("<expr-list>")")? {tags}? <fieldName…>
+/// ```
+///
+/// The field name(s) are a `SignalSymbol` parsed by `field_list`. Reuses `paren_list` for the bus
+/// instantiation args, `tag_list` for tags, and `field_list` for the trailing name(s). Gaps 15/16/21.
+pub(super) fn bus_signal_declaration(p: &mut Parser) {
+    let m = p.open();
+
+    // Leading wire direction. `input_or_output` guarantees the current token is `input`/`output`;
+    // the `_ => None` arm keeps the match exhaustive (defensive — unreachable in practice).
+    let io: Option<bool> = match p.current() {
+        InputKw => {
+            p.advance();
+            Some(true)
+        }
+        OutputKw => {
+            p.advance();
+            Some(false)
+        }
+        _ => None,
+    };
+
+    // Bus type identifier.
+    p.expect(Identifier);
+
+    // Optional bus instantiation args `(expr, …)` (grammar: `("("<Listable?>")")?`).
+    if p.at(LParen) {
+        paren_list(p);
+    }
+
+    // Optional tag list `{ tag, … }`.
+    if p.at(LCurly) {
+        tag_list(p);
+    }
+
+    let assign_able = io != Some(true);
+    field_list(p, assign_able);
+
+    let close_kind = match io {
         Some(true) => InputSignalDecl,
         Some(false) => OutputSignalDecl,
         None => SignalDecl,
@@ -230,7 +292,7 @@ pub(super) fn component_declaration(p: &mut Parser) {
 
         // template params
         let parameter_marker = p.open();
-        tuple_expression(p);
+        paren_list(p);
         p.close(parameter_marker, Call);
     }
 
@@ -239,11 +301,23 @@ pub(super) fn component_declaration(p: &mut Parser) {
 
 pub(super) fn declaration(p: &mut Parser) {
     match p.current() {
-        SignalKw | InputKw | OutputKw => signal_declaration(p),
+        SignalKw => signal_declaration(p),
+        InputKw | OutputKw => input_or_output(p),
         VarKw => var_declaration(p),
         ComponentKw => component_declaration(p),
-        kind => {
-            p.advance_with_error(&format!("expected a declaration keyword, found {:?}", kind));
-        }
+        // any other token — expected a declaration keyword
+        _ => p.advance_with_error(),
+    }
+}
+
+/// Parse an `input`/`output`-led declaration, dispatching between a bus-typed field
+/// (`input B b;`, grammar `BusHeader`) and an ordinary signal declaration (`input signal a;`)
+/// via non-emitting lookahead on the second token. The single source of this decision so block
+/// scope and `for`-init scope cannot diverge.
+pub(super) fn input_or_output(p: &mut Parser) {
+    if p.nth(1) != SignalKw {
+        bus_signal_declaration(p);
+    } else {
+        signal_declaration(p);
     }
 }

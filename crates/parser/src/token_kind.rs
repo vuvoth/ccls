@@ -32,15 +32,18 @@ pub enum TokenKind {
     #[regex(r"[0-9]+\.[0-9]+\.[0-9]+")]
     Version,
     // Literals
-    // Hexadecimal literal (grammar terminal `0x[0-9A-Fa-f]+`). Declared before `Number` so the
-    // longest match wins: `0x1F` lexes as a single HexNumber, not Number `0` + Identifier `x1F`.
-    #[regex(r"0x[0-9A-Fa-f]+")]
+    // Hexadecimal literal (grammar terminal `0x[0-9A-Fa-f]*` — ZERO digits allowed, so `0x` alone
+    // is a valid HexNumber). Declared before `Number` so the longest match wins: `0x1F` lexes as a
+    // single HexNumber, not Number `0` + Identifier `x1F`.
+    #[regex(r"0x[0-9A-Fa-f]*")]
     HexNumber,
     #[regex("[0-9]+")]
     Number,
     #[regex("[$_]*[a-zA-Z][a-zA-Z0-9_$]*")]
     Identifier,
-    #[regex(r#""[^"]*""#)]
+    // String literal (grammar terminal `"[^"\n]*"` — single-line; a newline terminates it). The
+    // `[^"\n]*` body excludes both `"` and newline, matching the official lalrpop regex exactly.
+    #[regex(r#""[^"\n]*""#)]
     CircomString,
     // Brackets
     #[token("(")]
@@ -62,6 +65,10 @@ pub enum TokenKind {
     Comma,
     #[token(".")]
     Dot,
+    // Anonymous placeholder (grammar Expression0: `"_"`). A lone `_` is not an Identifier (the
+    // ident regex requires a letter), so it needs its own terminal.
+    #[token("_")]
+    Underscore,
     // Boolean operators
     #[token("&&")]
     BoolAnd,
@@ -183,6 +190,18 @@ pub enum TokenKind {
     OutputKw,
     #[token("log")]
     LogKw,
+    // Template modifiers / definition keywords (grammar ParseDefinition). logos longest-match
+    // disambiguates `custom` from `custom_templates` (the longer token wins when both match).
+    #[token("custom")]
+    CustomKw,
+    #[token("custom_templates")]
+    CustomTemplatesKw,
+    #[token("extern_c")]
+    ExternCKw,
+    #[token("parallel")]
+    ParallelKw,
+    #[token("bus")]
+    BusKw,
     // Statement keywords
     #[token("if")]
     IfKw,
@@ -214,6 +233,9 @@ pub enum TokenKind {
     // Template
     TemplateDef,
     TemplateName,
+    // Bus definition (grammar ParseDefinition: `bus Name (params)? block`)
+    BusDef,
+    BusName,
     // ComplexIdentifier, which will replace:
     // ___ SignalIdentifier,
     // ___ VarIdentifier,
@@ -232,6 +254,10 @@ pub enum TokenKind {
     // Expression
     ExpressionAtom,
     Expression,
+    // ≥2-element parenthesized expression literal `(a, b, …)` (grammar Expression1 tuple form)
+    TupleExpr,
+    // `[a, b, …]` inline array literal (grammar Expression1 inline-array form)
+    InlineArray,
     // Complex token kind
     MainComponent,
     Block,

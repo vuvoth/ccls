@@ -7,15 +7,14 @@
 //! accessors below therefore expose the `Expression` children that are actually present, rather than
 //! assuming a uniform operand shape.
 
+use parser::token_kind::TokenKind;
 use parser::token_kind::TokenKind::*;
 use rowan::ast::support;
-
-use crate::syntax_node::CircomLanguage;
-use crate::syntax_node::SyntaxNode;
-use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 
-use super::ast::AstIdentifier;
+use crate::syntax_node::{CircomLanguage, SyntaxNode};
+
+use super::name::{AstComplexIdentifier, AstIdentifier};
 
 ast_node!(AstExpression, Expression);
 
@@ -62,5 +61,46 @@ impl AstTernaryConditional {
     /// The three branches in order: `[0]` condition, `[1]` then-branch, `[2]` else-branch.
     pub fn branches(&self) -> Vec<AstExpression> {
         support::children(self.syntax()).collect()
+    }
+}
+
+ast_node!(AstInlineArray, InlineArray);
+
+impl AstInlineArray {
+    /// The element expressions of `[a, b, c]` (grammar Expression1 inline-array form, ≥1).
+    pub fn elements(&self) -> Vec<AstExpression> {
+        support::children(self.syntax()).collect()
+    }
+}
+
+ast_node!(AstTupleExpr, TupleExpr);
+
+impl AstTupleExpr {
+    /// The element expressions of `(a, b, …)` (grammar Expression1 tuple form, ≥2). Every element
+    /// is a uniform `Expression` child — the parser wraps the first element to match the rest.
+    pub fn elements(&self) -> Vec<AstExpression> {
+        support::children(self.syntax()).collect()
+    }
+}
+
+ast_node!(AstParallelExpr, ParallelKw);
+
+impl AstParallelExpr {
+    /// The operand of `parallel <expr>` (grammar Expression14), wrapped in an `Expression` node.
+    pub fn operand(&self) -> Option<AstExpression> {
+        support::child(self.syntax())
+    }
+}
+
+ast_node!(AstComponentCall, ComponentCall);
+
+impl AstComponentCall {
+    /// The component being accessed, e.g. `c` in `c.x`.
+    pub fn component_name(&self) -> Option<AstComplexIdentifier> {
+        support::child(self.syntax())
+    }
+    /// The accessed signal/field, e.g. `x` in `c.x`.
+    pub fn signal(&self) -> Option<AstIdentifier> {
+        support::child(self.syntax())
     }
 }

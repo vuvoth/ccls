@@ -60,8 +60,7 @@ fn decnumber_terminal_conforms() {
 }
 
 // --- HEXNUMBER: grammar `r"0x[0-9A-Fa-f]*"` ----------------------------------------------------
-// NOTE: the grammar allows ZERO hex digits (`*`), so `0x` is a valid HEXNUMBER. Our lexer requires
-// at least one digit (`0x[0-9A-Fa-f]+`); this pins the (benign) deviation.
+// The grammar allows ZERO hex digits (`*`), so `0x` alone is a valid HEXNUMBER.
 
 #[test]
 fn hexnumber_terminal_conforms() {
@@ -71,18 +70,16 @@ fn hexnumber_terminal_conforms() {
 }
 
 #[test]
-fn hexnumber_empty_digits_deviation_is_pinned() {
-    // Grammar: `0x` alone is a HEXNUMBER. Ours: lexes as HexNumber `0` ... actually `0x` with no
-    // digits does not match our `+` regex, so it does NOT produce a single HexNumber.
-    let k = kinds("0x");
-    assert!(
-        !matches!(k.as_slice(), &[TokenKind::HexNumber]),
-        "our lexer deviates from grammar: `0x` is not a single HexNumber (grammar says it is)"
+fn hexnumber_empty_digits_conform() {
+    // Grammar: `0x` alone is a HEXNUMBER (`0x[0-9A-Fa-f]*`, zero digits allowed).
+    assert_eq!(
+        kinds("0x"),
+        vec![TokenKind::HexNumber],
+        "`0x` must be a valid (zero-digit) HexNumber per the grammar"
     );
 }
 
 // --- STRING: grammar `r#""[^"\n]*""#` (no newlines) --------------------------------------------
-// NOTE: our regex `"[^"]*` ALLOWS newlines inside a string — more permissive than the grammar.
 
 #[test]
 fn string_terminal_conforms() {
@@ -92,13 +89,14 @@ fn string_terminal_conforms() {
 }
 
 #[test]
-fn string_newline_deviation_is_pinned() {
-    // Grammar: a newline inside a string terminates it (strings are single-line). Ours accepts it.
-    let k = kinds("\"line\nbreak\"");
-    assert_eq!(
-        k,
-        vec![TokenKind::CircomString],
-        "our lexer is more permissive than the grammar: multi-line strings are accepted"
+fn string_newline_terminates() {
+    // Grammar: a newline inside a string terminates it (strings are single-line). The newline
+    // breaks the `"[^"\n]*"` match, so no single CircomString spans the line break.
+    assert!(
+        !tokenize("\"line\nbreak\"")
+            .iter()
+            .any(|t| t.kind == TokenKind::CircomString),
+        "a newline inside a string literal must prevent a CircomString token"
     );
 }
 
@@ -185,6 +183,11 @@ fn keyword_terminals_conform() {
         (TokenKind::WhileKw, "while"),
         (TokenKind::ReturnKw, "return"),
         (TokenKind::AssertKw, "assert"),
+        (TokenKind::CustomKw, "custom"),
+        (TokenKind::CustomTemplatesKw, "custom_templates"),
+        (TokenKind::ExternCKw, "extern_c"),
+        (TokenKind::ParallelKw, "parallel"),
+        (TokenKind::BusKw, "bus"),
     ];
     for (kind, src) in cases {
         assert_eq!(kinds(src), vec![*kind], "failed keyword: {src:?}");

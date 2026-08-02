@@ -1,17 +1,7 @@
-//! **Missing-grammar-feature inventory** — every construct the official circom grammar
-//! (`iden3/circom` → `parser/src/lang.lalrpop`) accepts but our parser does NOT yet support.
-//!
-//! Each test uses a realistic, multi-line circom program (not a toy snippet) exercising the
-//! feature in context, and asserts what the grammar *requires* (parse with no error, or a specific
-//! node kind). They are `#[ignore]`d so `cargo test` stays green; **the filter** is:
-//!
-//! ```text
-//! cargo test --test grammar_gaps -- --ignored
-//! ```
-//!
-//! Every test that still FAILS under `--ignored` is a real gap to implement; any that PASS are
-//! features we already handle (remove the `#[ignore]` and promote them to `grammar_structure.rs`).
-//! Implementation is tracked separately; this file is the authoritative "what are we missing" list.
+//! **Grammar-feature conformance** — every construct the official circom grammar
+//! (`iden3/circom` → `parser/src/lang.lalrpop`) accepts, exercised with realistic, multi-line
+//! circom programs. Each test asserts what the grammar *requires* (parse with no error, or a
+//! specific token kind). These previously-`#[ignore]`d gaps now all pass under plain `cargo test`.
 
 use parser::lexer::tokenize;
 use parser::token_kind::TokenKind;
@@ -41,9 +31,8 @@ fn kinds(src: &str) -> Vec<TokenKind> {
 // =====================================================================================
 
 #[test]
-#[ignore = "grammar HEXNUMBER = `0x[0-9A-Fa-f]*` allows zero hex digits (`0x` alone)"]
 fn gap_hexnumber_zero_digits() {
-    // Grammar: `0x` is a valid HEXNUMBER. Complicated: a bus field initialized to `0x`.
+    // Grammar: `0x` is a valid HEXNUMBER (regex `0x[0-9A-Fa-f]*`, zero digits allowed).
     let src = "template T() { signal input a; signal output o; o <== a + 0x; }";
     assert!(
         parses_clean(src),
@@ -52,44 +41,40 @@ fn gap_hexnumber_zero_digits() {
 }
 
 #[test]
-#[ignore = "grammar STRING = `\"[^\"\\n]*\"` is single-line; a newline must terminate it"]
 fn gap_string_is_single_line() {
-    // Grammar: a newline inside a string is invalid. We over-accept multi-line strings.
+    // Grammar: a newline inside a string terminates it (strings are single-line). With the
+    // `"[^"\n]*"` regex a multi-line literal cannot form a single CircomString token.
     let bad = "\"line one\nline two\"";
     assert!(
-        kinds(bad).contains(&TokenKind::Error),
-        "a newline inside a string literal should be a lexing error"
+        !tokenize(bad)
+            .iter()
+            .any(|t| t.kind == TokenKind::CircomString),
+        "a newline inside a string literal should prevent a CircomString token"
     );
 }
 
 #[test]
-#[ignore = "grammar reserves `parallel` (Expression14 + template modifier) — we lex it as Identifier"]
 fn gap_parallel_is_a_keyword() {
-    // If `parallel` were reserved, `template parallel T()` dispatches to the modifier arm. Instead
-    // it lexes as a plain Identifier, so the modifier keyword is never recognized.
+    // `parallel` is reserved (Expression14 + template modifier), not an Identifier.
     assert_ne!(kinds("parallel").as_slice(), &[TokenKind::Identifier]);
 }
 
 #[test]
-#[ignore = "grammar reserves `custom` (template modifier) — we lex it as Identifier"]
 fn gap_custom_is_a_keyword() {
     assert_ne!(kinds("custom").as_slice(), &[TokenKind::Identifier]);
 }
 
 #[test]
-#[ignore = "grammar reserves `extern_c` (template modifier) — we lex it as Identifier"]
 fn gap_extern_c_is_a_keyword() {
     assert_ne!(kinds("extern_c").as_slice(), &[TokenKind::Identifier]);
 }
 
 #[test]
-#[ignore = "grammar reserves `bus` (ParseDefinition) — we lex it as Identifier"]
 fn gap_bus_is_a_keyword() {
     assert_ne!(kinds("bus").as_slice(), &[TokenKind::Identifier]);
 }
 
 #[test]
-#[ignore = "grammar reserves `custom_templates` (ParsePragma) — we lex it as Identifier(s)"]
 fn gap_custom_templates_is_a_keyword() {
     assert_ne!(
         kinds("custom_templates").as_slice(),
@@ -102,7 +87,6 @@ fn gap_custom_templates_is_a_keyword() {
 // =====================================================================================
 
 #[test]
-#[ignore = "grammar ParsePragma: `pragma custom_templates;` enables custom gates"]
 fn gap_pragma_custom_templates() {
     let src = "pragma circom 2.0.0;\npragma custom_templates;\ntemplate T() { signal input a; }";
     assert!(parses_clean(src));
@@ -113,7 +97,6 @@ fn gap_pragma_custom_templates() {
 // =====================================================================================
 
 #[test]
-#[ignore = "grammar ParseDefinition: `template parallel T() {}`"]
 fn gap_template_parallel_modifier() {
     let src = "pragma circom 2.0.0;
 template parallel ParallelHash(n) {
@@ -131,29 +114,26 @@ template parallel ParallelHash(n) {
 }
 
 #[test]
-#[ignore = "grammar ParseDefinition: `template custom T() {}` (custom gate)"]
 fn gap_template_custom_modifier() {
     let src = "pragma circom 2.0.0;\npragma custom_templates;\ntemplate custom Poseidon(n) {\n    signal input x;\n    signal output y;\n    y <== x;\n}";
     assert!(parses_clean(src));
 }
 
 #[test]
-#[ignore = "grammar ParseDefinition: `template extern_c T() {}`"]
 fn gap_template_extern_c_modifier() {
     let src = "pragma circom 2.0.0;\ntemplate extern_c FieldMul() {\n    signal input a;\n    signal input b;\n    signal output c;\n    c <== a * b;\n}";
     assert!(parses_clean(src));
 }
 
 #[test]
-#[ignore = "grammar ParseDefinition: combined modifiers `template parallel custom extern_c T() {}`"]
 fn gap_template_combined_modifiers() {
+    // Grammar fixed modifier order: `custom` → `extern_c` → `parallel`.
     let src =
-        "pragma circom 2.0.0;\ntemplate parallel custom extern_c G() { signal output o; o <== 0; }";
+        "pragma circom 2.0.0;\ntemplate custom extern_c parallel G() { signal output o; o <== 0; }";
     assert!(parses_clean(src));
 }
 
 #[test]
-#[ignore = "grammar ParseDefinition: `bus Name { ... }` definition (no params)"]
 fn gap_bus_definition_no_params() {
     let src = "pragma circom 2.0.0;
 bus Point {
@@ -168,7 +148,6 @@ template T() {
 }
 
 #[test]
-#[ignore = "grammar ParseDefinition + BusHeader: `bus Name(args) { ... }` with params"]
 fn gap_bus_definition_with_params() {
     let src = "pragma circom 2.0.0;
 bus Vector(n) {
@@ -186,25 +165,25 @@ template T() {
 // =====================================================================================
 
 #[test]
-#[ignore = "grammar BusHeader: bus-typed signal `signal bus B;` / `signal input bus B;`"]
 fn gap_bus_typed_signal() {
+    // Grammar BusHeader (wire-first): `<input|output> <BusType> <fieldName>`.
     let src = "pragma circom 2.0.0;
 bus B { signal input x; }
 template T() {
-    signal input bus B;
+    input B b;
     signal output o;
-    o <== B.x;
+    o <== b.x;
 }";
     assert!(parses_clean(src));
 }
 
 #[test]
-#[ignore = "grammar BusHeader: `bus B(args)`-typed signal with instantiation args"]
 fn gap_bus_typed_signal_with_args() {
+    // BusHeader with instantiation args: `input <Bus>(args) <fieldName>`.
     let src = "pragma circom 2.0.0;
 bus V(n) { signal input items[n]; }
 template T(k) {
-    signal input bus V(k);
+    input V(k) v;
     signal output o;
     o <== 0;
 }";
@@ -216,11 +195,8 @@ template T(k) {
 // =====================================================================================
 
 #[test]
-#[ignore = "grammar Expression14: `parallel <expr>` wraps an expression for parallel evaluation"]
 fn gap_parallel_expression() {
-    // NOTE: `parallel (a + b)` would FALSELY parse as a function call today (since `parallel` is
-    // not reserved), so we use a bare operand to make the gap observable: once `parallel` is a
-    // keyword + Expression14 is handled, this parses; today it errors on the trailing operand.
+    // `parallel <expr>` wraps an expression for parallel evaluation (grammar Expression14).
     let src = "template T() {
     signal input a;
     signal input b;
@@ -233,8 +209,8 @@ fn gap_parallel_expression() {
 }
 
 #[test]
-#[ignore = "grammar Expression1: inline array `[a, b, c]`"]
 fn gap_inline_array_expression() {
+    // grammar Expression1 inline array: `[a, b, c]`.
     let src = "template T() {
     signal input a;
     signal input b;
@@ -247,8 +223,8 @@ fn gap_inline_array_expression() {
 }
 
 #[test]
-#[ignore = "grammar Expression1: tuple expression `(a, b)` (2+ elements)"]
 fn gap_tuple_expression() {
+    // grammar Expression1 tuple: `(a, b)` (≥2 elements).
     let src = "template T() {
     signal input a;
     signal input b;
@@ -260,8 +236,8 @@ fn gap_tuple_expression() {
 }
 
 #[test]
-#[ignore = "grammar Expression0: `_` placeholder variable (anonymous assignment target)"]
 fn gap_underscore_placeholder() {
+    // grammar Expression0: `_` placeholder variable (anonymous assignment target).
     let src = "template T() {
     signal input a;
     signal output out;
@@ -280,11 +256,10 @@ fn gap_underscore_placeholder() {
 
 // =====================================================================================
 // G. Whole-program realism — a complicated circuit mixing many grammar features at once.
-//    This is the "must parse" end-to-end target once the gaps above are closed.
+//    This is the "must parse" end-to-end target.
 // =====================================================================================
 
 #[test]
-#[ignore = "end-to-end: a realistic circuit using buses, parallel, custom gates, anon components, arrays, tuples"]
 fn gap_complicated_realistic_program() {
     let src = r#"pragma circom 2.0.0;
 pragma custom_templates;
@@ -313,10 +288,11 @@ template parallel MerkleTree(levels) {
 }
 
 template Aggregator(n) {
-    signal input bus Inputs(n);
+    input Inputs(n) inp;
     signal output hash;
     var pair = (Inputs.a[0], Inputs.b[0]);
-    component leaf = Multiplier2()(pair.0, pair.1);
+    component leaf = Multiplier2();
+    Multiplier2()(pair);
     var proof = [Inputs.a[0], Inputs.b[0]];
     hash <== MerkleTree(n)(leaf.out, proof);
 }

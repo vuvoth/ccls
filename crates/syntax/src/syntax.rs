@@ -15,14 +15,14 @@ use crate::syntax_node::SyntaxNode;
 /// Parse `source` as a whole circom program and build its syntax tree.
 pub fn syntax_tree(source: &str) -> SyntaxNode {
     let tokens = tokenize(source);
-    let events = Parser::parsing(&tokens);
+    let events = Parser::parse(&tokens);
     build_syntax_node(&tokens, events)
 }
 
 /// Parse `source` starting from a specific entry `scope` and build its syntax tree.
 pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     let tokens = tokenize(source);
-    let events = Parser::parsing_with_scope(&tokens, scope);
+    let events = Parser::parse_with_scope(&tokens, scope);
     build_syntax_node(&tokens, events)
 }
 
