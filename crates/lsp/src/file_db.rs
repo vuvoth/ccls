@@ -4,7 +4,7 @@ use std::sync::Arc;
 use lsp_types::{Position, Range, Url};
 use rowan::TextSize;
 
-use syntax::syntax_node::SyntaxNode;
+use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
 // File identity is owned by the `vfs` crate (a path-interned `u32` index), so aliased paths
 // collapse to one id via interning rather than via a path hash. Re-exported here for callers that
@@ -91,6 +91,16 @@ impl FileDB {
         Range {
             start: self.position(syntax_range.start()),
             end: self.position(syntax_range.end()),
+        }
+    }
+
+    /// LSP [`Range`] of a leaf [`SyntaxToken`] (rename/reference edits target the token span, not a
+    /// wrapping node).
+    pub fn token_range(&self, token: &SyntaxToken) -> Range {
+        let r = token.text_range();
+        Range {
+            start: self.position(r.start()),
+            end: self.position(r.end()),
         }
     }
 

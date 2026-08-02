@@ -8,15 +8,15 @@ use lsp_types::request::{
 use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentCall, AstComponentDecl};
+use syntax::abstract_syntax_tree::{AstComponentCall, AstComponentDecl};
 use syntax::syntax_node::SyntaxToken;
 
 use std::path::PathBuf;
 
-use crate::file_db::FileDB;
+use crate::file_db::{FileDB, FileId};
 use crate::handler;
-use crate::handler::goto_definition::{jump_to_lib, token_ancestors};
-use crate::resolver;
+use crate::handler::goto_definition::jump_to_lib;
+use crate::resolver::{self, token_ancestors, ResolvedSymbol};
 use crate::source_db::{ContentCacheDb, SourceDatabase};
 
 /// A text document notification (`textDocument/didOpen` or `textDocument/didChange`) normalized to
@@ -117,58 +117,89 @@ impl GlobalState {
         Ok(())
     }
 
-    /// Resolve every declaration of the symbol carried by `token`, searching the current file first
-    /// and then any `include`d library when the token sits in a component declaration/call.
-    pub fn lookup_definition(
-        &self,
-        file_db: &FileDB,
-        ast: &AstCircomProgram,
-        token: &SyntaxToken,
-    ) -> Vec<Location> {
-        // A string literal resolves to the included library file (the include path is searched in
-        // the current file only). Hoisted to the top so the resolver stays pure / URL-agnostic and
-        // never sees `CircomString` tokens.
+    /// Resolve the token's definition(s) to LSP [`Location`]s — the goto-definition shaper. An
+    /// include-path string routes to [`jump_to_lib`]; any other token resolves (possibly
+    /// cross-file) via [`Self::resolve_use`] and each result is tagged with its owning file's URL.
+    pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
             return jump_to_lib(file_db, token, self.source_db.vfs());
         }
-
-        // In-file resolution: the symbol table builds lazily on first query (never an `unwrap` —
-        // a failed parse yields an empty table).
-        let table = self.source_db.symbol_table(file_db.file_id);
-        let file_symbols = resolver::resolve(&table, token);
-        let mut locations: Vec<Location> = file_symbols
+        self.resolve_use(file_db, token)
             .into_iter()
-            .map(|s| Location::new(file_db.file_path.clone(), s.def_range))
+            .map(|(id, s)| Location::new(self.source_db.file_db(id).file_path.clone(), s.def_range))
+            .collect()
+    }
+
+    /// Resolve `token` to the declaration(s) it refers to, file-tagged. In-file first; then, for a
+    /// component declaration/call, each loaded include's top-level by name (cross-file resolution is
+    /// file-scope only — template/function names; a signal/var/param in a lib is only reachable via
+    /// member access, a separate problem). The shared resolution core for goto-definition, rename,
+    /// and references.
+    /// Resolve `token` to the declaration(s) it refers to, file-tagged. In-file first; then, for a
+    /// component declaration/call, each loaded include's top-level by name (cross-file resolution is
+    /// file-scope only — template/function names; a signal/var/param in a lib is only reachable via
+    /// member access, a separate problem). The shared resolution core for goto-definition, rename,
+    /// and references.
+    pub(crate) fn resolve_use(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let table = self.source_db.symbol_table(origin.file_id);
+        let mut out: Vec<(FileId, ResolvedSymbol)> = resolver::resolve(&table, token)
+            .into_iter()
+            .map(|s| (origin.file_id, s))
             .collect();
 
-        // For a component declaration/call, also search the libraries it may instantiate. Cross-file
-        // resolution is **file-scope only** (template/function names): a signal/var/param in a lib is
-        // only reachable via member-access (e.g. `c.signal`), which is a separate problem and out of
-        // scope. Resolution is by name in each lib's own table — never reusing the main-file token's
-        // identity (the bug that made the legacy `hash(text)` index structurally return `None` here).
         let is_component_use = token_ancestors(token)
             .any(|n| AstComponentDecl::can_cast(n.kind()) || AstComponentCall::can_cast(n.kind()));
         if is_component_use {
             let name = token.text();
-            for include in ast.libs() {
-                let Some(include_path) = include.lib() else {
-                    continue;
-                };
-                let Some(lib_id) = self
-                    .source_db
-                    .id_for_include(&file_db.file_path, &include_path.value())
-                else {
-                    continue;
-                };
-                let lib_table = self.source_db.symbol_table(lib_id);
-                let lib_file = self.source_db.file_db(lib_id);
-                for sym in lib_table.lookup_top_level(name) {
-                    locations.push(Location::new(lib_file.file_path.clone(), sym.def_range));
+            if let Some(ast) = self.source_db.ast(origin.file_id) {
+                for include in ast.libs() {
+                    let Some(path) = include.lib() else {
+                        continue;
+                    };
+                    let Some(lib_id) = self
+                        .source_db
+                        .id_for_include(&origin.file_path, &path.value())
+                    else {
+                        continue;
+                    };
+                    let lib_table = self.source_db.symbol_table(lib_id);
+                    for sym in lib_table.lookup_top_level(name) {
+                        out.push((
+                            lib_id,
+                            ResolvedSymbol {
+                                kind: sym.kind,
+                                name: sym.name.clone(),
+                                def_range: sym.def_range,
+                            },
+                        ));
+                    }
                 }
             }
         }
+        out
+    }
 
-        locations
+    /// Every occurrence of `target` **in its defining file** (`target.0`), as tokens. Rename and
+    /// references are in-file by design: each file's `SymbolTable` indexes only that file's own
+    /// declarations, so a token resolves unambiguously within its file. Cross-file rename (a
+    /// top-level symbol's usages in `include`d files, or renaming from a cross-file usage) needs a
+    /// workspace symbol graph and is a follow-up — *not* name/`def_range` matching across files,
+    /// which would both miss genuine cross-file usages and risk colliding when two files define a
+    /// same-named symbol at the same line:column.
+    pub(crate) fn find_occurrences(
+        &self,
+        target: &(FileId, ResolvedSymbol),
+    ) -> Vec<syntax::syntax_node::SyntaxToken> {
+        let (def_file, sym) = target;
+        let Some(ast) = self.source_db.ast(*def_file) else {
+            return Vec::new();
+        };
+        let table = self.source_db.symbol_table(*def_file);
+        resolver::occurrences_in(ast.syntax(), &table, sym)
     }
 
     /// Register an updated document: set its text (dropping its derived caches) and load every

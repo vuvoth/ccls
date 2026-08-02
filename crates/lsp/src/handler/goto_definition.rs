@@ -1,13 +1,13 @@
 use lsp_types::{Location, Range, Url};
-use parser::token_kind::TokenKind;
-use rowan::{ast::AstNode, TextSize};
+use rowan::ast::AstNode;
 
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstInclude};
-use syntax::syntax_node::{SyntaxNode, SyntaxToken};
+use syntax::abstract_syntax_tree::AstInclude;
+use syntax::syntax_node::SyntaxToken;
 use vfs::Vfs;
 
 use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
+use crate::resolver::{token_ancestors, token_at_offset};
 use crate::source_db::SourceDatabase;
 
 use anyhow::Result;
@@ -35,33 +35,10 @@ pub fn handle(
 
     let offset = file_db.offset(position);
     let locations = match token_at_offset(&ast, offset) {
-        Some(token) => state.lookup_definition(&file_db, &ast, &token),
+        Some(token) => state.lookup_definition(&file_db, &token),
         None => Vec::new(),
     };
     Ok(Some(GotoDefinitionResponse::Array(locations)))
-}
-
-/// The first `Identifier` or `CircomString` token covering `offset`, or `None`. A thin wrapper
-/// over [`rowan::SyntaxNode::token_at_offset`] that picks a semantically meaningful token — every
-/// other token kind (whitespace, punctuation, keywords) has no definition to jump to.
-pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
-    ast.syntax().token_at_offset(offset).find_map(|token| {
-        let kind = token.kind();
-        if kind == TokenKind::Identifier || kind == TokenKind::CircomString {
-            Some(token)
-        } else {
-            None
-        }
-    })
-}
-
-/// The token's wrapping nodes: its parent followed by all of that parent's ancestors. Mirrors
-/// `parent_ancestors()`, which is absent on `SyntaxToken` in this rowan version.
-pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
-    token
-        .parent()
-        .into_iter()
-        .flat_map(|p| p.ancestors().collect::<Vec<_>>())
 }
 
 // If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.

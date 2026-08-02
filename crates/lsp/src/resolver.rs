@@ -11,13 +11,41 @@
 //! the legacy `hash(text)` index structurally return `None` for cross-file signal/var/param lookups).
 
 use lsp_types::Range;
+use parser::token_kind::TokenKind;
+use rowan::ast::AstNode;
 use rowan::TextSize;
 
-use syntax::syntax_node::SyntaxToken;
+use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
 use crate::semantic::SymbolTable;
 
 pub use crate::semantic::SymbolKind;
+
+// --- cursor/token navigation (shared by goto-definition, references, rename) -----------------
+
+/// The first `Identifier` or `CircomString` token covering `offset`, or `None`. A thin wrapper
+/// over [`rowan::SyntaxNode::token_at_offset`] that picks a semantically meaningful token — every
+/// other token kind (whitespace, punctuation, keywords) has nothing to resolve/rename.
+pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
+    ast.syntax().token_at_offset(offset).find_map(|token| {
+        let kind = token.kind();
+        if kind == TokenKind::Identifier || kind == TokenKind::CircomString {
+            Some(token)
+        } else {
+            None
+        }
+    })
+}
+
+/// The token's wrapping nodes: its parent followed by all of that parent's ancestors. Mirrors
+/// `parent_ancestors()`, which is absent on `SyntaxToken` in this rowan version.
+pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
+    token
+        .parent()
+        .into_iter()
+        .flat_map(|p| p.ancestors().collect::<Vec<_>>())
+}
 
 /// A resolved reference: what the token means, and where it is defined. A single declaration
 /// per symbol (the former `Vec<Range>` was an artifact of `hash(text)` collapsing same-named decls
@@ -54,6 +82,28 @@ pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> 
         });
     }
     resolved
+}
+
+/// Every `Identifier` token in `root` that resolves (against `table`) to `target` — the
+/// declaration plus all its in-scope usages, excluding shadowed same-named tokens. Document order.
+///
+/// Shared by `references` and `rename`: an occurrence is found by *resolving* each candidate (not
+/// text-matching), so a same-named token in a sibling/inner scope is correctly skipped.
+pub fn occurrences_in(
+    root: &SyntaxNode,
+    table: &SymbolTable,
+    target: &ResolvedSymbol,
+) -> Vec<SyntaxToken> {
+    let name = target.name.as_str();
+    root.descendants_with_tokens()
+        .filter_map(|e| e.into_token())
+        .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
+        .filter(|t| {
+            resolve(table, t)
+                .iter()
+                .any(|s| s.kind == target.kind && s.def_range == target.def_range)
+        })
+        .collect()
 }
 
 #[cfg(test)]
