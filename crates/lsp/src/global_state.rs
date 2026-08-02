@@ -9,7 +9,9 @@ use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::TextSize;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentCall, AstComponentDecl};
+use syntax::abstract_syntax_tree::{
+    AstCircomProgram, AstComponentCall, AstComponentDecl, AstMainComponent,
+};
 use syntax::syntax_node::SyntaxToken;
 
 use std::path::PathBuf;
@@ -167,8 +169,9 @@ impl GlobalState {
     }
 
     /// Resolve `token` to its file-tagged declaration(s): in-file first; then, for a component
-    /// decl/call, each loaded include's top-level by name. Cross-file is file-scope only
-    /// (template/function names) — the shared core for goto-def, rename, references.
+    /// decl/call — or the top-level `component main = X()` instantiation — each loaded include's
+    /// top-level by name. Cross-file is file-scope only (template/function names) — the shared
+    /// core for goto-def, rename, references.
     pub(crate) fn resolve_use(
         &self,
         origin: &FileDB,
@@ -180,9 +183,15 @@ impl GlobalState {
             .map(|s| (origin.file_id, s))
             .collect();
 
-        // A component declaration/call also resolves to template/function defs in loaded includes.
-        let is_component_use = token_ancestors(token)
-            .any(|n| AstComponentDecl::can_cast(n.kind()) || AstComponentCall::can_cast(n.kind()));
+        // A component declaration/call — or the top-level `component main = X()` instantiation —
+        // also resolves to template/function defs in loaded includes. `MainComponent` is a distinct
+        // node kind from `ComponentDecl`/`ComponentCall`, so it is listed explicitly (without it,
+        // `component main = Lib()` where `Lib` is in an include would never resolve).
+        let is_component_use = token_ancestors(token).any(|n| {
+            AstComponentDecl::can_cast(n.kind())
+                || AstComponentCall::can_cast(n.kind())
+                || AstMainComponent::can_cast(n.kind())
+        });
         if is_component_use {
             let name = token.text();
             for lib_id in self.loaded_includes(origin) {
