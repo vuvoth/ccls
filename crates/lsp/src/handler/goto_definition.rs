@@ -76,7 +76,7 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Loca
 mod tests {
     use std::path::Path;
 
-    use lsp_types::Url;
+    use lsp_types::{Location, Url};
     use rowan::ast::AstNode;
     use syntax::{
         abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl, AstTemplateDef},
@@ -84,6 +84,9 @@ mod tests {
     };
 
     use crate::file_db::FileDB;
+    use crate::global_state::GlobalState;
+    use crate::source_db::SourceDatabase;
+    use parser::token_kind::TokenKind;
 
     use super::token_at_offset;
 
@@ -143,5 +146,102 @@ mod tests {
         let parent = Path::new(path).parent().unwrap().to_str().unwrap();
 
         assert_eq!("/hello", parent);
+    }
+
+    /// A `GlobalState` seeded with one open document (no workspace roots — in-file only).
+    fn state_with(url: &Url, source: &str) -> GlobalState {
+        let mut state = GlobalState::new(Vec::new());
+        state.source_db.set_document(url, source.to_string());
+        state
+    }
+
+    /// `lookup_definition` for the `occurrence`-th `Identifier` token named `name`, using the db's
+    /// own `FileDB` (so `origin.file_id` matches the interned id `resolve_use` queries).
+    fn jump(
+        state: &GlobalState,
+        url: &Url,
+        source: &str,
+        name: &str,
+        occurrence: usize,
+    ) -> Vec<Location> {
+        let id = state
+            .source_db
+            .id_for_url(url)
+            .expect("document registered");
+        let file_db = state.source_db.file_db(id);
+        let ast = AstCircomProgram::cast(syntax_tree(source)).expect("parses to a program");
+        let token = ast
+            .syntax()
+            .descendants_with_tokens()
+            .filter_map(|e| e.into_token())
+            .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
+            .nth(occurrence)
+            .unwrap_or_else(|| panic!("token {name}#{occurrence} not found"));
+        state.lookup_definition(&file_db, &token)
+    }
+
+    /// Goto-definition from the template reference inside `component main = X()` resolves to `X`'s
+    /// definition **in the same file** (the in-file `lookup_top_level` path; unaffected by the gate).
+    #[test]
+    fn main_component_same_file_jump_test() {
+        let source = "pragma circom 2.0.0;\ntemplate X() { signal output o; o <== 0; }\ncomponent main = X();\n";
+        let url = Url::from_file_path("/tmp/mc_same.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // The `X` usage in `component main = X()` is the 2nd `X` token (0th = the definition).
+        let locs = jump(&state, &url, source, "X", 1);
+
+        assert_eq!(locs.len(), 1, "same-file main-component jump: {locs:?}");
+        assert_eq!(locs[0].uri, url, "jumps within the same file");
+        // `def_range` is the template name token, on line 2 (0-indexed 1).
+        assert_eq!(
+            locs[0].range.start.line, 1,
+            "lands on the template definition"
+        );
+    }
+
+    /// Goto-definition from the canonical `component main = Lib()` entry point must jump across the
+    /// `include` to `Lib`'s definition — the case the old `is_component_use` gate missed because
+    /// `MainComponent` is a distinct node kind from `ComponentDecl`/`ComponentCall`.
+    #[test]
+    fn main_component_cross_file_jump_test() {
+        use std::fs;
+
+        let base = std::env::temp_dir().join(format!("ccls_mc_xfile_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(
+            ws.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal output o;\n    o <== 0;\n}\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ncomponent main = Lib();\n";
+        let main_path = ws.join("main.circom");
+        fs::write(&main_path, main_src).unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        // Workspace root set so the `include` is loaded (path-traversal confinement).
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+        state.source_db.load_include(&main_url, "lib.circom");
+
+        // The only `Lib` token in main.circom is the reference inside `component main = Lib()`.
+        let locs = jump(&state, &main_url, main_src, "Lib", 0);
+
+        assert_eq!(locs.len(), 1, "cross-file main-component jump: {locs:?}");
+        assert!(
+            locs[0].uri.to_file_path().unwrap().ends_with("lib.circom"),
+            "jumps into the included lib: {}",
+            locs[0].uri
+        );
+        // Lands on `template Lib()` — the template name line in lib.circom.
+        assert_eq!(
+            locs[0].range.start.line, 1,
+            "lands on the lib template: {locs:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
     }
 }
