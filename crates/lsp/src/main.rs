@@ -13,8 +13,8 @@ pub mod file_db;
 pub mod global_state;
 pub mod handler;
 pub mod resolver;
-pub mod semantic;
 pub mod source_db;
+pub mod symbol_table;
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // All logging must go to stderr — stdout is the LSP message channel.

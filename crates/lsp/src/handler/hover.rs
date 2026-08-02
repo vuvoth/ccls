@@ -84,7 +84,7 @@ mod tests {
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
     use parser::token_kind::TokenKind;
-    use syntax::syntax::syntax_tree;
+    use syntax::tree::syntax_tree;
 
     use super::handle;
     use lsp_types::{

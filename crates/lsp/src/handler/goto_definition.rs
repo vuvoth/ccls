@@ -2,7 +2,7 @@ use lsp_types::{Location, Range, Url};
 use rowan::ast::AstNode;
 
 use syntax::abstract_syntax_tree::AstInclude;
-use syntax::syntax_node::SyntaxToken;
+use syntax::node::SyntaxToken;
 use vfs::Vfs;
 
 use crate::file_db::FileDB;
@@ -80,7 +80,7 @@ mod tests {
     use rowan::ast::AstNode;
     use syntax::{
         abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl, AstTemplateDef},
-        syntax::syntax_tree,
+        tree::syntax_tree,
     };
 
     use crate::file_db::FileDB;

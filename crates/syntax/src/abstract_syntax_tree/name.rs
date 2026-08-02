@@ -5,7 +5,7 @@ use parser::token_kind::TokenKind;
 use parser::token_kind::TokenKind::*;
 use rowan::ast::{support, AstNode};
 
-use crate::syntax_node::{CircomLanguage, SyntaxNode};
+use crate::node::{CircomLanguage, SyntaxNode};
 
 /// A node that declares a nameable symbol and exposes its leaf identifier token — the `a` in
 /// `signal input a;`, the `T` in `template T() {}`. Implementing it lets a declaration be looked up

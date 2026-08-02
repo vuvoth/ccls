@@ -18,7 +18,7 @@ use crate::file_db::FileId;
 use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::{identifier_at, ResolvedSymbol};
 use crate::source_db::SourceDatabase;
-use syntax::syntax_node::SyntaxToken;
+use syntax::node::SyntaxToken;
 
 /// Entry point for `textDocument/rename`. Returns `None` (no edits) when the cursor isn't on a
 /// renamable `Identifier`, `new_name` isn't a legal circom identifier, or the file is unknown.
@@ -109,7 +109,7 @@ mod tests {
     };
 
     use parser::token_kind::TokenKind;
-    use syntax::syntax::syntax_tree;
+    use syntax::tree::syntax_tree;
 
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;

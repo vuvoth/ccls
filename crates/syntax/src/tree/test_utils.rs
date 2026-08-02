@@ -1,6 +1,6 @@
 pub use rowan::{NodeOrToken, WalkEvent};
 
-use crate::syntax_node::SyntaxNode;
+use crate::node::SyntaxNode;
 
 #[macro_export]
 macro_rules! test_syntax {
@@ -9,7 +9,7 @@ macro_rules! test_syntax {
 
         let full_path = format!("{}{}", crate_path, $file_path);
         let source = std::fs::read_to_string(full_path).expect("Should not failed");
-        let syntax = $crate::syntax::syntax_node_from_source(&source, $scope);
+        let syntax = $crate::tree::syntax_node_from_source(&source, $scope);
         insta::assert_snapshot!($file_path, view_ast(&syntax));
     };
 }

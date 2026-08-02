@@ -49,11 +49,11 @@ mod tests {
     use rowan::ast::AstNode;
 
     use syntax::abstract_syntax_tree::AstCircomProgram;
-    use syntax::syntax::syntax_tree;
+    use syntax::tree::syntax_tree;
 
     use crate::file_db::{FileDB, FileId};
     use crate::resolver::{occurrences_in, resolve};
-    use crate::semantic::SymbolTable;
+    use crate::symbol_table::SymbolTable;
 
     /// Times the `references` pipeline (parse, `SymbolTable::build`, `occurrences_in`) on a large
     /// synthetic circuit to split inherent cost (reparse) from avoidable cost (build/occurrences).

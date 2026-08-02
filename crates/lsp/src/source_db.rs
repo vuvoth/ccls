@@ -14,12 +14,12 @@ use std::sync::Arc;
 use lsp_types::Url;
 use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::AstCircomProgram;
-use syntax::syntax::syntax_tree;
-use syntax::syntax_node::SyntaxNode;
+use syntax::node::SyntaxNode;
+use syntax::tree::syntax_tree;
 use vfs::{ChangedFile, Vfs, VfsPath};
 
 use crate::file_db::{FileDB, FileId};
-use crate::semantic::SymbolTable;
+use crate::symbol_table::SymbolTable;
 
 /// Source-level queries over open files, keyed by [`FileId`] — inputs (`file_text`) or
 /// content-derived values (`parse`/`ast`/`file_db`/`symbol_table`). All `&self` with memoization

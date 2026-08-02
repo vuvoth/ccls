@@ -12,7 +12,7 @@ use rowan::TextSize;
 use syntax::abstract_syntax_tree::{
     AstCircomProgram, AstComponentCall, AstComponentDecl, AstMainComponent,
 };
-use syntax::syntax_node::SyntaxToken;
+use syntax::node::SyntaxToken;
 
 use std::path::PathBuf;
 
@@ -304,7 +304,7 @@ impl GlobalState {
     pub(crate) fn find_occurrences(
         &self,
         target: &(FileId, ResolvedSymbol),
-    ) -> Vec<syntax::syntax_node::SyntaxToken> {
+    ) -> Vec<syntax::node::SyntaxToken> {
         let (def_file, sym) = target;
         let Some(ast) = self.source_db.ast(*def_file) else {
             return Vec::new();

@@ -16,11 +16,11 @@ use rowan::ast::AstNode;
 use rowan::TextSize;
 
 use syntax::abstract_syntax_tree::{AstCall, AstCircomProgram, AstComponentCall};
-use syntax::syntax_node::{SyntaxNode, SyntaxToken};
+use syntax::node::{SyntaxNode, SyntaxToken};
 
-use crate::semantic::{Symbol, SymbolTable};
+use crate::symbol_table::{Symbol, SymbolTable};
 
-pub use crate::semantic::SymbolKind;
+pub use crate::symbol_table::SymbolKind;
 
 // --- cursor/token navigation (shared by goto-definition, references, rename) -----------------
 
@@ -174,11 +174,11 @@ mod tests {
         AstCircomProgram, AstComponentCall, AstComponentDecl, AstInputSignalDecl, AstSignalDecl,
         AstVarDecl,
     };
-    use syntax::syntax::syntax_tree;
-    use syntax::syntax_node::{CircomLanguage, SyntaxToken};
+    use syntax::node::{CircomLanguage, SyntaxToken};
+    use syntax::tree::syntax_tree;
 
     use crate::file_db::{FileDB, FileId};
-    use crate::semantic::SymbolTable;
+    use crate::symbol_table::SymbolTable;
 
     use super::{resolve, SymbolKind};
 

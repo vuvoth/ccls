@@ -9,7 +9,7 @@ use lsp_types::Range;
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::{TextRange, TextSize};
-use syntax::syntax_node::SyntaxNode;
+use syntax::node::SyntaxNode;
 
 use syntax::abstract_syntax_tree::{
     AstCircomProgram, AstComponentDecl, AstIdentifier, AstInputSignalDecl, AstOutputSignalDecl,

@@ -8,8 +8,8 @@
 //! gap is documented and surfaces the moment support lands.
 
 use parser::token_kind::TokenKind;
-use syntax::syntax::syntax_tree;
-use syntax::syntax_node::SyntaxNode;
+use syntax::node::SyntaxNode;
+use syntax::tree::syntax_tree;
 
 // --- harness ------------------------------------------------------------------------------------
 
