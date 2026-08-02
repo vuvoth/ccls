@@ -6,7 +6,7 @@ use parser::token_kind::TokenKind;
 use parser::token_kind::TokenKind::*;
 use rowan::ast::{support, AstNode};
 
-use crate::syntax_node::{CircomLanguage, SyntaxNode};
+use crate::node::{CircomLanguage, SyntaxNode};
 
 use super::block::{AstBlock, AstStatementList};
 use super::name::{AstIdentifier, AstParameterList, Named};

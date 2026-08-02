@@ -8,8 +8,8 @@ use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::{
     AstCircomProgram, AstInlineArray, AstParallelExpr, AstTupleExpr, Named,
 };
-use syntax::syntax::syntax_tree;
-use syntax::syntax_node::{CircomLanguage, SyntaxNode};
+use syntax::node::{CircomLanguage, SyntaxNode};
+use syntax::tree::syntax_tree;
 
 /// Parse `src` as a full program and return the typed root.
 fn program(src: &str) -> AstCircomProgram {

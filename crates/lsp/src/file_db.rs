@@ -4,7 +4,7 @@ use std::sync::Arc;
 use lsp_types::{Position, Range, Url};
 use rowan::TextSize;
 
-use syntax::syntax_node::{SyntaxNode, SyntaxToken};
+use syntax::node::{SyntaxNode, SyntaxToken};
 
 // File identity is owned by the `vfs` crate (a path-interned `u32` index), so aliased paths
 // collapse to one id via interning rather than via a path hash. Re-exported here for callers that

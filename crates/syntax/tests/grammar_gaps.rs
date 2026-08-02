@@ -5,7 +5,7 @@
 
 use parser::lexer::tokenize;
 use parser::token_kind::TokenKind;
-use syntax::syntax::syntax_tree;
+use syntax::tree::syntax_tree;
 
 // --- shared harness ---------------------------------------------------------------------------
 

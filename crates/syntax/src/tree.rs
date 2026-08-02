@@ -10,7 +10,7 @@ pub use rowan::{
     WalkEvent,
 };
 
-use crate::syntax_node::SyntaxNode;
+use crate::node::SyntaxNode;
 
 /// Parse `source` as a whole circom program and build its syntax tree.
 pub fn syntax_tree(source: &str) -> SyntaxNode {
@@ -113,8 +113,8 @@ mod test_utils;
 mod tests {
     use parser::grammar::entry::Scope;
 
-    use crate::syntax::test_utils::view_ast;
     use crate::test_syntax;
+    use crate::tree::test_utils::view_ast;
 
     #[test]
     fn pragma_happy_test() {
@@ -126,12 +126,12 @@ mod tests {
         // Regression: circom permits pragma/include/template/function/main in any order. A program
         // with an `include` *after* a definition must parse the include (not treat it as a stray
         // top-level token) and produce no error node for it.
-        use crate::syntax::WalkEvent;
+        use crate::tree::WalkEvent;
         use parser::token_kind::TokenKind;
         use rowan::NodeOrToken;
 
         let src = "pragma circom 2.0.0;\ntemplate T() {}\ninclude \"lib.circom\";\n";
-        let tree = crate::syntax::syntax_tree(src);
+        let tree = crate::tree::syntax_tree(src);
 
         let mut has_include = false;
         let mut has_error = false;
