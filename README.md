@@ -14,26 +14,24 @@ The project is split across:
 
 ## ✨ Features
 
-### Implemented
+CCLS provides **Go to Definition** (cross-file via `include`), **Hover**, **Completion**
+(including `component.<signal>` member completion), semantic **Find References**, scope-aware
+**Rename**, an **error-recovering parser**, lazy/cached analysis, and **sandboxed includes**
+(path-traversal safe).
 
-- [x] **Go to Definition** — resolves signals, variables, parameters, templates, functions, and
-      components, including **cross-file** jumps through `include` statements, and jumping straight
-      into an included library file from its `"path.circom"` string.
-- [x] **Hover** — shows the symbol kind and its declaration signature (header only for block-bodied
-      defs like `template`/`function`/`bus`).
-- [x] **Completion** — in-scope body symbols, file top-level names, reserved keywords, and **member
-      completion** (`component.<signal>`) that resolves a component's template across files.
-- [x] **Find References** — every occurrence of a symbol, resolved *semantically* (not text-matched),
-      so shadowing is respected.
-- [x] **Rename** — scope-aware rename with `prepareRename` support; refuses keywords, include-path
-      strings, illegal names, and unresolved member-access fields.
-- [x] **Error-recovering parser** — keeps working on invalid/partial circom files.
-- [x] **Lazy, cached analysis** — parsing and symbol tables are memoized and invalidated only on real
-      edits; includes are read from disk once.
-- [x] **Sandboxed includes** — `include` resolution is confined to workspace roots
-      (path-traversal / symlink-safe).
+See [`docs/features.md`](./docs/features.md) for the full list with per-feature details, and
+[`docs/roadmap.md`](./docs/roadmap.md) for what is not yet implemented.
 
-> See [`TODO.md`](./TODO.md) for the roadmap of features not yet implemented.
+---
+
+## 📚 Documentation
+
+In-depth docs live in [`docs/`](./docs/README.md):
+
+- [Features](./docs/features.md) — what CCLS can do, and how each feature resolves symbols.
+- [Architecture](./docs/architecture.md) — workspace layout, resolution core, source DB, VFS.
+- [Roadmap](./docs/roadmap.md) — capabilities not yet implemented.
+- [Per-crate deep dives](./docs/crates/) — `parser`, `syntax`, `lsp`, `vfs`.
 
 ---
 
@@ -100,24 +98,16 @@ Optional, but recommended for snapshot testing.
 
 ## 🏗️ Architecture
 
-```
-circom-language-server/
-├── crates/
-│   ├── parser/    # `logos` lexer + event-driven parser with markers
-│   ├── syntax/    # `rowan` lossless syntax tree + typed AST
-│   ├── vfs/       # Virtual file system (existence, text, change log)
-│   └── lsp/       # LSP server: handlers, global state, resolver, semantic index
-├── editors/code/  # VS Code extension (TypeScript, `circom-plus`)
-└── xtask/         # Build & install tasks (`cargo xtask install …`)
-```
+A multi-crate Rust workspace: `parser` (lexer + event-driven parser), `syntax` (`rowan`
+lossless tree + typed AST), `vfs` (in-memory virtual file system), and `lsp` (the language
+server), plus the TypeScript VS Code extension in `editors/code/` and build tasks in `xtask/`.
 
-Key design notes:
+The resolution core (`resolver.rs` + `symbol_table.rs`) is name-based and shared by
+goto-definition, hover, references, and rename, over a salsa-shaped source DB that is
+invalidated by draining the VFS change log.
 
-- **Resolution core** (`resolver.rs` + `semantic.rs`) is name-based and shared by goto-definition,
-  hover, references, and rename — so the same symbol resolves consistently across features.
-- **Source database** (`source_db.rs`) memoizes parse / file DB / symbol table per file, drained from
-  the VFS change log so editing file A never recomputes file B.
-- Includes are loaded once from disk, cached, and confined to workspace roots.
+See [`docs/architecture.md`](./docs/architecture.md) for the full design, and
+[`docs/crates/`](./docs/crates/) for per-crate deep dives.
 
 ---
 
