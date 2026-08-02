@@ -160,15 +160,33 @@ impl SymbolTable {
         self.top_level.get(name).map(Vec::as_slice).unwrap_or(&[])
     }
 
-    /// Look up `name` in the body scope whose byte range contains `offset`. The flat-scope model
-    /// means a token sits in at most one scope (templates/functions do not nest).
+    /// The single body scope whose byte range contains `offset`, or `None`. The flat-scope model
+    /// means a token sits in at most one scope (templates/functions do not nest). Shared by
+    /// [`lookup_in_scope`] (rename/references via `resolver::resolve`) and [`scope_symbols_at`]
+    /// (completion) so the two features can never disagree on which scope an offset belongs to.
+    fn scope_at(&self, offset: TextSize) -> Option<&Scope> {
+        self.scopes.iter().find(|s| s.range.contains(offset))
+    }
+
+    /// Look up `name` in the body scope containing `offset`.
     pub fn lookup_in_scope(&self, offset: TextSize, name: &str) -> &[Symbol] {
-        self.scopes
-            .iter()
-            .find(|s| s.range.contains(offset))
+        self.scope_at(offset)
             .and_then(|s| s.symbols.get(name))
             .map(Vec::as_slice)
             .unwrap_or(&[])
+    }
+
+    /// Every top-level symbol (template/function/bus) in the file — completion's global names.
+    pub fn top_level_symbols(&self) -> Vec<&Symbol> {
+        self.top_level.values().flatten().collect()
+    }
+
+    /// Every symbol declared in the body scope containing `offset` (params/signals/vars/
+    /// components), or empty if the offset is outside any body — completion's in-scope names.
+    pub fn scope_symbols_at(&self, offset: TextSize) -> Vec<&Symbol> {
+        self.scope_at(offset)
+            .map(|s| s.symbols.values().flatten().collect::<Vec<_>>())
+            .unwrap_or_default()
     }
 }
 

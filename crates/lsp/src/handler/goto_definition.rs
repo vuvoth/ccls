@@ -8,7 +8,6 @@ use vfs::Vfs;
 use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
 use crate::resolver::{token_ancestors, token_at_offset};
-use crate::source_db::SourceDatabase;
 
 use anyhow::Result;
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse};
@@ -24,18 +23,13 @@ pub fn handle(
     let uri = params.text_document_position_params.text_document.uri;
     let position = params.text_document_position_params.position;
 
-    // Resolve URI → FileId → (ast, file_db) through the content cache.
-    let Some(id) = state.source_db.id_for_url(&uri) else {
+    // Shared open-document prologue. Goto-definition keeps `token_at_offset` (not `identifier_at`)
+    // because an include-path `CircomString` is also a valid jump target.
+    let Some(ctx) = state.cursor_context(&uri, position) else {
         return Ok(None);
     };
-    let Some(ast) = state.source_db.ast(id) else {
-        return Ok(None);
-    };
-    let file_db = state.source_db.file_db(id);
-
-    let offset = file_db.offset(position);
-    let locations = match token_at_offset(&ast, offset) {
-        Some(token) => state.lookup_definition(&file_db, &token),
+    let locations = match token_at_offset(&ctx.ast, ctx.offset) {
+        Some(token) => state.lookup_definition(&ctx.file_db, &token),
         None => Vec::new(),
     };
     Ok(Some(GotoDefinitionResponse::Array(locations)))

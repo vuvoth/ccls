@@ -14,7 +14,7 @@ use parser::lexer::tokenize;
 use parser::token_kind::TokenKind;
 
 use crate::global_state::GlobalState;
-use crate::resolver::token_at_offset;
+use crate::resolver::identifier_at;
 use crate::source_db::SourceDatabase;
 
 /// Entry point for the `textDocument/rename` request.
@@ -30,26 +30,17 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
         return Ok(None);
     }
 
-    let Some(id) = state.source_db.id_for_url(&uri) else {
+    // Shared cursor prologue + identifier-only token (include strings/keywords aren't renamable).
+    let Some(ctx) = state.cursor_context(&uri, position) else {
         return Ok(None);
     };
-    let Some(ast) = state.source_db.ast(id) else {
+    let Some(token) = identifier_at(&ctx.ast, ctx.offset) else {
         return Ok(None);
     };
-    let file_db = state.source_db.file_db(id);
-
-    let offset = file_db.offset(position);
-    let Some(token) = token_at_offset(&ast, offset) else {
-        return Ok(None);
-    };
-    // Only identifiers are renamable (include-path strings route to `jump_to_lib`, not here).
-    if token.kind() != TokenKind::Identifier {
-        return Ok(None);
-    }
 
     // The declaration the cursor is on. An unresolved token (e.g. a component-call field like
     // `c.x`, which the flat resolver deliberately doesn't resolve) has nothing to rename.
-    let Some(target) = state.resolve_use(&file_db, &token).into_iter().next() else {
+    let Some(target) = state.resolve_use(&ctx.file_db, &token).into_iter().next() else {
         return Ok(None);
     };
 

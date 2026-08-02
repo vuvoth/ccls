@@ -7,10 +7,8 @@
 use anyhow::Result;
 use lsp_types::{Location, ReferenceParams};
 
-use parser::token_kind::TokenKind;
-
 use crate::global_state::GlobalState;
-use crate::resolver::token_at_offset;
+use crate::resolver::identifier_at;
 use crate::source_db::SourceDatabase;
 
 /// Entry point for the `textDocument/references` request. Returns the declaration plus every
@@ -20,23 +18,14 @@ pub fn handle(state: &GlobalState, params: ReferenceParams) -> Result<Option<Vec
     let uri = params.text_document_position.text_document.uri;
     let position = params.text_document_position.position;
 
-    let Some(id) = state.source_db.id_for_url(&uri) else {
+    let Some(ctx) = state.cursor_context(&uri, position) else {
         return Ok(None);
     };
-    let Some(ast) = state.source_db.ast(id) else {
+    let Some(token) = identifier_at(&ctx.ast, ctx.offset) else {
         return Ok(None);
     };
-    let file_db = state.source_db.file_db(id);
 
-    let offset = file_db.offset(position);
-    let Some(token) = token_at_offset(&ast, offset) else {
-        return Ok(None);
-    };
-    if token.kind() != TokenKind::Identifier {
-        return Ok(None);
-    }
-
-    let Some(target) = state.resolve_use(&file_db, &token).into_iter().next() else {
+    let Some(target) = state.resolve_use(&ctx.file_db, &token).into_iter().next() else {
         return Ok(None);
     };
 

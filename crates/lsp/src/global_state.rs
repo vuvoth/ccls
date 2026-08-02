@@ -8,7 +8,8 @@ use lsp_types::request::{
 use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
-use syntax::abstract_syntax_tree::{AstComponentCall, AstComponentDecl};
+use rowan::TextSize;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentCall, AstComponentDecl};
 use syntax::syntax_node::SyntaxToken;
 
 use std::path::PathBuf;
@@ -63,6 +64,18 @@ pub struct GlobalState {
     pub source_db: ContentCacheDb,
 }
 
+/// A resolved cursor location: the document, its parse, its offset bookkeeping, and the byte offset
+/// of the cursor. The shared prologue of every read-handler (goto-definition, rename, references,
+/// hover, completion) — each opens `id_for_url → ast → file_db → offset` identically, so it lives
+/// here once. Handlers use the fields they need (completion uses `id`+`offset`; goto/rename/
+/// references also use `ast`).
+pub(crate) struct CursorContext {
+    pub id: FileId,
+    pub ast: AstCircomProgram,
+    pub file_db: FileDB,
+    pub offset: TextSize,
+}
+
 impl Default for GlobalState {
     fn default() -> Self {
         Self::new(Vec::new())
@@ -77,6 +90,25 @@ impl GlobalState {
         let mut source_db = ContentCacheDb::new();
         source_db.set_workspace_roots(roots);
         Self { source_db }
+    }
+
+    /// Resolve `(uri, position)` to a [`CursorContext`] — the shared open-document prologue.
+    /// Returns `None` for an unknown file or one that fails to parse.
+    pub(crate) fn cursor_context(
+        &self,
+        uri: &Url,
+        position: lsp_types::Position,
+    ) -> Option<CursorContext> {
+        let id = self.source_db.id_for_url(uri)?;
+        let ast = self.source_db.ast(id)?;
+        let file_db = self.source_db.file_db(id);
+        let offset = file_db.offset(position);
+        Some(CursorContext {
+            id,
+            ast,
+            file_db,
+            offset,
+        })
     }
 
     /// Dispatch an LSP request to its handler, selected by method name.

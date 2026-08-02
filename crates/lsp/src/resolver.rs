@@ -47,6 +47,14 @@ pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> 
         .flat_map(|p| p.ancestors().collect::<Vec<_>>())
 }
 
+/// The `Identifier` token covering `offset`, or `None` — `token_at_offset` narrowed to identifiers
+/// only. Shared by handlers that operate on a renamable/referenceable symbol (rename, references,
+/// hover); `goto_definition` keeps `token_at_offset` because it also accepts include-path strings.
+pub fn identifier_at(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
+    let token = token_at_offset(ast, offset)?;
+    (token.kind() == TokenKind::Identifier).then_some(token)
+}
+
 /// A resolved reference: what the token means, and where it is defined. A single declaration
 /// per symbol (the former `Vec<Range>` was an artifact of `hash(text)` collapsing same-named decls
 /// into one id). It is URL-agnostic — the caller tags each range with its owning file when shaping
