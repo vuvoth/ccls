@@ -2,8 +2,8 @@ use anyhow::Result;
 use lsp_server::{Notification, Request, RequestId, Response};
 use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument, Notification as _};
 use lsp_types::request::{
-    Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest, References,
-    Rename, Request as _,
+    Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest,
+    PrepareRenameRequest, References, Rename, Request as _,
 };
 use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
@@ -117,6 +117,7 @@ impl GlobalState {
             }
             Formatting::METHOD => dispatch(self, id, req, handler::formatting::handle),
             Rename::METHOD => dispatch(self, id, req, handler::rename::handle),
+            PrepareRenameRequest::METHOD => dispatch(self, id, req, handler::rename::prepare),
             _ => Ok(None),
         }
     }

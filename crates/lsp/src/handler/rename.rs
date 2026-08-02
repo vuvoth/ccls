@@ -7,13 +7,18 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use lsp_types::{RenameParams, TextEdit, WorkspaceEdit};
+use lsp_types::{
+    Position, PrepareRenameResponse, RenameParams, TextDocumentPositionParams, TextEdit, Url,
+    WorkspaceEdit,
+};
 use parser::lexer::tokenize;
 use parser::token_kind::TokenKind;
 
-use crate::global_state::GlobalState;
-use crate::resolver::identifier_at;
+use crate::file_db::FileId;
+use crate::global_state::{CursorContext, GlobalState};
+use crate::resolver::{identifier_at, ResolvedSymbol};
 use crate::source_db::SourceDatabase;
+use syntax::syntax_node::SyntaxToken;
 
 /// Entry point for `textDocument/rename`. Returns `None` (no edits) when the cursor isn't on a
 /// renamable `Identifier`, `new_name` isn't a legal circom identifier, or the file is unknown.
@@ -26,17 +31,8 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
         return Ok(None);
     }
 
-    // Shared cursor prologue + identifier-only token (include strings/keywords aren't renamable).
-    let Some(ctx) = state.cursor_context(&uri, position) else {
-        return Ok(None);
-    };
-    let Some(token) = identifier_at(&ctx.ast, ctx.offset) else {
-        return Ok(None);
-    };
-
-    // The declaration under the cursor. An unresolved token (e.g. a component-call field like
-    // `c.x`, deliberately unresolved) has nothing to rename.
-    let Some(target) = state.resolve_use(&ctx.file_db, &token).into_iter().next() else {
+    // Shared cursor prologue; `None` for keywords/include-strings/unresolved member-access fields.
+    let Some((_ctx, _token, target)) = renamable_cursor(state, &uri, position) else {
         return Ok(None);
     };
 
@@ -60,6 +56,40 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
     }))
 }
 
+/// Shared guard for `rename` and `prepareRename`: resolve the cursor to a renamable symbol.
+/// Returns `None` for keywords (they lex as their own kind, not `Identifier`), include-path
+/// `CircomString`s, and unresolved member-access fields (`c.x`) — exactly the cases `handle`
+/// already refuses, so the two handlers can never disagree.
+fn renamable_cursor(
+    state: &GlobalState,
+    uri: &Url,
+    position: Position,
+) -> Option<(CursorContext, SyntaxToken, (FileId, ResolvedSymbol))> {
+    let ctx = state.cursor_context(uri, position)?;
+    let token = identifier_at(&ctx.ast, ctx.offset)?;
+    let target = state.resolve_use(&ctx.file_db, &token).into_iter().next()?;
+    Some((ctx, token, target))
+}
+
+/// Entry point for `textDocument/prepareRename`. Returns the token's range + its current text as
+/// the placeholder (pre-filling the rename box), or `None` (suppress the box entirely) when the
+/// cursor isn't on a renamable `Identifier` — so the client never opens the rename box over a
+/// keyword.
+pub fn prepare(
+    state: &GlobalState,
+    params: TextDocumentPositionParams,
+) -> Result<Option<PrepareRenameResponse>> {
+    let Some((ctx, token, _target)) =
+        renamable_cursor(state, &params.text_document.uri, params.position)
+    else {
+        return Ok(None);
+    };
+    Ok(Some(PrepareRenameResponse::RangeWithPlaceholder {
+        range: ctx.file_db.token_range(&token),
+        placeholder: token.text().to_string(),
+    }))
+}
+
 /// `true` if `name` is a legal circom identifier: it lexes as exactly one `Identifier` token. This
 /// single check rejects reserved keywords (they lex as their own kind), digit-leading names, illegal
 /// characters (lex as `Error`), empty, and multi-token names.
@@ -74,8 +104,8 @@ fn is_valid_new_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use lsp_types::{
-        Position, RenameParams, TextDocumentIdentifier, TextDocumentPositionParams, Url,
-        WorkspaceEdit,
+        Position, PrepareRenameResponse, RenameParams, TextDocumentIdentifier,
+        TextDocumentPositionParams, Url, WorkspaceEdit,
     };
 
     use parser::token_kind::TokenKind;
@@ -126,6 +156,22 @@ mod tests {
                 },
                 work_done_progress_params: Default::default(),
                 new_name: new_name.to_string(),
+            },
+        )
+        .unwrap()
+    }
+
+    /// Thin `prepareRename` test wrapper mirroring [`rename`].
+    fn prepare(
+        state: &GlobalState,
+        url: &Url,
+        position: Position,
+    ) -> Option<PrepareRenameResponse> {
+        super::prepare(
+            state,
+            TextDocumentPositionParams {
+                text_document: TextDocumentIdentifier { uri: url.clone() },
+                position,
             },
         )
         .unwrap()
@@ -316,5 +362,79 @@ mod tests {
         // All four `i` occurrences: declaration, condition, increment, body (`in[i]`).
         assert_eq!(edits.len(), 4, "all loop-variable occurrences: {edits:?}");
         assert!(edits.iter().all(|e| e.new_text == "idx"));
+    }
+
+    /// `prepareRename` on a keyword cursor yields `None`, so the client suppresses the rename box.
+    #[test]
+    fn prepare_rejects_keyword_cursor_test() {
+        let source =
+            "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate T() { signal input a; }\n";
+        let url = Url::from_file_path("/tmp/prepare_kw.circom").unwrap();
+        let state = state_with(&url, source);
+
+        assert!(
+            prepare(&state, &url, position_of_token(source, "signal")).is_none(),
+            "keyword cursor must not be renamable"
+        );
+    }
+
+    /// `prepareRename` on an include-path string cursor yields `None`.
+    #[test]
+    fn prepare_rejects_include_string_cursor_test() {
+        let source =
+            "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate T() { signal input a; }\n";
+        let url = Url::from_file_path("/tmp/prepare_inc.circom").unwrap();
+        let state = state_with(&url, source);
+
+        assert!(
+            prepare(&state, &url, position_of_token(source, "\"lib.circom\"")).is_none(),
+            "include-path string cursor must not be renamable"
+        );
+    }
+
+    /// `prepareRename` on a renamable identifier returns its exact range and current text as the
+    /// placeholder (pre-filling the rename box).
+    #[test]
+    fn prepare_identifier_returns_range_and_placeholder_test() {
+        let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal output c;\n    c <== a + 0;\n}\n";
+        let url = Url::from_file_path("/tmp/prepare_id.circom").unwrap();
+        let state = state_with(&url, source);
+
+        let pos = position_of(source, "a", 0);
+        let resp = prepare(&state, &url, pos).expect("identifier cursor is renamable");
+        let (range, placeholder) = match resp {
+            PrepareRenameResponse::RangeWithPlaceholder { range, placeholder } => {
+                (range, placeholder)
+            }
+            other => panic!("expected RangeWithPlaceholder, got {other:?}"),
+        };
+        assert_eq!(placeholder, "a");
+
+        // The returned range must exactly cover the `a` declaration token.
+        let expected = {
+            let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
+            let node = syntax_tree(source);
+            let token = node
+                .descendants_with_tokens()
+                .filter_map(|e| e.into_token())
+                .find(|t| t.kind() == TokenKind::Identifier && t.text() == "a")
+                .unwrap();
+            file.token_range(&token)
+        };
+        assert_eq!(range, expected);
+    }
+
+    /// `prepareRename` on an unresolved member-access field (`c.x`) yields `None`.
+    #[test]
+    fn prepare_rejects_member_access_field_test() {
+        let source = "pragma circom 2.0.0;\ntemplate T() { signal input x; signal output o; }\ntemplate Main() { component c = T(); c.x <== 0; }\n";
+        let url = Url::from_file_path("/tmp/prepare_member.circom").unwrap();
+        let state = state_with(&url, source);
+
+        let pos = position_of(source, "x", 1);
+        assert!(
+            prepare(&state, &url, pos).is_none(),
+            "unresolved member-access field must not be renamable"
+        );
     }
 }

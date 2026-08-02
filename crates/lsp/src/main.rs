@@ -43,8 +43,10 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
 /// Advertise the LSP features this server handles.
 ///
 /// `definition` is fully implemented; `hover`/`completion`/`references`/`documentSymbol`/
-/// `formatting`/`rename` are registered as placeholders — the client routes them to the server,
-/// which currently returns an empty result until each is implemented in `handler::*`.
+/// `formatting` are registered as placeholders — the client routes them to the server, which
+/// currently returns an empty result until each is implemented in `handler::*`. `rename` is fully
+/// implemented and advertises `prepareSupport` so the client consults the server (not its own
+/// textual word check) before opening the rename box — keywords/strings never become renamable.
 fn server_capabilities() -> ServerCapabilities {
     ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
@@ -57,7 +59,10 @@ fn server_capabilities() -> ServerCapabilities {
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         document_formatting_provider: Some(OneOf::Left(true)),
-        rename_provider: Some(OneOf::Left(true)),
+        rename_provider: Some(OneOf::Right(lsp_types::RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: Default::default(),
+        })),
         ..Default::default()
     }
 }
