@@ -26,7 +26,7 @@ use syntax::syntax::syntax_tree;
 use syntax::syntax_node::SyntaxNode;
 use vfs::{ChangedFile, Vfs, VfsPath};
 
-use crate::database::{FileDB, FileId};
+use crate::file_db::{FileDB, FileId};
 use crate::semantic::SymbolTable;
 
 /// Source-level queries over a set of open files. Every method is keyed by [`FileId`] and either
@@ -45,7 +45,8 @@ pub trait SourceDatabase {
     fn ast(&self, id: FileId) -> Option<AstCircomProgram>;
     /// Offset/line bookkeeping for `id` (memoized).
     fn file_db(&self, id: FileId) -> FileDB;
-    /// The lexical symbol table for `id` (memoized). Phase A returns an empty table.
+    /// The lexical symbol table for `id` (memoized). Built lazily on first query from the cached
+    /// parse, and dropped by the change-log invalidation on any edit of `id`.
     fn symbol_table(&self, id: FileId) -> Arc<SymbolTable>;
 }
 
@@ -90,25 +91,53 @@ impl ContentCacheDb {
         }
     }
 
+    /// Convert a `file:`-scheme URL to its absolutized [`VfsPath`]. Returns `None` for non-`file:`
+    /// schemes (untitled/git docs) or paths that can't be absolutized. Single source of truth for
+    /// the URI→path step so interning and lookup can never disagree (a split here would intern
+    /// under one key and look up under another, silently breaking resolution).
+    fn url_to_vpath(url: &Url) -> Option<VfsPath> {
+        let path = url.to_file_path().ok()?;
+        VfsPath::from_abs_path(&path)
+    }
+
+    /// Resolve a relative include `rel` against `parent_url`'s directory to an absolutized
+    /// [`VfsPath`]. Shared by [`Self::load_include`] (load-or-serve), [`Self::id_for_include`]
+    /// (serve-only), and the goto-definition path so all three agree on the resolved path — an
+    /// include `"../lib.circom"` resolves to the same canonical path whether it's being loaded,
+    /// looked up, or jumped to.
+    fn resolve_include(parent_url: &Url, rel: &str) -> Option<VfsPath> {
+        let parent_path = parent_url.to_file_path().ok()?;
+        let parent_dir = parent_path.parent()?;
+        let lib_path = parent_dir.join(rel);
+        VfsPath::from_abs_path(&lib_path)
+    }
+
     /// The `FileId` for `url`, computed only from its absolutized path so aliased paths
     /// (`/a/../a/c` vs `/a/c`) collapse to one id via interning. Returns `None` for non-`file:`
     /// schemes (untitled/git docs) or paths that can't be absolutized — callers skip indexing
     /// those.
     pub fn id_for_url(&self, url: &Url) -> Option<FileId> {
-        let path = url.to_file_path().ok()?;
-        let vpath = VfsPath::from_abs_path(&path)?;
+        self.vfs.file_id(&Self::url_to_vpath(url)?)
+    }
+
+    /// The already-interned `FileId` for an include, without reading disk. Returns `None` if the
+    /// path can't be resolved or the include hasn't been loaded yet. Used by cross-file
+    /// goto-definition (the include is loaded once in `handle_update`).
+    pub fn id_for_include(&self, parent_url: &Url, rel: &str) -> Option<FileId> {
+        let vpath = Self::resolve_include(parent_url, rel)?;
         self.vfs.file_id(&vpath)
     }
 
-    /// Register a document or update its text. Identical text is a no-op (no change recorded, no
-    /// cache drop); a real change drains the VFS change log and drops only that file's derived
-    /// caches so they recompute lazily. Returns its `FileId`, or `None` if `url` is non-`file:`.
-    pub fn set_document(&mut self, url: &Url, text: String) -> Option<FileId> {
-        let path = url.to_file_path().ok()?;
-        let vpath = VfsPath::from_abs_path(&path)?;
+    /// Register a document or update its text. Returns `(FileId, changed)`: `changed` is `false`
+    /// when the text was identical to what's already stored (a no-op — no change recorded, no
+    /// cache drop), letting the caller skip pointless reindexing on a client resending unchanged
+    /// content. Returns `None` if `url` is non-`file:`.
+    pub fn set_document(&mut self, url: &Url, text: String) -> Option<(FileId, bool)> {
+        let vpath = Self::url_to_vpath(url)?;
         let id = self.vfs.set_file_contents(vpath, Some(Arc::from(text)));
-        self.invalidate_changed();
-        Some(id)
+        let changes = self.invalidate_changed();
+        let changed = changes.iter().any(|c| c.file_id == id);
+        Some((id, changed))
     }
 
     /// Resolve a relative include `rel` against `parent_url`'s directory and load it from disk
@@ -118,17 +147,14 @@ impl ContentCacheDb {
     /// Returns `None` (and is skipped) for non-`file:` schemes, a missing parent dir, an unreadable
     /// file, or a path that can't be absolutized.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        let parent_path = parent_url.to_file_path().ok()?;
-        let parent_dir = parent_path.parent()?;
-        let lib_path = parent_dir.join(rel);
-        let vpath = VfsPath::from_abs_path(&lib_path)?;
+        let vpath = Self::resolve_include(parent_url, rel)?;
 
         // Already loaded — serve the cached id, never re-read on the main file's keystroke.
         if let Some(id) = self.vfs.file_id(&vpath) {
             return Some(id);
         }
 
-        let src = std::fs::read_to_string(&lib_path).ok()?;
+        let src = std::fs::read_to_string(vpath.as_path()).ok()?;
         let id = self.vfs.set_file_contents(vpath, Some(Arc::from(src)));
         self.invalidate_changed();
         Some(id)
@@ -136,18 +162,18 @@ impl ContentCacheDb {
 
     /// Drain the VFS change log and drop every changed id's derived caches (other files are
     /// untouched). `parse_count` is intentionally preserved — it tracks total parses, not cache
-    /// state.
-    fn invalidate_changed(&mut self) {
+    /// state. Returns the drained changes so callers can tell whether a specific id changed.
+    fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
         let changes = self.vfs.take_changes();
-        if changes.is_empty() {
-            return;
+        if !changes.is_empty() {
+            let mut caches = self.caches.borrow_mut();
+            for ChangedFile { file_id, .. } in &changes {
+                caches.parse.remove(file_id);
+                caches.file_db.remove(file_id);
+                caches.symbol_table.remove(file_id);
+            }
         }
-        let mut caches = self.caches.borrow_mut();
-        for ChangedFile { file_id, .. } in &changes {
-            caches.parse.remove(file_id);
-            caches.file_db.remove(file_id);
-            caches.symbol_table.remove(file_id);
-        }
+        changes
     }
 
     /// Reconstruct the `file:` URL for `id` from its absolutized VFS path. Safe because `id` was
@@ -226,8 +252,15 @@ impl SourceDatabase for ContentCacheDb {
             }
         }
 
-        // Phase A: the table is empty. Phase B indexes `self.parse(id)` here — the signature stays.
-        let table = Arc::new(SymbolTable);
+        // Lazy Phase B index: build the per-file `SymbolTable` from the cached parse + file DB.
+        // A file whose text fails to parse to a program root yields an empty table (no `unwrap`).
+        let table = match self.ast(id) {
+            Some(ast) => {
+                let file_db = self.file_db(id);
+                Arc::new(SymbolTable::build(&file_db, &ast))
+            }
+            None => Arc::new(SymbolTable::default()),
+        };
         self.caches
             .borrow_mut()
             .symbol_table
@@ -259,9 +292,10 @@ mod tests {
     fn parse_memoized_by_content_test() {
         let mut db = ContentCacheDb::new();
         let url = url_for("memo");
-        let id = db
+        let (id, changed) = db
             .set_document(&url, "pragma circom 2.0.0;".to_string())
             .unwrap();
+        assert!(changed, "first registration is a real change");
 
         db.parse(id);
         assert_eq!(db.parse_count(id), 1, "first query parses");
@@ -271,12 +305,23 @@ mod tests {
         assert_eq!(db.parse_count(id), 1, "second query reuses the cached tree");
 
         // Different text → invalidation → recompute.
-        db.set_document(&url, "pragma circom 2.1.0;".to_string());
+        let (_, changed2) = db
+            .set_document(&url, "pragma circom 2.1.0;".to_string())
+            .unwrap();
+        assert!(changed2, "different text is a real change");
         db.parse(id);
         assert_eq!(db.parse_count(id), 2, "content change forces a reparse");
 
+        // Re-submitting identical text is a no-op: no change reported, no reparse.
+        let (_, changed3) = db
+            .set_document(&url, "pragma circom 2.1.0;".to_string())
+            .unwrap();
+        assert!(!changed3, "identical text is a no-op");
+        db.parse(id);
+        assert_eq!(db.parse_count(id), 2, "no-op resend does not reparse");
+
         // Same id, different file: editing file B never touches file A's cache.
-        let other = db
+        let (other, _) = db
             .set_document(&url_for("other"), "template T() {}".to_string())
             .unwrap();
         db.parse(other);
@@ -291,7 +336,7 @@ mod tests {
     fn file_db_memoized_and_consistent_with_text_test() {
         let mut db = ContentCacheDb::new();
         let url = url_for("fdb");
-        let id = db.set_document(&url, "a\nb\nc".to_string()).unwrap();
+        let (id, _) = db.set_document(&url, "a\nb\nc".to_string()).unwrap();
         let first = db.file_db(id);
         // end_line_vec records byte offsets of '\n' -> [1, 3].
         assert_eq!(first.end_line_vec, vec![1, 3]);

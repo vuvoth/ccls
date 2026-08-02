@@ -7,5 +7,5 @@ pub(super) fn include(p: &mut Parser) {
     p.expect(IncludeKw);
     p.expect(CircomString);
     p.expect(Semicolon);
-    p.close(m, IncludeKw);
+    p.close(m, Include);
 }

@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-
 use parser::event::Event;
 use parser::grammar::entry::Scope;
 use parser::lexer::{tokenize, Token};
@@ -13,23 +11,6 @@ pub use rowan::{
 };
 
 use crate::syntax_node::SyntaxNode;
-
-// Thread-local interning cache shared across parses so identical tokens/subtrees are deduplicated
-// between successive document reparses (the common case in an LSP that re-parses on every edit),
-// rather than re-allocating them on each parse.
-//
-// Building is synchronous and non-reentrant — a single parse holds the borrow for the duration of
-// one `build_green` + `finish` — so the `RefCell` can never be borrowed twice at once.
-thread_local! {
-    static NODE_CACHE: RefCell<NodeCache> = RefCell::new(NodeCache::default());
-}
-
-/// Drop the interned tokens/nodes accumulated in the thread-local cache. Not required for
-/// correctness — the cache is bounded in practice by the token/node vocabulary — but offered as an
-/// escape hatch for long-running servers that want to reclaim memory.
-pub fn clear_node_cache() {
-    NODE_CACHE.with(|c| *c.borrow_mut() = NodeCache::default());
-}
 
 /// Parse `source` as a whole circom program and build its syntax tree.
 pub fn syntax_tree(source: &str) -> SyntaxNode {
@@ -46,13 +27,15 @@ pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
 }
 
 fn build_syntax_node(tokens: &[Token], events: Vec<Event>) -> SyntaxNode {
-    NODE_CACHE.with(|cell| {
-        let mut cache = cell.borrow_mut();
-        let mut builder = GreenNodeBuilder::with_cache(&mut cache);
-        build_green(tokens, events, &mut builder);
-        let green = builder.finish();
-        SyntaxNode::new_root(green)
-    })
+    // A fresh `NodeCache` per parse: identical tokens/subtrees are still deduplicated *within* a
+    // single parse, but nothing accumulates across parses. A process-global cache would leak
+    // every distinct identifier/literal ever parsed for the whole server lifetime (unbounded in a
+    // long LSP session); a per-parse cache bounds memory to one parse's working set.
+    let mut cache = NodeCache::default();
+    let mut builder = GreenNodeBuilder::with_cache(&mut cache);
+    build_green(tokens, events, &mut builder);
+    let green = builder.finish();
+    SyntaxNode::new_root(green)
 }
 
 /// Drive a `GreenNodeBuilder` straight from the parser's event stream, producing a tree
@@ -135,6 +118,34 @@ mod tests {
     #[test]
     fn pragma_happy_test() {
         test_syntax!("/src/test_files/happy/pragma.circom", Scope::Pragma);
+    }
+
+    #[test]
+    fn top_level_allows_include_after_definition_test() {
+        // Regression: circom permits pragma/include/template/function/main in any order. A program
+        // with an `include` *after* a definition must parse the include (not treat it as a stray
+        // top-level token) and produce no error node for it.
+        use crate::syntax::WalkEvent;
+        use parser::token_kind::TokenKind;
+        use rowan::NodeOrToken;
+
+        let src = "pragma circom 2.0.0;\ntemplate T() {}\ninclude \"lib.circom\";\n";
+        let tree = crate::syntax::syntax_tree(src);
+
+        let mut has_include = false;
+        let mut has_error = false;
+        for event in tree.preorder_with_tokens() {
+            if let WalkEvent::Enter(NodeOrToken::Node(n)) = event {
+                if n.kind() == TokenKind::Include {
+                    has_include = true;
+                }
+                if n.kind() == TokenKind::Error || n.kind() == TokenKind::ParserError {
+                    has_error = true;
+                }
+            }
+        }
+        assert!(has_include, "trailing include must be parsed");
+        assert!(!has_error, "interspersed include must not produce an error");
     }
 
     #[test]

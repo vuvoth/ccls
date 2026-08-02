@@ -8,9 +8,10 @@ use lsp_types::{
 
 use crate::global_state::GlobalState;
 
-pub mod database;
+pub mod file_db;
 pub mod global_state;
 pub mod handler;
+pub mod resolver;
 pub mod semantic;
 pub mod source_db;
 

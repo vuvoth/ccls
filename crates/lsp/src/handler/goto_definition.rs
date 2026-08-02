@@ -1,21 +1,11 @@
-use lsp_types::Location;
-use lsp_types::Position;
-use lsp_types::Range;
-use lsp_types::Url;
+use lsp_types::{Location, Range, Url};
 use parser::token_kind::TokenKind;
-use rowan::ast::AstNode;
-use rowan::SyntaxText;
+use rowan::{ast::AstNode, TextSize};
 
-use syntax::abstract_syntax_tree::AstComponentCall;
-use syntax::abstract_syntax_tree::AstInclude;
-use syntax::abstract_syntax_tree::AstTemplateDef;
-use syntax::abstract_syntax_tree::AstTemplateName;
-use syntax::abstract_syntax_tree::Named;
-use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentDecl};
-use syntax::syntax_node::SyntaxNode;
-use syntax::syntax_node::SyntaxToken;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstInclude};
+use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
-use crate::database::{FileDB, SemanticData, TokenId};
+    use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
 use crate::source_db::SourceDatabase;
 
@@ -42,64 +32,42 @@ pub fn handle(
     };
     let file = state.source_db.file_db(id);
 
-    let locations = match lookup_token_at_position(&file, &ast, position) {
+    let offset = file.off_set(position);
+    let locations = match token_at_offset(&ast, offset) {
         Some(token) => state.lookup_definition(&file, &ast, &token),
         None => Vec::new(),
     };
     Ok(Some(GotoDefinitionResponse::Array(locations)))
 }
 
-// find the first ancestor with given kind of a syntax token
-pub fn lookup_node_wrap_token(ast_type: TokenKind, token: &SyntaxToken) -> Option<SyntaxNode> {
-    let mut p = token.parent();
-    while let Some(t) = p {
-        if t.kind() == ast_type {
-            return Some(t);
-        }
-        p = t.parent();
-    }
-    None
-}
-
-// return an Identifier/CircomString token at a position
-pub fn lookup_token_at_position(
-    file: &FileDB,
-    ast: &AstCircomProgram,
-    position: Position,
-) -> Option<SyntaxToken> {
-    let off_set = file.off_set(position);
-    ast.syntax().token_at_offset(off_set).find_map(|token| {
+/// The first `Identifier` or `CircomString` token covering `offset`, or `None`. A thin wrapper
+/// over [`rowan::SyntaxNode::token_at_offset`] that picks a semantically meaningful token — every
+/// other token kind (whitespace, punctuation, keywords) has no definition to jump to.
+pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
+    ast.syntax().token_at_offset(offset).find_map(|token| {
         let kind = token.kind();
-
-        if kind == TokenKind::Identifier {
-            return Some(token);
+        if kind == TokenKind::Identifier || kind == TokenKind::CircomString {
+            Some(token)
+        } else {
+            None
         }
-
-        if kind == TokenKind::CircomString {
-            return Some(token);
-        }
-
-        None
     })
 }
 
-// find all template name (in component declaration) which are used inside a template
-pub fn lookup_component(template: &AstTemplateDef, text: SyntaxText) -> Option<AstTemplateName> {
-    let statements = template.statements()?;
-    statements
-        .find_children::<AstComponentDecl>()
+/// The token's wrapping nodes: its parent followed by all of that parent's ancestors. Mirrors
+/// `parent_ancestors()`, which is absent on `SyntaxToken` in this rowan version.
+pub fn ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
+    token
+        .parent()
         .into_iter()
-        .find(|c| c.identifier().is_some_and(|n| n.syntax().text() == text))
-        .and_then(|c| c.template())
+        .flat_map(|p| p.ancestors().collect::<Vec<_>>())
 }
 
-// if token in an include statement
-// add lib path (location of source code of that library) into result
+// If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.
+// Routed here (never the resolver) because the resolver only handles `Identifier` tokens — a
+// `CircomString` carries a path, not a symbol name.
 pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
-    let Some(include_lib) = lookup_node_wrap_token(TokenKind::IncludeKw, token) else {
-        return Vec::new();
-    };
-    let Some(ast_include) = AstInclude::cast(include_lib) else {
+    let Some(ast_include) = ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
     };
     let Some(abs_lib) = ast_include.lib() else {
@@ -110,152 +78,16 @@ pub fn jump_to_lib(file: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         return Vec::new();
     };
     let lib_path = parent_dir.join(abs_lib.value());
-    let Ok(lib_url) = Url::from_file_path(&lib_path) else {
+    // Absolutize so the returned location URL is canonical and matches the FileId the source db
+    // interns for the same include (otherwise a `"../lib.circom"` include resolves to a
+    // non-canonical URL like `/a/b/../lib.circom` that won't match the interned `/a/lib.circom`).
+    let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) else {
+        return Vec::new();
+    };
+    let Ok(lib_url) = Url::from_file_path(vpath.as_path()) else {
         return Vec::new();
     };
     vec![Location::new(lib_url, Range::default())]
-}
-
-pub fn lookup_definition(
-    file: &FileDB,
-    ast: &AstCircomProgram,
-    semantic_data: &SemanticData,
-    token: &SyntaxToken,
-) -> Vec<Location> {
-    let template_list = ast.template_list();
-    let function_list = ast.function_list();
-
-    let mut res = Vec::new();
-
-    if token.kind() == TokenKind::CircomString {
-        return jump_to_lib(file, token);
-    }
-
-    // signal from other template
-    // eg: in1, in2 from component call `mul(in1, in2)`
-    let mut signal_outside = false;
-
-    if let Some(component_call) = lookup_node_wrap_token(TokenKind::ComponentCall, token) {
-        // find template called.
-        if let Some(ast_component_call) = AstComponentCall::cast(component_call) {
-            if let Some(signal) = ast_component_call.signal() {
-                // if target token is the parameter of a component call
-                // TODO: go to params in template!!! (failed)
-                if signal.syntax().text() == token.text() {
-                    signal_outside = true;
-                    // lookup template of component
-                    if let Some(current_template) =
-                        lookup_node_wrap_token(TokenKind::TemplateDef, token)
-                    {
-                        if let Some(ast_template_name) = lookup_component(
-                            &AstTemplateDef::cast(current_template).unwrap(),
-                            ast_component_call.component_name().unwrap().syntax().text(),
-                        ) {
-                            if let Some(other_template) =
-                                ast.get_template_by_name(&ast_template_name)
-                            {
-                                let template_id = other_template.syntax().token_id();
-                                if let Some(semantic) =
-                                    semantic_data.template_data_semantic.get(&template_id)
-                                {
-                                    if let Some(tmp) =
-                                        semantic.signal.0.get(&signal.syntax().token_id())
-                                    {
-                                        res.extend(tmp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if !signal_outside {
-        // TODO: look up token in param list of node wrap token
-
-        // look up token in template information
-        // (template name, signal/variable/component in template)
-
-        eprintln!("look up in templates...");
-        for template in template_list {
-            if let Some(name) = template.identifier() {
-                if name.syntax().text() == token.text() {
-                    let range = file.range(template.syntax());
-                    res.push(range);
-                }
-            }
-
-            if !template
-                .syntax()
-                .text_range()
-                .contains_range(token.text_range())
-            {
-                continue;
-            }
-
-            let template_id = template.syntax().token_id();
-
-            if let Some(data) = semantic_data.lookup_template_param(template_id, token) {
-                res.extend(data);
-            }
-
-            if let Some(data) = semantic_data.lookup_template_signal(template_id, token) {
-                res.extend(data);
-            }
-
-            if let Some(data) = semantic_data.lookup_template_variable(template_id, token) {
-                res.extend(data);
-            }
-
-            if let Some(component_decl) =
-                semantic_data.lookup_template_component(template_id, token)
-            {
-                res.extend(component_decl);
-            }
-        }
-
-        // TODO: look up token in function information
-        // (function name, signal/variable/component in function)
-
-        eprintln!("look up in functions...");
-        for function in function_list {
-            let function_name = function.function_name().unwrap();
-            if function_name.syntax().text() == token.text() {
-                let range = file.range(function.syntax());
-                res.push(range);
-            }
-
-            if !function
-                .syntax()
-                .text_range()
-                .contains_range(token.text_range())
-            {
-                continue;
-            }
-
-            let function_id = function.syntax().token_id();
-
-            if let Some(data) = semantic_data.lookup_function_param(function_id, token) {
-                res.extend(data);
-            }
-
-            if let Some(data) = semantic_data.lookup_function_variable(function_id, token) {
-                res.extend(data);
-            }
-
-            if let Some(component_decl) =
-                semantic_data.lookup_function_component(function_id, token)
-            {
-                res.extend(component_decl);
-            }
-        }
-    }
-
-    res.into_iter()
-        .map(|range| Location::new(file.file_path.clone(), range))
-        .collect()
 }
 
 #[cfg(test)]
@@ -263,25 +95,25 @@ mod tests {
     use std::path::Path;
 
     use lsp_types::Url;
-    use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
     use syntax::{
-        abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl},
+        abstract_syntax_tree::{AstCircomProgram, AstInputSignalDecl, AstTemplateDef},
         syntax::syntax_tree,
     };
 
-    use crate::{database::FileDB, handler::goto_definition::lookup_node_wrap_token};
+use crate::file_db::FileDB;
 
-    use super::lookup_token_at_position;
+    use super::token_at_offset;
 
     fn get_source_from_path(file_path: &str) -> String {
         let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let full_path = format!("{}{}", crate_path, file_path);
-        let source = std::fs::read_to_string(&full_path).expect(&full_path);
-
-        source
+        std::fs::read_to_string(&full_path).expect(&full_path)
     }
 
+    /// Replaces the legacy `lookup_node_wrap_token(TokenKind::TemplateDef, &token)` call with typed
+    /// ancestor navigation. The resolved node (and hence the insta snapshot) is identical — only the
+    /// navigation primitive changes from a kind-string walk to a typed cast.
     #[test]
     fn goto_decl_test() {
         let file_path = "/src/test_files/handler/templates.circom";
@@ -305,12 +137,12 @@ mod tests {
 
             let tmp = signal_name.syntax().text_range().start();
 
-            if let Some(token) = lookup_token_at_position(&file, &program_ast, file.position(tmp)) {
-                let wrap_token = lookup_node_wrap_token(TokenKind::TemplateDef, &token);
+            if let Some(token) = token_at_offset(&program_ast, file.off_set(file.position(tmp))) {
+                let wrap_token = super::ancestors(&token).find_map(AstTemplateDef::cast);
 
                 let string_syntax_node = match wrap_token {
                     None => "None".to_string(),
-                    Some(syntax_node) => format!("{}", syntax_node),
+                    Some(template_def) => format!("{}", template_def.syntax()),
                 };
 
                 insta::assert_snapshot!("test_lookup_node_wrap_token", string_syntax_node);

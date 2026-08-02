@@ -206,6 +206,8 @@ pub enum TokenKind {
     WhileLoop,
     // Program
     CircomProgram,
+    // Include statement node (distinct from the IncludeKw keyword token)
+    Include,
     // Function
     FunctionDef,
     FunctionName,
@@ -237,14 +239,12 @@ pub enum TokenKind {
     ParameterList,
     Call,
     TenaryConditional,
-    Condition,
     Statement,
     StatementList,
     ArrayQuery,
     ParserError,
     BlockComment,
     EOF,
-    ROOT,
     __LAST,
 }
 

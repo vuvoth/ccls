@@ -7,12 +7,14 @@ use lsp_types::request::{
 };
 use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
 use parser::token_kind::TokenKind;
-use syntax::abstract_syntax_tree::AstCircomProgram;
+use rowan::ast::AstNode;
+use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentCall, AstComponentDecl};
 use syntax::syntax_node::SyntaxToken;
 
-use crate::database::{FileDB, SemanticDB};
+use crate::file_db::FileDB;
 use crate::handler;
-use crate::handler::goto_definition::{lookup_definition, lookup_node_wrap_token};
+use crate::handler::goto_definition::{ancestors, jump_to_lib};
+use crate::resolver;
 use crate::source_db::{ContentCacheDb, SourceDatabase};
 
 /// A text document notification (`textDocument/didOpen` or `textDocument/didChange`) normalized to
@@ -34,8 +36,16 @@ impl From<DidOpenTextDocumentParams> for TextDocument {
 
 impl From<DidChangeTextDocumentParams> for TextDocument {
     fn from(value: DidChangeTextDocumentParams) -> Self {
+        // A `didChange` may legally carry an empty `contentChanges` array; index it safely rather
+        // than panicking (a panic would kill the single-threaded server).
+        let text = value
+            .content_changes
+            .into_iter()
+            .next()
+            .map(|c| c.text)
+            .unwrap_or_default();
         Self {
-            text: value.content_changes[0].text.to_string(),
+            text,
             uri: value.text_document.uri,
         }
     }
@@ -43,14 +53,12 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 
 /// Server-wide state shared by every request/notification handler.
 ///
-/// - `source_db` — the content-addressed [`SourceDatabase`]: file text, cached parse trees, file
-///   DBs, and (Phase B) symbol tables. Replaces the per-file `ast_map`/`file_map` maps; includes
-///   are read from disk once and then served from cache across keystrokes.
-/// - `db` — the legacy semantic index (template/function/signal/variable/component info). Kept for
-///   goto-definition until Phase B replaces it with the symbol table.
+/// `source_db` is the content-addressed [`SourceDatabase`]: file text, cached parse trees, file
+/// DBs, and the per-file [`crate::semantic::SymbolTable`]. Includes are read from disk once and then
+/// served from cache across keystrokes; the symbol table builds lazily on first query and is
+/// invalidated by the change-log drop on edit.
 pub struct GlobalState {
     pub source_db: ContentCacheDb,
-    pub db: SemanticDB,
 }
 
 impl Default for GlobalState {
@@ -63,7 +71,6 @@ impl GlobalState {
     pub fn new() -> Self {
         Self {
             source_db: ContentCacheDb::new(),
-            db: SemanticDB::new(),
         }
     }
 
@@ -113,54 +120,60 @@ impl GlobalState {
         ast: &AstCircomProgram,
         token: &SyntaxToken,
     ) -> Vec<Location> {
-        let semantic_data = self.db.semantic.get(&root.file_id).unwrap();
-        let mut result = lookup_definition(root, ast, semantic_data, token);
-
-        // A string literal resolves within the current file only (the include path itself).
+        // A string literal resolves to the included library file (the include path is searched in
+        // the current file only). Hoisted to the top so the resolver stays pure / URL-agnostic and
+        // never sees `CircomString` tokens.
         if token.kind() == TokenKind::CircomString {
-            return result;
+            return jump_to_lib(root, token);
         }
 
-        // For a component declaration/call, also search the libraries it may instantiate.
-        let parent = root.get_path();
-        let is_component_use = lookup_node_wrap_token(TokenKind::ComponentDecl, token).is_some()
-            || lookup_node_wrap_token(TokenKind::ComponentCall, token).is_some();
+        // In-file resolution: the symbol table builds lazily on first query (never an `unwrap` —
+        // a failed parse yields an empty table).
+        let table = self.source_db.symbol_table(root.file_id);
+        let main_symbols = resolver::resolve(&table, token);
+        let mut result: Vec<Location> = main_symbols
+            .into_iter()
+            .map(|s| Location::new(root.file_path.clone(), s.def_range))
+            .collect();
+
+        // For a component declaration/call, also search the libraries it may instantiate. Cross-file
+        // resolution is **file-scope only** (template/function names): a signal/var/param in a lib is
+        // only reachable via member-access (e.g. `c.signal`), which is a separate problem and out of
+        // scope. Resolution is by name in each lib's own table — never reusing the main-file token's
+        // identity (the bug that made the legacy `hash(text)` index structurally return `None` here).
+        let is_component_use = ancestors(token)
+            .any(|n| AstComponentDecl::can_cast(n.kind()) || AstComponentCall::can_cast(n.kind()));
         if is_component_use {
+            let name = token.text();
             for lib in ast.libs() {
                 let Some(lib_abs) = lib.lib() else { continue };
-                let Some(parent_dir) = parent.parent() else {
+                let Some(lib_id) = self
+                    .source_db
+                    .id_for_include(&root.file_path, &lib_abs.value())
+                else {
                     continue;
                 };
-                let lib_path = parent_dir.join(lib_abs.value());
-                let Ok(lib_url) = Url::from_file_path(&lib_path) else {
-                    continue;
-                };
-
-                // Resolve through the cache: the lib was loaded once in `handle_update`.
-                let Some(lib_id) = self.source_db.id_for_url(&lib_url) else {
-                    continue;
-                };
-                let Some(ast_lib) = self.source_db.ast(lib_id) else {
-                    continue;
-                };
-                let file_lib = self.source_db.file_db(lib_id);
-                let Some(semantic_lib) = self.db.semantic.get(&lib_id) else {
-                    continue;
-                };
-                result.extend(lookup_definition(&file_lib, &ast_lib, semantic_lib, token));
+                let lib_table = self.source_db.symbol_table(lib_id);
+                let lib_file = self.source_db.file_db(lib_id);
+                for sym in lib_table.lookup_file(name) {
+                    result.push(Location::new(lib_file.file_path.clone(), sym.def_range));
+                }
             }
         }
 
         result
     }
 
-    /// Index an updated document into the caches: register its text (dropping its derived caches) +
-    /// load every `include` once, then rebuild the semantic index for it and its includes.
+    /// Register an updated document: set its text (dropping its derived caches) and load every
+    /// `include` once so the libraries are in the VFS for cross-file resolution.
     ///
-    /// Non-`file:` URIs (untitled/git docs), missing parent dirs, and unreadable includes are
-    /// skipped rather than crashing the server.
+    /// There is no eager semantic index anymore — the symbol table builds lazily on the first
+    /// query and is invalidated by the change-log cache drop in [`SourceDatabase`]. A no-op update
+    /// (the client resent identical text) short-circuits before the include walk. Non-`file:` URIs
+    /// (untitled/git docs), missing parent dirs, and unreadable includes are skipped rather than
+    /// crashing the server.
     pub fn handle_update(&mut self, text_document: &TextDocument) -> Result<()> {
-        let Some(id) = self
+        let Some((id, changed)) = self
             .source_db
             .set_document(&text_document.uri, text_document.text.clone())
         else {
@@ -168,26 +181,19 @@ impl GlobalState {
             return Ok(());
         };
 
-        // Rebuild the semantic index for the main file. The parse itself comes from the cache.
-        if let Some(ast) = self.source_db.ast(id) {
-            let file_db = self.source_db.file_db(id);
-            self.db.semantic.remove(&id);
-            self.db.circom_program_semantic(&file_db, &ast);
+        // Identical text → nothing changed, so the parse cache and symbol table are still valid.
+        if !changed {
+            return Ok(());
+        }
 
-            // Includes: read from disk once, then serve from cache on subsequent keystrokes.
+        // Includes: read from disk once, then serve from cache on subsequent keystrokes. The
+        // symbol table for the main file (and its libs) builds lazily on first query.
+        if let Some(ast) = self.source_db.ast(id) {
             for lib in ast.libs() {
                 let Some(lib_abs) = lib.lib() else { continue };
-                let Some(lib_id) = self
+                let _ = self
                     .source_db
-                    .load_include(&text_document.uri, &lib_abs.value())
-                else {
-                    continue;
-                };
-                if let Some(lib_ast) = self.source_db.ast(lib_id) {
-                    let lib_file = self.source_db.file_db(lib_id);
-                    self.db.semantic.remove(&lib_id);
-                    self.db.circom_program_semantic(&lib_file, &lib_ast);
-                }
+                    .load_include(&text_document.uri, &lib_abs.value());
             }
         }
 
@@ -223,6 +229,8 @@ mod tests {
 
     use lsp_types::Url;
 
+    use crate::source_db::SourceDatabase;
+
     use super::{GlobalState, TextDocument};
 
     /// A `TextDocument` built straight from a URI + text (fields are private, but this test module
@@ -241,9 +249,10 @@ mod tests {
         Url::from_file_path(&path).unwrap()
     }
 
-    /// Regression test for the Phase A win: editing the main file must never re-read or re-parse an
-    /// unchanged `include`. We observe `parse_count` for the library — it must stay at 1 across two
-    /// `didChange`s of the main file.
+    /// Regression test for the cache win: editing the main file must never re-read or re-parse an
+    /// unchanged `include`. We observe `parse_count` for the library — it must stay at 1 across a
+    /// `didChange` of the main file. (Indexing is now lazy: the lib is parsed the first time a query
+    /// needs it, not eagerly on open, so this triggers that parse with an explicit `ast` query.)
     #[test]
     fn include_parsed_once_across_keystrokes_test() {
         let main_uri = fixture_uri("with_include/main.circom");
@@ -252,16 +261,20 @@ mod tests {
 
         let mut state = GlobalState::new();
 
-        // First open: main + lib each parse once.
+        // First open: registers main + loads the lib text into the VFS (no parse yet — indexing is
+        // lazy, so the lib isn't parsed until a query needs it).
         state.handle_update(&doc(&main_uri, src.clone())).unwrap();
         let lib_id = state
             .source_db
             .id_for_url(&lib_uri)
             .expect("include should be loaded on first open");
+
+        // Simulate the first query that touches the lib (e.g. a cross-file goto-def): it parses once.
+        let _ = state.source_db.ast(lib_id);
         assert_eq!(
             state.source_db.parse_count(lib_id),
             1,
-            "lib parsed exactly once on first load"
+            "lib parsed exactly once on first query"
         );
 
         // Second didChange of the main file (text differs) — the lib is unchanged, so it must be a

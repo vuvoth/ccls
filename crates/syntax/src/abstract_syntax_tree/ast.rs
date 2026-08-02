@@ -206,7 +206,7 @@ impl AstCircomString {
     }
 }
 
-ast_node!(AstInclude, IncludeKw);
+ast_node!(AstInclude, Include);
 
 impl AstInclude {
     pub fn lib(&self) -> Option<AstCircomString> {

@@ -20,7 +20,7 @@ expression: view_ast(& syntax)
 |     |      EndLine 20..21 "\n"
 |      EndLine 21..22
 |     |      EndLine 21..22 "\n"
-|      IncludeKw 22..43
+|      Include 22..43
 |     |      IncludeKw 22..29
 |     |     |      IncludeKw 22..29 "include"
 |     |      WhiteSpace 29..30

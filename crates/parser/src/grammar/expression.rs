@@ -33,9 +33,9 @@ fn circom_expression(p: &mut Parser) {
 /// `cond ? if_true : if_false`. The branches are parsed at the `||` level so a nested ternary is
 /// rejected (matching the grammar — `a ? b : c ? d : e` is a syntax error in circom).
 ///
-/// The whole form is wrapped in a single `TenaryConditional` node. (A separate `Condition` node
-/// is not emitted: the event/marker model cannot reliably double-wrap an already-parsed operand,
-/// and circom's own AST models this as one `InlineSwitchOp`.)
+/// The whole form is wrapped in a single `TenaryConditional` node (the event/marker model cannot
+/// reliably double-wrap an already-parsed operand, and circom's own AST models this as one
+/// `InlineSwitchOp`).
 fn ternary_conditional(p: &mut Parser, cond: Marker) {
     // <condition> ? <if_true> : <if_false>  — wrap the already-parsed condition in the node.
     let m = p.open_before(cond);
