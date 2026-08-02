@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::path::PathBuf;
 
 use lsp_server::{Connection, Message};
 use lsp_types::{
@@ -63,9 +64,11 @@ fn main_loop(
     connection: Connection,
     params: serde_json::Value,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
-    let _params: InitializeParams = serde_json::from_value(params)?;
+    let params: InitializeParams = serde_json::from_value(params)?;
 
-    let mut state = GlobalState::new();
+    // Capture workspace roots so `include` resolution can be confined to them (path-traversal
+    // defense). Without roots the server refuses to load any include rather than read arbitrarily.
+    let mut state = GlobalState::new(workspace_roots(&params));
 
     for msg in &connection.receiver {
         match msg {
@@ -85,4 +88,37 @@ fn main_loop(
         }
     }
     Ok(())
+}
+
+/// Workspace root folders from the `initialize` handshake, in priority order: modern clients send
+/// `workspace_folders`; older clients send a single `root_uri`. Each is converted from its `file:`
+/// URI to a path and canonicalized (so the Vfs's pure containment check compares canonical vs
+/// canonical). Non-`file:` roots and roots that can't be canonicalized are dropped.
+fn workspace_roots(params: &InitializeParams) -> Vec<PathBuf> {
+    let raw: Vec<PathBuf> = if let Some(folders) = &params.workspace_folders {
+        let roots: Vec<PathBuf> = folders
+            .iter()
+            .filter_map(|f| f.uri.to_file_path().ok())
+            .collect();
+        if !roots.is_empty() {
+            roots
+        } else {
+            params
+                .root_uri
+                .as_ref()
+                .and_then(|uri| uri.to_file_path().ok())
+                .map(|root| vec![root])
+                .unwrap_or_default()
+        }
+    } else {
+        params
+            .root_uri
+            .as_ref()
+            .and_then(|uri| uri.to_file_path().ok())
+            .map(|root| vec![root])
+            .unwrap_or_default()
+    };
+    raw.into_iter()
+        .filter_map(|r| r.canonicalize().ok())
+        .collect()
 }

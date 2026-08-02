@@ -11,28 +11,14 @@ pub fn block(p: &mut Parser) {
 
         let stmt_marker = p.open();
         while !p.at(RCurly) && !p.eof() {
-            let kind = p.current();
-            match kind {
-                SignalKw => {
-                    declaration::signal_declaration(p);
-                    p.expect(Semicolon);
-                }
-                // `input`/`output` is either a signal declaration (`input signal …`) or a bus-typed
-                // field (`input <Bus> …`). The dispatch (and its `nth(1)` lookahead) lives in one
-                // place — `declaration::input_or_output` — shared with the `for`-init path.
-                InputKw | OutputKw => {
-                    declaration::input_or_output(p);
-                    p.expect(Semicolon);
-                }
-                VarKw => {
-                    declaration::var_declaration(p);
-                    p.expect(Semicolon);
-                }
-                ComponentKw => {
-                    declaration::component_declaration(p);
-                    p.expect(Semicolon);
-                }
-                _ => statement::statement(p),
+            if p.current().is_declaration_kw() {
+                // Single dispatch source: `declaration::declaration` (and its `input_or_output`
+                // bus-typed lookahead) is shared with the `for`-init path, so the declaration
+                // keyword set lives in exactly one place — `is_declaration_kw`.
+                declaration::declaration(p);
+                p.expect(Semicolon);
+            } else {
+                statement::statement(p);
             }
         }
 

@@ -11,6 +11,8 @@ use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::{AstCircomProgram, AstComponentCall, AstComponentDecl};
 use syntax::syntax_node::SyntaxToken;
 
+use std::path::PathBuf;
+
 use crate::file_db::FileDB;
 use crate::handler;
 use crate::handler::goto_definition::{jump_to_lib, token_ancestors};
@@ -63,15 +65,18 @@ pub struct GlobalState {
 
 impl Default for GlobalState {
     fn default() -> Self {
-        Self::new()
+        Self::new(Vec::new())
     }
 }
 
 impl GlobalState {
-    pub fn new() -> Self {
-        Self {
-            source_db: ContentCacheDb::new(),
-        }
+    /// Construct with the workspace `roots` used to confine `include` resolution. The roots are
+    /// canonicalized and stored on the source db; an empty list means no include is ever loaded
+    /// (fail-closed against path traversal).
+    pub fn new(roots: Vec<PathBuf>) -> Self {
+        let mut source_db = ContentCacheDb::new();
+        source_db.set_workspace_roots(roots);
+        Self { source_db }
     }
 
     /// Dispatch an LSP request to its handler, selected by method name.
@@ -124,7 +129,7 @@ impl GlobalState {
         // the current file only). Hoisted to the top so the resolver stays pure / URL-agnostic and
         // never sees `CircomString` tokens.
         if token.kind() == TokenKind::CircomString {
-            return jump_to_lib(file_db, token);
+            return jump_to_lib(file_db, token, self.source_db.vfs());
         }
 
         // In-file resolution: the symbol table builds lazily on first query (never an `unwrap` —
@@ -263,7 +268,14 @@ mod tests {
         let lib_uri = fixture_uri("with_include/lib.circom");
         let src = std::fs::read_to_string(main_uri.to_file_path().unwrap()).unwrap();
 
-        let mut state = GlobalState::new();
+        // The include must resolve inside a workspace root (path-traversal confinement), so seed
+        // the state with the fixture's directory as the root.
+        let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&crate_path)
+            .join("src/test_files/handler/with_include")
+            .canonicalize()
+            .unwrap();
+        let mut state = GlobalState::new(vec![root]);
 
         // First open: registers main + loads the lib text into the VFS (no parse yet — indexing is
         // lazy, so the lib isn't parsed until a query needs it).
@@ -295,7 +307,7 @@ mod tests {
     /// A non-`file:` document (untitled) is skipped without panicking and isn't indexed.
     #[test]
     fn handle_update_skips_non_file_uri_test() {
-        let mut state = GlobalState::new();
+        let mut state = GlobalState::new(Vec::new());
         let untitled = Url::parse("untitled:Untitled-1").unwrap();
         // Must not panic, and must not register the document.
         state

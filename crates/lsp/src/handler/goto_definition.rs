@@ -4,6 +4,7 @@ use rowan::{ast::AstNode, TextSize};
 
 use syntax::abstract_syntax_tree::{AstCircomProgram, AstInclude};
 use syntax::syntax_node::{SyntaxNode, SyntaxToken};
+use vfs::Vfs;
 
 use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
@@ -66,7 +67,7 @@ pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> 
 // If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.
 // Routed here (never the resolver) because the resolver only handles `Identifier` tokens — a
 // `CircomString` carries a path, not a symbol name.
-pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
+pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
     let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
     };
@@ -78,6 +79,16 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         return Vec::new();
     };
     let lib_path = parent_dir.join(include_path.value());
+
+    // Defense-in-depth: don't offer a jump target for an include that escapes the workspace.
+    // `load_include` (the actual read boundary) already refuses these; mirror it so goto-def never
+    // surfaces an unreachable/escaped path. `canonicalize` resolves `..`/symlinks (the one disk
+    // stat, kept out of the I/O-free Vfs); `vfs.is_confined` is the pure prefix check.
+    match lib_path.canonicalize() {
+        Ok(canon) if vfs.is_confined(&canon) => {}
+        _ => return Vec::new(),
+    }
+
     // Absolutize so the returned location URL is canonical and matches the FileId the source db
     // interns for the same include (otherwise a `"../lib.circom"` include resolves to a
     // non-canonical URL like `/a/b/../lib.circom` that won't match the interned `/a/lib.circom`).

@@ -17,6 +17,7 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use lsp_types::Url;
@@ -91,6 +92,18 @@ impl ContentCacheDb {
         }
     }
 
+    /// Set the workspace roots used to confine `include` resolution. Delegates to the [`Vfs`],
+    /// which owns the (canonicalized) roots and the pure containment check.
+    pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
+        self.vfs.set_workspace_roots(roots);
+    }
+
+    /// Read-only handle to the underlying [`Vfs`] (e.g. so `jump_to_lib` can apply the same
+    /// containment check that `load_include` does).
+    pub(crate) fn vfs(&self) -> &Vfs {
+        &self.vfs
+    }
+
     /// Convert a `file:`-scheme URL to its absolutized [`VfsPath`]. Returns `None` for non-`file:`
     /// schemes (untitled/git docs) or paths that can't be absolutized. Single source of truth for
     /// the URI→path step so interning and lookup can never disagree (a split here would intern
@@ -148,6 +161,18 @@ impl ContentCacheDb {
     /// file, or a path that can't be absolutized.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
         let vpath = Self::resolve_include(parent_url, rel)?;
+
+        // Security: confine the resolved include to a workspace root. `canonicalize` (the one disk
+        // stat — kept in this LSP layer so the Vfs stays I/O-free) resolves `..`, `.`, and symlinks
+        // to a real absolute path; the Vfs's pure `is_confined` then checks it's inside a root. An
+        // include that escapes (`include "/etc/passwd"`, `include "../../.ssh/id_rsa"`, or a
+        // symlink under the root pointing out) is refused instead of reading an arbitrary
+        // process-readable file. This is the single read boundary; the lookup/jump paths only ever
+        // surface includes loaded (and thus confined) here.
+        let canonical = vpath.as_path().canonicalize().ok()?;
+        if !self.vfs.is_confined(&canonical) {
+            return None;
+        }
 
         // Already loaded — serve the cached id, never re-read on the main file's keystroke.
         if let Some(id) = self.vfs.file_id(&vpath) {
@@ -392,5 +417,57 @@ template Multiplier2() {
             rebuilt.lookup_top_level("Multiplier2").is_empty(),
             "the edited program has no Multiplier2 template"
         );
+    }
+
+    /// Path-traversal confinement: an `include` that resolves outside the workspace root is refused
+    /// (never read), whether via `..`, an absolute path, or a symlink. Set up a workspace dir, a
+    /// main file inside it, and a secret file one level above; both escape forms must return `None`.
+    #[test]
+    fn include_confined_to_workspace_root_test() {
+        use std::fs;
+        use std::path::PathBuf;
+
+        let base = std::env::temp_dir().join(format!("ccls_confine_{}", std::process::id()));
+        let ws = base.join("ws");
+        let secret = base.join("secret.circom");
+        let main_path = ws.join("main.circom");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(&secret, "pragma circom 2.0.0;").unwrap();
+        fs::write(&main_path, "pragma circom 2.0.0;").unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        let mut db = ContentCacheDb::new();
+        // Root is the workspace dir only — `secret.circom` lives above it.
+        db.set_workspace_roots(vec![ws.canonicalize().unwrap()]);
+
+        // No roots configured yet in the empty case: every include is refused (fail closed).
+        let mut empty = ContentCacheDb::new();
+        assert!(
+            empty.load_include(&main_url, "lib.circom").is_none(),
+            "with no workspace roots, no include may be loaded (fail closed)"
+        );
+
+        // `..` escape to a sibling file outside the root is refused.
+        assert!(
+            db.load_include(&main_url, "../secret.circom").is_none(),
+            "include escaping the workspace via `..` must be refused"
+        );
+        // Absolute path outside the root is refused (`PathBuf::join` would otherwise replace base).
+        assert!(
+            db.load_include(&main_url, secret.to_str().unwrap())
+                .is_none(),
+            "an absolute include outside the workspace must be refused"
+        );
+
+        // Sanity: a same-directory include inside the root loads (file must exist).
+        let in_root = ws.join("lib.circom");
+        fs::write(&in_root, "pragma circom 2.0.0;").unwrap();
+        assert!(
+            db.load_include(&main_url, "lib.circom").is_some(),
+            "an include inside the workspace root must load"
+        );
+
+        let _ = PathBuf::from(&base);
+        let _ = fs::remove_dir_all(&base);
     }
 }

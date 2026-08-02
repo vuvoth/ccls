@@ -71,6 +71,13 @@ pub struct Vfs {
     path_to_id: HashMap<VfsPath, FileId>,
     files: Vec<FileState>,
     changes: Vec<ChangedFile>,
+    /// Canonicalized workspace root folders. The containment primitive for confining untrusted
+    /// `include "…"` resolution (path-traversal defense): an include may only resolve to a file
+    /// inside one of these. Set once via [`Vfs::set_workspace_roots`]; empty (fail-closed) until
+    /// then. The roots themselves are stored already-canonicalized by the caller, so
+    /// [`Vfs::is_confined`] stays pure (no disk I/O) — the `canonicalize` stat is the LSP layer's
+    /// job, keeping this crate I/O-free and unit-testable.
+    workspace_roots: Vec<PathBuf>,
 }
 
 impl Default for Vfs {
@@ -85,7 +92,26 @@ impl Vfs {
             path_to_id: HashMap::new(),
             files: Vec::new(),
             changes: Vec::new(),
+            workspace_roots: Vec::new(),
         }
+    }
+
+    /// Set the workspace roots used by [`Self::is_confined`]. Callers (the LSP `initialize`
+    /// handshake) pass already-canonicalized absolute paths; no disk I/O happens here.
+    pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
+        self.workspace_roots = roots;
+    }
+
+    /// Pure containment check: is `canonical` (an already-canonicalized absolute path) inside one of
+    /// the workspace roots? **Fail-closed** — with no roots configured nothing is confined, so the
+    /// LSP refuses to load any include rather than risk an arbitrary read. No disk I/O: the caller
+    /// canonicalizes the candidate path (resolving `..`/symlinks) before calling.
+    pub fn is_confined(&self, canonical: &Path) -> bool {
+        !self.workspace_roots.is_empty()
+            && self
+                .workspace_roots
+                .iter()
+                .any(|root| canonical.starts_with(root))
     }
 
     /// The id for `path` if it has been interned, else `None`.

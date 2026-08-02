@@ -11,11 +11,11 @@ use std::collections::HashMap;
 use lsp_types::Range;
 use rowan::ast::AstNode;
 use rowan::{TextRange, TextSize};
+use syntax::syntax_node::SyntaxNode;
 
 use syntax::abstract_syntax_tree::{
-    AstCircomProgram, AstComponentDecl, AstFunctionDef, AstIdentifier, AstInputSignalDecl,
-    AstOutputSignalDecl, AstParameterList, AstSignalDecl, AstStatementList, AstTemplateDef,
-    AstVarDecl, Named,
+    AstCircomProgram, AstComponentDecl, AstIdentifier, AstInputSignalDecl, AstOutputSignalDecl,
+    AstParameterList, AstSignalDecl, AstStatementList, AstVarDecl, Named,
 };
 
 use crate::file_db::FileDB;
@@ -25,6 +25,7 @@ use crate::file_db::FileDB;
 pub enum SymbolKind {
     Template,
     Function,
+    Bus,
     Signal,
     Variable,
     Component,
@@ -40,19 +41,10 @@ pub struct Symbol {
     pub def_range: Range,
 }
 
-/// Whether a body scope belongs to a template or a function.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ScopeKind {
-    Template,
-    Function,
-}
-
-/// A template/function body scope. `range` is the whole-unit **byte** range used for
+/// A template/function/bus body scope. `range` is the whole-unit **byte** range used for
 /// cursor-containment: the scope whose `range` contains the token's start offset is the scope.
 #[derive(Debug, Clone)]
 struct Scope {
-    #[allow(dead_code)]
-    kind: ScopeKind,
     range: TextRange,
     symbols: HashMap<String, Vec<Symbol>>,
 }
@@ -77,69 +69,86 @@ impl SymbolTable {
             let Some(name) = template.identifier() else {
                 continue;
             };
-            table.add_template(file_db, &template, &name);
+            let name = name.syntax().text().to_string();
+            table.index_unit(
+                file_db,
+                template.syntax(),
+                &name,
+                SymbolKind::Template,
+                template.parameter_list(),
+                template.statements(),
+            );
         }
 
         for function in ast.function_list() {
             let Some(name) = function.identifier() else {
                 continue;
             };
-            table.add_function(file_db, &function, &name);
+            let name = name.syntax().text().to_string();
+            table.index_unit(
+                file_db,
+                function.syntax(),
+                &name,
+                SymbolKind::Function,
+                function.parameter_list(),
+                function.statements(),
+            );
+        }
+
+        for bus in ast.bus_list() {
+            let Some(name) = bus.identifier() else {
+                continue;
+            };
+            let name = name.syntax().text().to_string();
+            table.index_unit(
+                file_db,
+                bus.syntax(),
+                &name,
+                SymbolKind::Bus,
+                bus.parameter_list(),
+                bus.statements(),
+            );
         }
 
         table
     }
 
-    fn add_template(&mut self, file_db: &FileDB, template: &AstTemplateDef, name: &AstIdentifier) {
-        let name_str = name.syntax().text().to_string();
-        let scope_range = template.syntax().text_range();
-        let def_range = file_db.range(template.syntax());
+    /// Index one top-level definition unit (template/function/bus) — the three share the
+    /// `definition_body` grammar (`name (params)? block`), so their indexing is identical apart
+    /// from `kind` and whether signal declarations are allowed (templates and buses have signals;
+    /// functions do not). Centralizing it keeps the three from drifting.
+    fn index_unit(
+        &mut self,
+        file_db: &FileDB,
+        unit_syntax: &SyntaxNode,
+        name: &str,
+        kind: SymbolKind,
+        params: Option<AstParameterList>,
+        statements: Option<AstStatementList>,
+    ) {
+        let scope_range = unit_syntax.text_range();
+        let def_range = file_db.range(unit_syntax);
+        // Templates and buses carry signal declarations in their bodies; functions do not.
+        let with_signals = kind != SymbolKind::Function;
 
         self.top_level
-            .entry(name_str.clone())
+            .entry(name.to_string())
             .or_default()
             .push(Symbol {
-                kind: SymbolKind::Template,
-                name: name_str.clone(),
+                kind,
+                name: name.to_string(),
                 def_range,
             });
 
         let mut scope = Scope {
-            kind: ScopeKind::Template,
             range: scope_range,
             symbols: HashMap::new(),
         };
-        index_params(&mut scope.symbols, file_db, template.parameter_list());
-        if let Some(statements) = template.statements() {
-            index_signals(&mut scope.symbols, file_db, &statements);
-            index_vars(&mut scope.symbols, file_db, &statements);
-            index_components(&mut scope.symbols, file_db, &statements);
-        }
-        self.scopes.push(scope);
-    }
-
-    fn add_function(&mut self, file_db: &FileDB, function: &AstFunctionDef, name: &AstIdentifier) {
-        let name_str = name.syntax().text().to_string();
-        let scope_range = function.syntax().text_range();
-        let def_range = file_db.range(function.syntax());
-
-        self.top_level
-            .entry(name_str.clone())
-            .or_default()
-            .push(Symbol {
-                kind: SymbolKind::Function,
-                name: name_str.clone(),
-                def_range,
-            });
-
-        let mut scope = Scope {
-            kind: ScopeKind::Function,
-            range: scope_range,
-            symbols: HashMap::new(),
-        };
-        index_params(&mut scope.symbols, file_db, function.parameter_list());
-        if let Some(statements) = function.statements() {
-            // Functions cannot declare signals, so only vars/components are indexed here.
+        index_params(&mut scope.symbols, file_db, params);
+        if let Some(statements) = statements {
+            if with_signals {
+                index_signals(&mut scope.symbols, file_db, &statements);
+            }
             index_vars(&mut scope.symbols, file_db, &statements);
             index_components(&mut scope.symbols, file_db, &statements);
         }
@@ -165,21 +174,35 @@ impl SymbolTable {
 
 /// Index one named declaration (`signal`/`var`/`component`) into `symbols` keyed by its
 /// [`Named::identifier`] text, using the whole declaration node's range as the definition range.
+///
+/// Tuple-form declarations (`var (a,b) = …`, `signal (a,b) <== …`) have no wrapping
+/// `ComplexIdentifier` — [`Named::identifier`] returns `None` — so their names are bare
+/// `Identifier` children of the declaration node; each is indexed individually (else goto-def on a
+/// tuple-declared name would resolve to nothing).
 fn index_decl<N: Named>(
     symbols: &mut HashMap<String, Vec<Symbol>>,
     file_db: &FileDB,
     kind: SymbolKind,
     decl: &N,
 ) {
-    let Some(id) = decl.identifier() else {
+    if let Some(id) = decl.identifier() {
+        let name = id.syntax().text().to_string();
+        symbols.entry(name.clone()).or_default().push(Symbol {
+            kind,
+            name,
+            def_range: file_db.range(decl.syntax()),
+        });
         return;
-    };
-    let name = id.syntax().text().to_string();
-    symbols.entry(name.clone()).or_default().push(Symbol {
-        kind,
-        name,
-        def_range: file_db.range(decl.syntax()),
-    });
+    }
+    // Tuple form: the names are bare `Identifier` children (no `ComplexIdentifier` wrapper).
+    for id in decl.syntax().children().filter_map(AstIdentifier::cast) {
+        let name = id.syntax().text().to_string();
+        symbols.entry(name.clone()).or_default().push(Symbol {
+            kind,
+            name,
+            def_range: file_db.range(id.syntax()),
+        });
+    }
 }
 
 /// Index every parameter of `params` (function/template args) as a [`SymbolKind::Param`].
