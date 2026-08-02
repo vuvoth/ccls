@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  CircomProgram 0..2427
 |      BlockComment 0..764
@@ -147,13 +147,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |      WhiteSpace 1681..1689 "        "
 |     |     |     |     |     |      StatementList 1689..1716
 |     |     |     |     |     |     |      AssignStatement 1689..1692
-|     |     |     |     |     |     |     |      Expression 1689..1692
-|     |     |     |     |     |     |     |     |      UnitInc 1689..1692
-|     |     |     |     |     |     |     |     |     |      ExpressionAtom 1689..1690
-|     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690 "r"
-|     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692
-|     |     |     |     |     |     |     |     |     |     |      UnitInc 1690..1692 "++"
+|     |     |     |     |     |     |     |      Expression 1689..1690
+|     |     |     |     |     |     |     |     |      ExpressionAtom 1689..1690
+|     |     |     |     |     |     |     |     |     |      Identifier 1689..1690
+|     |     |     |     |     |     |     |     |     |     |      Identifier 1689..1690 "r"
+|     |     |     |     |     |     |     |      UnitInc 1690..1692
+|     |     |     |     |     |     |     |     |      UnitInc 1690..1692 "++"
 |     |     |     |     |     |     |      Semicolon 1692..1693
 |     |     |     |     |     |     |     |      Semicolon 1692..1693 ";"
 |     |     |     |     |     |     |      EndLine 1693..1695
@@ -515,13 +514,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |      WhiteSpace 1979..1980
 |     |     |     |     |     |      WhiteSpace 1979..1980 " "
 |     |     |     |     |      AssignStatement 1980..1983
-|     |     |     |     |     |      Expression 1980..1983
-|     |     |     |     |     |     |      UnitInc 1980..1983
-|     |     |     |     |     |     |     |      ExpressionAtom 1980..1981
-|     |     |     |     |     |     |     |     |      Identifier 1980..1981
-|     |     |     |     |     |     |     |     |     |      Identifier 1980..1981 "k"
-|     |     |     |     |     |     |     |      UnitInc 1981..1983
-|     |     |     |     |     |     |     |     |      UnitInc 1981..1983 "++"
+|     |     |     |     |     |      Expression 1980..1981
+|     |     |     |     |     |     |      ExpressionAtom 1980..1981
+|     |     |     |     |     |     |     |      Identifier 1980..1981
+|     |     |     |     |     |     |     |     |      Identifier 1980..1981 "k"
+|     |     |     |     |     |      UnitInc 1981..1983
+|     |     |     |     |     |     |      UnitInc 1981..1983 "++"
 |     |     |     |     |      RParen 1983..1984
 |     |     |     |     |     |      RParen 1983..1984 ")"
 |     |     |     |     |      WhiteSpace 1984..1985
@@ -571,13 +569,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      WhiteSpace 2012..2013
 |     |     |     |     |     |     |     |     |      WhiteSpace 2012..2013 " "
 |     |     |     |     |     |     |     |      AssignStatement 2013..2016
-|     |     |     |     |     |     |     |     |      Expression 2013..2016
-|     |     |     |     |     |     |     |     |     |      UnitInc 2013..2016
-|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2013..2014
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2013..2014
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2013..2014 "j"
-|     |     |     |     |     |     |     |     |     |     |      UnitInc 2014..2016
-|     |     |     |     |     |     |     |     |     |     |     |      UnitInc 2014..2016 "++"
+|     |     |     |     |     |     |     |     |      Expression 2013..2014
+|     |     |     |     |     |     |     |     |     |      ExpressionAtom 2013..2014
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2013..2014
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2013..2014 "j"
+|     |     |     |     |     |     |     |     |      UnitInc 2014..2016
+|     |     |     |     |     |     |     |     |     |      UnitInc 2014..2016 "++"
 |     |     |     |     |     |     |     |      RParen 2016..2017
 |     |     |     |     |     |     |     |     |      RParen 2016..2017 ")"
 |     |     |     |     |     |     |     |      WhiteSpace 2017..2018
@@ -738,13 +735,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |     |     |     |     |     |      WhiteSpace 2138..2139
 |     |     |     |     |     |     |     |     |      WhiteSpace 2138..2139 " "
 |     |     |     |     |     |     |     |      AssignStatement 2139..2142
-|     |     |     |     |     |     |     |     |      Expression 2139..2142
-|     |     |     |     |     |     |     |     |     |      UnitInc 2139..2142
-|     |     |     |     |     |     |     |     |     |     |      ExpressionAtom 2139..2140
-|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2139..2140
-|     |     |     |     |     |     |     |     |     |     |     |     |      Identifier 2139..2140 "k"
-|     |     |     |     |     |     |     |     |     |     |      UnitInc 2140..2142
-|     |     |     |     |     |     |     |     |     |     |     |      UnitInc 2140..2142 "++"
+|     |     |     |     |     |     |     |     |      Expression 2139..2140
+|     |     |     |     |     |     |     |     |     |      ExpressionAtom 2139..2140
+|     |     |     |     |     |     |     |     |     |     |      Identifier 2139..2140
+|     |     |     |     |     |     |     |     |     |     |     |      Identifier 2139..2140 "k"
+|     |     |     |     |     |     |     |     |      UnitInc 2140..2142
+|     |     |     |     |     |     |     |     |     |      UnitInc 2140..2142 "++"
 |     |     |     |     |     |     |     |      RParen 2142..2143
 |     |     |     |     |     |     |     |     |      RParen 2142..2143 ")"
 |     |     |     |     |     |     |     |      WhiteSpace 2143..2144

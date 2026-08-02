@@ -1,11 +1,6 @@
 use super::*;
 
-/**
- * parse pragma in circom language
- * grammar:
- *      pragma circom <version>;
- */
-
+/// Parse `pragma circom <version>;` (grammar: `ParsePragma`).
 pub fn pragma(p: &mut Parser) {
     let m = p.open();
     p.expect(PragmaKw);

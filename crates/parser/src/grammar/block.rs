@@ -1,19 +1,9 @@
 use super::*;
 
-/*
-{
-    <declaration>/<statement>
-    <declaration>/<statement>
-    ....
-    <declaration>/<statement>
-}
-*/
+/// Parse a block `{ <declaration>|<statement> ... }` (grammar: `ParseBlock`).
 pub fn block(p: &mut Parser) {
-    p.inc_rcurly();
-
-    // TODO: why do not use expect for { and }
     if !p.at(LCurly) {
-        p.advance_with_error("Miss {");
+        p.advance_with_error("expected `{`");
     } else {
         let m = p.open();
         p.expect(LCurly);
@@ -22,7 +12,7 @@ pub fn block(p: &mut Parser) {
         while !p.at(RCurly) && !p.eof() {
             let kind = p.current();
             match kind {
-                SignalKw => {
+                SignalKw | InputKw | OutputKw => {
                     declaration::signal_declaration(p);
                     p.expect(Semicolon);
                 }
@@ -42,7 +32,5 @@ pub fn block(p: &mut Parser) {
 
         p.expect(RCurly);
         p.close(m, Block);
-
-        p.dec_rcurly();
     }
 }

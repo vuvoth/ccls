@@ -1,181 +1,165 @@
 use list::tuple_expression;
 
 use crate::parser::Marker;
+use crate::token_kind::TokenKind;
 
 use super::*;
 
+// Binding power for ternary branches. The ternary `?:` is the loosest operator and is handled
+// outside the Pratt loop (in `circom_expression`). Per the grammar (`Expression13: E12 ? E12 : E12`)
+// both the condition and the branches are at the `||` level (`Expression12`): they may contain
+// `||` and anything tighter, but NOT a nested ternary.
+const MIN_BINDING_POWER: u16 = 0;
+const TERNARY_BRANCH_BP: u16 = crate::token_kind::BP_BOOL_OR;
+
+/// Parse a full expression, wrapping it in an `Expression` node.
+/// (grammar: `ParseExpression` → ternary / binary / atom)
 pub(super) fn expression(p: &mut Parser) {
-    let open_marker = p.open();
+    let m = p.open();
     circom_expression(p);
-    p.close(open_marker, Expression);
+    p.close(m, Expression);
 }
 
-/**
- * TODO: why parse a stament inside expression module???
- * manage 2 cases: normal expression (a++, a-b,...), tenary_conditional_statement (a ? b : c)
- * circom_expression = expr ? expr: expr |
- *                     expr                          
- */
+/// Parse an expression that may be a ternary `cond ? a : b`, or a plain binary/atom.
+/// (grammar: `Expression13 = Expression12 "?" Expression12 ":" Expression12`)
 fn circom_expression(p: &mut Parser) {
-    if let Some(lhs) = expression_rec(p, 0) {
-        let current_kind = p.current();
-
-        if matches!(current_kind, MarkQuestion) {
-            tenary_conditional_statement(p, lhs);
+    if let Some(cond) = expression_rec(p, MIN_BINDING_POWER) {
+        if p.at(MarkQuestion) {
+            ternary_conditional(p, cond);
         }
     }
 }
 
-/**
- * grammar: <condition> ? <expression-1> : <expression-2>
-* <condition> is also an expression,
-* whose open and close events are already in the Parser event list
-* lhs is that open event
-*/
-pub fn tenary_conditional_statement(p: &mut Parser, lhs: Marker) {
-    // <condition>
-    let open_marker = p.open_before(lhs);
-    p.close(open_marker, Condition);
+/// `cond ? if_true : if_false`. The branches are parsed at the `||` level so a nested ternary is
+/// rejected (matching the grammar — `a ? b : c ? d : e` is a syntax error in circom).
+///
+/// The whole form is wrapped in a single `TenaryConditional` node. (A separate `Condition` node
+/// is not emitted: the event/marker model cannot reliably double-wrap an already-parsed operand,
+/// and circom's own AST models this as one `InlineSwitchOp`.)
+fn ternary_conditional(p: &mut Parser, cond: Marker) {
+    // <condition> ? <if_true> : <if_false>  — wrap the already-parsed condition in the node.
+    let m = p.open_before(cond);
 
-    // <condition> ?
     p.expect(MarkQuestion);
 
-    // <condition> ? <expression-1>
-    let first_expression = p.open();
-    expression_rec(p, 0);
-    p.close(first_expression, Expression);
+    let if_true = p.open();
+    expression_rec(p, TERNARY_BRANCH_BP);
+    p.close(if_true, Expression);
 
-    // <condition> ? <expression-1> :
     p.expect(Colon);
 
-    // <condition> ? <expression-1> : <expression-2>
-    let last_expression = p.open();
-    expression_rec(p, 0);
-    p.close(last_expression, Expression);
+    let if_false = p.open();
+    expression_rec(p, TERNARY_BRANCH_BP);
+    p.close(if_false, Expression);
 
-    p.close(open_marker, TenaryConditional);
+    p.close(m, TenaryConditional);
 }
 
-/**
- * return marker which bound the expression
- */
-pub fn expression_rec(p: &mut Parser, pb: u16) -> Option<Marker> {
-    // consume all first prefix tokens (++a, --a, -a, +a, !a)
-    // next, consume first atom (identifier/number/tuple)
-    let parse_able: Option<Marker> = {
-        if let Some(pp) = p.current().prefix() {
-            let kind = p.current();
-            let open_marker = p.open();
-            // consume prefix token (++, --, -, +, !)
-            p.advance();
-            // continue with the next tokens
-            expression_rec(p, pp);
-            Some(p.close(open_marker, kind))
-        } else {
-            expression_atom(p)
-        }
-    };
+/// Precedence-climbing (Pratt) core. Returns the marker bounding the parsed expression, or
+/// `None` if no atom could be parsed.
+///
+/// `min_bp` is the minimum infix left-binding-power required to continue: an operator is pulled
+/// in only when `lbp >= min_bp`. Left-associative operators recurse with `rbp = lbp + 1`, so a
+/// following same-precedence operator is NOT absorbed into the right operand (e.g.
+/// `a - b - c` groups as `(a - b) - c`).
+fn expression_rec(p: &mut Parser, min_bp: u16) -> Option<Marker> {
+    let mut lhs = parse_prefix_or_atom(p)?;
 
-    parse_able?;
-
-    let mut lhs = parse_able.unwrap();
-
-    while !p.eof() {
+    loop {
         let kind = p.current();
 
-        if let Some((lp, rp)) = kind.infix() {
-            // infix case: <a> + <b>
-            // <a> is already consume in parse_able
-
-            // TODO: what does it mean???
-            if rp <= pb {
-                return None;
+        if let Some((lbp, rbp)) = kind.infix() {
+            if lbp < min_bp {
+                break;
             }
-
-            // open event that wrap the first parameter (<a>)
-            let open_marker = p.open_before(lhs);
-
-            // consume the infix token
-            p.advance();
-
-            // extract the second parameter
-            expression_rec(p, lp);
-
-            lhs = p.close(open_marker, kind);
-        } else if let Some(pp) = kind.postfix() {
-            if pp <= pb {
-                return None;
+            let m = p.open_before(lhs);
+            p.advance(); // consume the infix operator
+            expression_rec(p, rbp); // right operand at `rbp` (controls associativity)
+            lhs = p.close(m, kind);
+        } else if let Some(postfix_bp) = kind.postfix() {
+            if postfix_bp < min_bp {
+                break;
             }
-
-            match kind {
-                LParen => {
-                    // function call
-                    let open_marker = p.open_before(lhs);
-                    tuple_expression(p);
-                    lhs = p.close(open_marker, Call);
-                }
-                LBracket => {
-                    // array subscript: abc[N - 1]
-                    let open_marker = p.open_before(lhs);
-                    p.expect(LBracket);
-                    expression(p);
-                    p.expect(RBracket);
-                    p.close(open_marker, ArrayQuery);
-                }
-                Dot => {
-                    // attribute access
-                    // abc[N - 1].def OR abc.def --> component call
-                    let open_marker = p.open_before(lhs);
-                    p.expect(Dot);
-                    p.expect(Identifier);
-                    p.close(open_marker, ComponentCall);
-                }
-                UnitDec | UnitInc => {
-                    let open_marker = p.open_before(lhs);
-                    // consume token ++/-- and do nothing
-                    p.advance();
-                    p.close(open_marker, kind);
-                }
-                _ => {
-                    // not a postfix token
-                    p.advance_with_error(&format!("Expect a postfix token, but found {:?}", kind));
-                    break;
-                }
-            };
+            match parse_postfix(p, lhs, kind) {
+                Some(new_lhs) => lhs = new_lhs,
+                None => break, // error already reported; stop
+            }
         } else {
             break;
         }
     }
 
-    // return the outer open marker
     Some(lhs)
 }
 
-/**
- * the unit element in expression
- * eg: a, b, 5, 100, (<expression>)
- */
-fn expression_atom(p: &mut Parser) -> Option<Marker> {
+/// Parse a prefix expression (`!`, `~`, `-`) or fall through to an atom.
+/// (grammar: `Expression2 = PrefixOpTier<ParseExpressionPrefixOpcode, Expression1>`)
+fn parse_prefix_or_atom(p: &mut Parser) -> Option<Marker> {
     let kind = p.current();
+    if let Some(prefix_bp) = kind.prefix() {
+        let m = p.open();
+        p.advance(); // consume the prefix operator
+        expression_rec(p, prefix_bp); // operand at the prefix binding power
+        Some(p.close(m, kind))
+    } else {
+        expression_atom(p)
+    }
+}
 
+/// Parse a single postfix operator (call `()`, index `[]`, member `.`). Returns the new lhs
+/// marker, or `None` on an unexpected token (error already reported). Chaining is handled by the
+/// caller's loop. (grammar: `Expression1` postfix forms)
+fn parse_postfix(p: &mut Parser, lhs: Marker, kind: TokenKind) -> Option<Marker> {
+    let m = p.open_before(lhs);
     match kind {
-        Number | Identifier => {
-            let open_marker = p.open();
-            p.advance();
-            let m_close = p.close(open_marker, ExpressionAtom);
-            Some(m_close)
-        }
         LParen => {
-            // (<expression>)
-            let open_marker = p.open();
-            p.expect(LParen);
-            expression_rec(p, 0);
-            p.expect(RParen);
-            let m_close = p.close(open_marker, Expression);
-            Some(m_close)
+            // function/template call: name(arg, ...)
+            tuple_expression(p);
+            Some(p.close(m, Call))
+        }
+        LBracket => {
+            // array subscript: arr[expr]
+            p.expect(LBracket);
+            expression(p);
+            p.expect(RBracket);
+            Some(p.close(m, ArrayQuery))
+        }
+        Dot => {
+            // member / component-signal access: obj.field
+            p.expect(Dot);
+            p.expect(Identifier);
+            Some(p.close(m, ComponentCall))
         }
         _ => {
-            p.advance_with_error("Invalid Token");
+            p.advance_with_error(&format!("expected a postfix token, found {:?}", kind));
+            None
+        }
+    }
+}
+
+/// Parse an expression atom: an identifier, a numeric literal (decimal or hex), or a
+/// parenthesized expression (which may itself contain a ternary).
+/// (grammar: `Expression0`)
+fn expression_atom(p: &mut Parser) -> Option<Marker> {
+    let kind = p.current();
+    match kind {
+        Number | HexNumber | Identifier => {
+            let m = p.open();
+            p.advance();
+            Some(p.close(m, ExpressionAtom))
+        }
+        LParen => {
+            // ( <expression> )  — a parenthesized expression is a full expression, so it may
+            // contain a ternary: `(a ? b : c)`. Use `circom_expression` (ternary-capable) rather
+            // than `expression_rec` (which stops at `?`).
+            let m = p.open();
+            p.expect(LParen);
+            circom_expression(p);
+            p.expect(RParen);
+            Some(p.close(m, Expression))
+        }
+        _ => {
+            p.advance_with_error("invalid token");
             None
         }
     }

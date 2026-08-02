@@ -34,34 +34,69 @@ pub(crate) fn complex_identifier(p: &mut Parser) {
 }
 
 /*
-"signal" --> None
-"signal input" --> Some(true)
-"signal output" --> Some(false)
-*/
+ * Parse a signal header (grammar: `SignalHeader`).
+ *
+ * Two keyword orders are accepted:
+ *   signal (input|output)?   -> intermediate / input / output
+ *   (input|output) signal    -> input / output
+ * Optionally followed by a tag list `{ tag1, tag2, ... }` (grammar `ParseTagsList`).
+ *
+ * Returns `Some(true)` for input, `Some(false)` for output, `None` for intermediate.
+ */
 fn signal_header(p: &mut Parser) -> Option<bool> {
     let m = p.open();
-    p.expect(SignalKw);
 
     let result = match p.current() {
-        InputKw => Some(true),
-        OutputKw => Some(false),
+        // "signal" ("input"|"output")?
+        SignalKw => {
+            p.expect(SignalKw);
+            match p.current() {
+                InputKw => {
+                    p.advance();
+                    Some(true)
+                }
+                OutputKw => {
+                    p.advance();
+                    Some(false)
+                }
+                _ => None,
+            }
+        }
+        // ("input"|"output") "signal"
+        InputKw => {
+            p.advance();
+            p.expect(SignalKw);
+            Some(true)
+        }
+        OutputKw => {
+            p.advance();
+            p.expect(SignalKw);
+            Some(false)
+        }
         _ => None,
     };
 
-    if result.is_some() {
-        p.advance();
-    }
-
-    // signal tags
-    // {tag1, tag2, tag2}
-    // TODO: support list of tags
+    // tag list: { tag1, tag2, ... }
     if p.at(LCurly) {
-        p.expect(Identifier);
-        p.expect(RCurly);
+        tag_list(p);
     }
 
     p.close(m, SignalHeader);
     result
+}
+
+/// Parse a comma-separated tag list inside `{ ... }` (grammar: `ParseTagsList`).
+/// Requires at least one identifier when the braces are present.
+fn tag_list(p: &mut Parser) {
+    p.expect(LCurly);
+    if p.at(Identifier) {
+        p.expect(Identifier);
+        while p.at(Comma) && !p.eof() {
+            p.skip();
+            p.expect(Identifier);
+        }
+    }
+    p.expect(RCurly);
 }
 
 /*
@@ -131,9 +166,9 @@ pub(super) fn var_declaration(p: &mut Parser) {
 intermediate and outputs signals right after their declaration
 */
 pub(super) fn signal_declaration(p: &mut Parser) {
-    // TODO: can we remove that?
-    if !p.at(SignalKw) {
-        p.advance_with_error("Signal error");
+    // Accept `signal ...`, `input signal ...`, or `output signal ...` (grammar `SignalHeader`).
+    if !p.at(SignalKw) && !p.at(InputKw) && !p.at(OutputKw) {
+        p.advance_with_error("expected a signal declaration");
         return;
     }
 
@@ -204,9 +239,11 @@ pub(super) fn component_declaration(p: &mut Parser) {
 
 pub(super) fn declaration(p: &mut Parser) {
     match p.current() {
-        SignalKw => signal_declaration(p),
+        SignalKw | InputKw | OutputKw => signal_declaration(p),
         VarKw => var_declaration(p),
         ComponentKw => component_declaration(p),
-        _ => unreachable!(),
+        kind => {
+            p.advance_with_error(&format!("expected a declaration keyword, found {:?}", kind));
+        }
     }
 }

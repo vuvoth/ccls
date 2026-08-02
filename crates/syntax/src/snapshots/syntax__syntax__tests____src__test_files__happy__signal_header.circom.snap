@@ -1,0 +1,163 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ Block 0..238
+|      LCurly 0..1
+|     |      LCurly 0..1 "{"
+|      EndLine 1..2
+|     |      EndLine 1..2 "\n"
+|      WhiteSpace 2..6
+|     |      WhiteSpace 2..6 "    "
+|      CommentLine 6..93
+|     |      CommentLine 6..93 "// signal header: both keyword orders and (optional) tag lists (tags precede the name)."
+|      EndLine 93..94
+|     |      EndLine 93..94 "\n"
+|      WhiteSpace 94..98
+|     |      WhiteSpace 94..98 "    "
+|      StatementList 98..237
+|     |      InputSignalDecl 98..112
+|     |     |      SignalHeader 98..111
+|     |     |     |      SignalKw 98..104
+|     |     |     |     |      SignalKw 98..104 "signal"
+|     |     |     |      WhiteSpace 104..105
+|     |     |     |     |      WhiteSpace 104..105 " "
+|     |     |     |      InputKw 105..110
+|     |     |     |     |      InputKw 105..110 "input"
+|     |     |     |      WhiteSpace 110..111
+|     |     |     |     |      WhiteSpace 110..111 " "
+|     |     |      ComplexIdentifier 111..112
+|     |     |     |      Identifier 111..112
+|     |     |     |     |      Identifier 111..112 "a"
+|     |      Semicolon 112..113
+|     |     |      Semicolon 112..113 ";"
+|     |      EndLine 113..114
+|     |     |      EndLine 113..114 "\n"
+|     |      WhiteSpace 114..118
+|     |     |      WhiteSpace 114..118 "    "
+|     |      OutputSignalDecl 118..133
+|     |     |      SignalHeader 118..132
+|     |     |     |      SignalKw 118..124
+|     |     |     |     |      SignalKw 118..124 "signal"
+|     |     |     |      WhiteSpace 124..125
+|     |     |     |     |      WhiteSpace 124..125 " "
+|     |     |     |      OutputKw 125..131
+|     |     |     |     |      OutputKw 125..131 "output"
+|     |     |     |      WhiteSpace 131..132
+|     |     |     |     |      WhiteSpace 131..132 " "
+|     |     |      ComplexIdentifier 132..133
+|     |     |     |      Identifier 132..133
+|     |     |     |     |      Identifier 132..133 "b"
+|     |      Semicolon 133..134
+|     |     |      Semicolon 133..134 ";"
+|     |      EndLine 134..135
+|     |     |      EndLine 134..135 "\n"
+|     |      WhiteSpace 135..139
+|     |     |      WhiteSpace 135..139 "    "
+|     |      SignalDecl 139..147
+|     |     |      SignalHeader 139..146
+|     |     |     |      SignalKw 139..145
+|     |     |     |     |      SignalKw 139..145 "signal"
+|     |     |     |      WhiteSpace 145..146
+|     |     |     |     |      WhiteSpace 145..146 " "
+|     |     |      ComplexIdentifier 146..147
+|     |     |     |      Identifier 146..147
+|     |     |     |     |      Identifier 146..147 "c"
+|     |      Semicolon 147..148
+|     |     |      Semicolon 147..148 ";"
+|     |      EndLine 148..149
+|     |     |      EndLine 148..149 "\n"
+|     |      WhiteSpace 149..153
+|     |     |      WhiteSpace 149..153 "    "
+|     |      InputSignalDecl 153..167
+|     |     |      SignalHeader 153..166
+|     |     |     |      InputKw 153..158
+|     |     |     |     |      InputKw 153..158 "input"
+|     |     |     |      WhiteSpace 158..159
+|     |     |     |     |      WhiteSpace 158..159 " "
+|     |     |     |      SignalKw 159..165
+|     |     |     |     |      SignalKw 159..165 "signal"
+|     |     |     |      WhiteSpace 165..166
+|     |     |     |     |      WhiteSpace 165..166 " "
+|     |     |      ComplexIdentifier 166..167
+|     |     |     |      Identifier 166..167
+|     |     |     |     |      Identifier 166..167 "d"
+|     |      Semicolon 167..168
+|     |     |      Semicolon 167..168 ";"
+|     |      EndLine 168..169
+|     |     |      EndLine 168..169 "\n"
+|     |      WhiteSpace 169..173
+|     |     |      WhiteSpace 169..173 "    "
+|     |      OutputSignalDecl 173..188
+|     |     |      SignalHeader 173..187
+|     |     |     |      OutputKw 173..179
+|     |     |     |     |      OutputKw 173..179 "output"
+|     |     |     |      WhiteSpace 179..180
+|     |     |     |     |      WhiteSpace 179..180 " "
+|     |     |     |      SignalKw 180..186
+|     |     |     |     |      SignalKw 180..186 "signal"
+|     |     |     |      WhiteSpace 186..187
+|     |     |     |     |      WhiteSpace 186..187 " "
+|     |     |      ComplexIdentifier 187..188
+|     |     |     |      Identifier 187..188
+|     |     |     |     |      Identifier 187..188 "e"
+|     |      Semicolon 188..189
+|     |     |      Semicolon 188..189 ";"
+|     |      EndLine 189..190
+|     |     |      EndLine 189..190 "\n"
+|     |      WhiteSpace 190..194
+|     |     |      WhiteSpace 190..194 "    "
+|     |      SignalDecl 194..207
+|     |     |      SignalHeader 194..205
+|     |     |     |      SignalKw 194..200
+|     |     |     |     |      SignalKw 194..200 "signal"
+|     |     |     |      WhiteSpace 200..201
+|     |     |     |     |      WhiteSpace 200..201 " "
+|     |     |     |      LCurly 201..202
+|     |     |     |     |      LCurly 201..202 "{"
+|     |     |     |      Identifier 202..204
+|     |     |     |     |      Identifier 202..204 "t1"
+|     |     |     |      RCurly 204..205
+|     |     |     |     |      RCurly 204..205 "}"
+|     |     |      WhiteSpace 205..206
+|     |     |     |      WhiteSpace 205..206 " "
+|     |     |      ComplexIdentifier 206..207
+|     |     |     |      Identifier 206..207
+|     |     |     |     |      Identifier 206..207 "f"
+|     |      Semicolon 207..208
+|     |     |      Semicolon 207..208 ";"
+|     |      EndLine 208..209
+|     |     |      EndLine 208..209 "\n"
+|     |      WhiteSpace 209..213
+|     |     |      WhiteSpace 209..213 "    "
+|     |      InputSignalDecl 213..235
+|     |     |      SignalHeader 213..233
+|     |     |     |      SignalKw 213..219
+|     |     |     |     |      SignalKw 213..219 "signal"
+|     |     |     |      WhiteSpace 219..220
+|     |     |     |     |      WhiteSpace 219..220 " "
+|     |     |     |      InputKw 220..225
+|     |     |     |     |      InputKw 220..225 "input"
+|     |     |     |      WhiteSpace 225..226
+|     |     |     |     |      WhiteSpace 225..226 " "
+|     |     |     |      LCurly 226..227
+|     |     |     |     |      LCurly 226..227 "{"
+|     |     |     |      Identifier 227..229
+|     |     |     |     |      Identifier 227..229 "t1"
+|     |     |     |      WhiteSpace 229..230
+|     |     |     |     |      WhiteSpace 229..230 " "
+|     |     |     |      Identifier 230..232
+|     |     |     |     |      Identifier 230..232 "t2"
+|     |     |     |      RCurly 232..233
+|     |     |     |     |      RCurly 232..233 "}"
+|     |     |      WhiteSpace 233..234
+|     |     |     |      WhiteSpace 233..234 " "
+|     |     |      ComplexIdentifier 234..235
+|     |     |     |      Identifier 234..235
+|     |     |     |     |      Identifier 234..235 "g"
+|     |      Semicolon 235..236
+|     |     |      Semicolon 235..236 ";"
+|     |      EndLine 236..237
+|     |     |      EndLine 236..237 "\n"
+|      RCurly 237..238
+|     |      RCurly 237..238 "}"

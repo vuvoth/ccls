@@ -1,0 +1,532 @@
+---
+source: crates/syntax/src/syntax.rs
+expression: view_ast(& syntax)
+---
+ Block 0..792
+|      LCurly 0..1
+|     |      LCurly 0..1 "{"
+|      EndLine 1..2
+|     |      EndLine 1..2 "\n"
+|      WhiteSpace 2..6
+|     |      WhiteSpace 2..6 "    "
+|      CommentLine 6..75
+|     |      CommentLine 6..75 "// Associativity (must be LEFT-associative): a - b - c == (a - b) - c"
+|      EndLine 75..76
+|     |      EndLine 75..76 "\n"
+|      WhiteSpace 76..80
+|     |      WhiteSpace 76..80 "    "
+|      StatementList 80..791
+|     |      VarDecl 80..104
+|     |     |      VarKw 80..83
+|     |     |     |      VarKw 80..83 "var"
+|     |     |      WhiteSpace 83..84
+|     |     |     |      WhiteSpace 83..84 " "
+|     |     |      ComplexIdentifier 84..93
+|     |     |     |      Identifier 84..92
+|     |     |     |     |      Identifier 84..92 "left_sub"
+|     |     |     |      WhiteSpace 92..93
+|     |     |     |     |      WhiteSpace 92..93 " "
+|     |     |      Assign 93..94
+|     |     |     |      Assign 93..94 "="
+|     |     |      WhiteSpace 94..95
+|     |     |     |      WhiteSpace 94..95 " "
+|     |     |      Expression 95..104
+|     |     |     |      Sub 95..104
+|     |     |     |     |      Sub 95..101
+|     |     |     |     |     |      ExpressionAtom 95..96
+|     |     |     |     |     |     |      Identifier 95..96
+|     |     |     |     |     |     |     |      Identifier 95..96 "a"
+|     |     |     |     |     |      WhiteSpace 96..97
+|     |     |     |     |     |     |      WhiteSpace 96..97 " "
+|     |     |     |     |     |      Sub 97..98
+|     |     |     |     |     |     |      Sub 97..98 "-"
+|     |     |     |     |     |      WhiteSpace 98..99
+|     |     |     |     |     |     |      WhiteSpace 98..99 " "
+|     |     |     |     |     |      ExpressionAtom 99..100
+|     |     |     |     |     |     |      Identifier 99..100
+|     |     |     |     |     |     |     |      Identifier 99..100 "b"
+|     |     |     |     |     |      WhiteSpace 100..101
+|     |     |     |     |     |     |      WhiteSpace 100..101 " "
+|     |     |     |     |      Sub 101..102
+|     |     |     |     |     |      Sub 101..102 "-"
+|     |     |     |     |      WhiteSpace 102..103
+|     |     |     |     |     |      WhiteSpace 102..103 " "
+|     |     |     |     |      ExpressionAtom 103..104
+|     |     |     |     |     |      Identifier 103..104
+|     |     |     |     |     |     |      Identifier 103..104 "c"
+|     |      Semicolon 104..105
+|     |     |      Semicolon 104..105 ";"
+|     |      EndLine 105..106
+|     |     |      EndLine 105..106 "\n"
+|     |      WhiteSpace 106..110
+|     |     |      WhiteSpace 106..110 "    "
+|     |      VarDecl 110..134
+|     |     |      VarKw 110..113
+|     |     |     |      VarKw 110..113 "var"
+|     |     |      WhiteSpace 113..114
+|     |     |     |      WhiteSpace 113..114 " "
+|     |     |      ComplexIdentifier 114..123
+|     |     |     |      Identifier 114..122
+|     |     |     |     |      Identifier 114..122 "left_div"
+|     |     |     |      WhiteSpace 122..123
+|     |     |     |     |      WhiteSpace 122..123 " "
+|     |     |      Assign 123..124
+|     |     |     |      Assign 123..124 "="
+|     |     |      WhiteSpace 124..125
+|     |     |     |      WhiteSpace 124..125 " "
+|     |     |      Expression 125..134
+|     |     |     |      Div 125..134
+|     |     |     |     |      Div 125..131
+|     |     |     |     |     |      ExpressionAtom 125..126
+|     |     |     |     |     |     |      Identifier 125..126
+|     |     |     |     |     |     |     |      Identifier 125..126 "a"
+|     |     |     |     |     |      WhiteSpace 126..127
+|     |     |     |     |     |     |      WhiteSpace 126..127 " "
+|     |     |     |     |     |      Div 127..128
+|     |     |     |     |     |     |      Div 127..128 "/"
+|     |     |     |     |     |      WhiteSpace 128..129
+|     |     |     |     |     |     |      WhiteSpace 128..129 " "
+|     |     |     |     |     |      ExpressionAtom 129..130
+|     |     |     |     |     |     |      Identifier 129..130
+|     |     |     |     |     |     |     |      Identifier 129..130 "b"
+|     |     |     |     |     |      WhiteSpace 130..131
+|     |     |     |     |     |     |      WhiteSpace 130..131 " "
+|     |     |     |     |      Div 131..132
+|     |     |     |     |     |      Div 131..132 "/"
+|     |     |     |     |      WhiteSpace 132..133
+|     |     |     |     |     |      WhiteSpace 132..133 " "
+|     |     |     |     |      ExpressionAtom 133..134
+|     |     |     |     |     |      Identifier 133..134
+|     |     |     |     |     |     |      Identifier 133..134 "c"
+|     |      Semicolon 134..135
+|     |     |      Semicolon 134..135 ";"
+|     |      EndLine 135..136
+|     |     |      EndLine 135..136 "\n"
+|     |      WhiteSpace 136..140
+|     |     |      WhiteSpace 136..140 "    "
+|     |      VarDecl 140..169
+|     |     |      VarKw 140..143
+|     |     |     |      VarKw 140..143 "var"
+|     |     |      WhiteSpace 143..144
+|     |     |     |      WhiteSpace 143..144 " "
+|     |     |      ComplexIdentifier 144..158
+|     |     |     |      Identifier 144..157
+|     |     |     |     |      Identifier 144..157 "mixed_add_sub"
+|     |     |     |      WhiteSpace 157..158
+|     |     |     |     |      WhiteSpace 157..158 " "
+|     |     |      Assign 158..159
+|     |     |     |      Assign 158..159 "="
+|     |     |      WhiteSpace 159..160
+|     |     |     |      WhiteSpace 159..160 " "
+|     |     |      Expression 160..169
+|     |     |     |      Add 160..169
+|     |     |     |     |      Sub 160..166
+|     |     |     |     |     |      ExpressionAtom 160..161
+|     |     |     |     |     |     |      Identifier 160..161
+|     |     |     |     |     |     |     |      Identifier 160..161 "a"
+|     |     |     |     |     |      WhiteSpace 161..162
+|     |     |     |     |     |     |      WhiteSpace 161..162 " "
+|     |     |     |     |     |      Sub 162..163
+|     |     |     |     |     |     |      Sub 162..163 "-"
+|     |     |     |     |     |      WhiteSpace 163..164
+|     |     |     |     |     |     |      WhiteSpace 163..164 " "
+|     |     |     |     |     |      ExpressionAtom 164..165
+|     |     |     |     |     |     |      Identifier 164..165
+|     |     |     |     |     |     |     |      Identifier 164..165 "b"
+|     |     |     |     |     |      WhiteSpace 165..166
+|     |     |     |     |     |     |      WhiteSpace 165..166 " "
+|     |     |     |     |      Add 166..167
+|     |     |     |     |     |      Add 166..167 "+"
+|     |     |     |     |      WhiteSpace 167..168
+|     |     |     |     |     |      WhiteSpace 167..168 " "
+|     |     |     |     |      ExpressionAtom 168..169
+|     |     |     |     |     |      Identifier 168..169
+|     |     |     |     |     |     |      Identifier 168..169 "c"
+|     |      Semicolon 169..170
+|     |     |      Semicolon 169..170 ";"
+|     |      EndLine 170..171
+|     |     |      EndLine 170..171 "\n"
+|     |      WhiteSpace 171..175
+|     |     |      WhiteSpace 171..175 "    "
+|     |      CommentLine 175..257
+|     |     |      CommentLine 175..257 "// Precedence: bitwise binds tighter than comparisons (a & b == c == (a & b) == c)"
+|     |      EndLine 257..258
+|     |     |      EndLine 257..258 "\n"
+|     |      WhiteSpace 258..262
+|     |     |      WhiteSpace 258..262 "    "
+|     |      VarDecl 262..293
+|     |     |      VarKw 262..265
+|     |     |     |      VarKw 262..265 "var"
+|     |     |      WhiteSpace 265..266
+|     |     |     |      WhiteSpace 265..266 " "
+|     |     |      ComplexIdentifier 266..281
+|     |     |     |      Identifier 266..280
+|     |     |     |     |      Identifier 266..280 "bitwise_vs_cmp"
+|     |     |     |      WhiteSpace 280..281
+|     |     |     |     |      WhiteSpace 280..281 " "
+|     |     |      Assign 281..282
+|     |     |     |      Assign 281..282 "="
+|     |     |      WhiteSpace 282..283
+|     |     |     |      WhiteSpace 282..283 " "
+|     |     |      Expression 283..293
+|     |     |     |      Equal 283..293
+|     |     |     |     |      BitAnd 283..289
+|     |     |     |     |     |      ExpressionAtom 283..284
+|     |     |     |     |     |     |      Identifier 283..284
+|     |     |     |     |     |     |     |      Identifier 283..284 "a"
+|     |     |     |     |     |      WhiteSpace 284..285
+|     |     |     |     |     |     |      WhiteSpace 284..285 " "
+|     |     |     |     |     |      BitAnd 285..286
+|     |     |     |     |     |     |      BitAnd 285..286 "&"
+|     |     |     |     |     |      WhiteSpace 286..287
+|     |     |     |     |     |     |      WhiteSpace 286..287 " "
+|     |     |     |     |     |      ExpressionAtom 287..288
+|     |     |     |     |     |     |      Identifier 287..288
+|     |     |     |     |     |     |     |      Identifier 287..288 "b"
+|     |     |     |     |     |      WhiteSpace 288..289
+|     |     |     |     |     |     |      WhiteSpace 288..289 " "
+|     |     |     |     |      Equal 289..291
+|     |     |     |     |     |      Equal 289..291 "=="
+|     |     |     |     |      WhiteSpace 291..292
+|     |     |     |     |     |      WhiteSpace 291..292 " "
+|     |     |     |     |      ExpressionAtom 292..293
+|     |     |     |     |     |      Identifier 292..293
+|     |     |     |     |     |     |      Identifier 292..293 "c"
+|     |      Semicolon 293..294
+|     |     |      Semicolon 293..294 ";"
+|     |      EndLine 294..295
+|     |     |      EndLine 294..295 "\n"
+|     |      WhiteSpace 295..299
+|     |     |      WhiteSpace 295..299 "    "
+|     |      VarDecl 299..330
+|     |     |      VarKw 299..302
+|     |     |     |      VarKw 299..302 "var"
+|     |     |      WhiteSpace 302..303
+|     |     |     |      WhiteSpace 302..303 " "
+|     |     |      ComplexIdentifier 303..318
+|     |     |     |      Identifier 303..317
+|     |     |     |     |      Identifier 303..317 "cmp_vs_bitwise"
+|     |     |     |      WhiteSpace 317..318
+|     |     |     |     |      WhiteSpace 317..318 " "
+|     |     |      Assign 318..319
+|     |     |     |      Assign 318..319 "="
+|     |     |      WhiteSpace 319..320
+|     |     |     |      WhiteSpace 319..320 " "
+|     |     |      Expression 320..330
+|     |     |     |      Equal 320..330
+|     |     |     |     |      ExpressionAtom 320..321
+|     |     |     |     |     |      Identifier 320..321
+|     |     |     |     |     |     |      Identifier 320..321 "a"
+|     |     |     |     |      WhiteSpace 321..322
+|     |     |     |     |     |      WhiteSpace 321..322 " "
+|     |     |     |     |      Equal 322..324
+|     |     |     |     |     |      Equal 322..324 "=="
+|     |     |     |     |      WhiteSpace 324..325
+|     |     |     |     |     |      WhiteSpace 324..325 " "
+|     |     |     |     |      BitAnd 325..330
+|     |     |     |     |     |      ExpressionAtom 325..326
+|     |     |     |     |     |     |      Identifier 325..326
+|     |     |     |     |     |     |     |      Identifier 325..326 "b"
+|     |     |     |     |     |      WhiteSpace 326..327
+|     |     |     |     |     |     |      WhiteSpace 326..327 " "
+|     |     |     |     |     |      BitAnd 327..328
+|     |     |     |     |     |     |      BitAnd 327..328 "&"
+|     |     |     |     |     |      WhiteSpace 328..329
+|     |     |     |     |     |     |      WhiteSpace 328..329 " "
+|     |     |     |     |     |      ExpressionAtom 329..330
+|     |     |     |     |     |     |      Identifier 329..330
+|     |     |     |     |     |     |     |      Identifier 329..330 "c"
+|     |      Semicolon 330..331
+|     |     |      Semicolon 330..331 ";"
+|     |      EndLine 331..332
+|     |     |      EndLine 331..332 "\n"
+|     |      WhiteSpace 332..336
+|     |     |      WhiteSpace 332..336 "    "
+|     |      CommentLine 336..361
+|     |     |      CommentLine 336..361 "// * before + (a * b + c)"
+|     |      EndLine 361..362
+|     |     |      EndLine 361..362 "\n"
+|     |      WhiteSpace 362..366
+|     |     |      WhiteSpace 362..366 "    "
+|     |      VarDecl 366..396
+|     |     |      VarKw 366..369
+|     |     |     |      VarKw 366..369 "var"
+|     |     |      WhiteSpace 369..370
+|     |     |     |      WhiteSpace 369..370 " "
+|     |     |      ComplexIdentifier 370..385
+|     |     |     |      Identifier 370..384
+|     |     |     |     |      Identifier 370..384 "mul_before_add"
+|     |     |     |      WhiteSpace 384..385
+|     |     |     |     |      WhiteSpace 384..385 " "
+|     |     |      Assign 385..386
+|     |     |     |      Assign 385..386 "="
+|     |     |      WhiteSpace 386..387
+|     |     |     |      WhiteSpace 386..387 " "
+|     |     |      Expression 387..396
+|     |     |     |      Add 387..396
+|     |     |     |     |      Mul 387..393
+|     |     |     |     |     |      ExpressionAtom 387..388
+|     |     |     |     |     |     |      Identifier 387..388
+|     |     |     |     |     |     |     |      Identifier 387..388 "a"
+|     |     |     |     |     |      WhiteSpace 388..389
+|     |     |     |     |     |     |      WhiteSpace 388..389 " "
+|     |     |     |     |     |      Mul 389..390
+|     |     |     |     |     |     |      Mul 389..390 "*"
+|     |     |     |     |     |      WhiteSpace 390..391
+|     |     |     |     |     |     |      WhiteSpace 390..391 " "
+|     |     |     |     |     |      ExpressionAtom 391..392
+|     |     |     |     |     |     |      Identifier 391..392
+|     |     |     |     |     |     |     |      Identifier 391..392 "b"
+|     |     |     |     |     |      WhiteSpace 392..393
+|     |     |     |     |     |     |      WhiteSpace 392..393 " "
+|     |     |     |     |      Add 393..394
+|     |     |     |     |     |      Add 393..394 "+"
+|     |     |     |     |      WhiteSpace 394..395
+|     |     |     |     |     |      WhiteSpace 394..395 " "
+|     |     |     |     |      ExpressionAtom 395..396
+|     |     |     |     |     |      Identifier 395..396
+|     |     |     |     |     |     |      Identifier 395..396 "c"
+|     |      Semicolon 396..397
+|     |     |      Semicolon 396..397 ";"
+|     |      EndLine 397..398
+|     |     |      EndLine 397..398 "\n"
+|     |      WhiteSpace 398..402
+|     |     |      WhiteSpace 398..402 "    "
+|     |      VarDecl 402..431
+|     |     |      VarKw 402..405
+|     |     |     |      VarKw 402..405 "var"
+|     |     |      WhiteSpace 405..406
+|     |     |     |      WhiteSpace 405..406 " "
+|     |     |      ComplexIdentifier 406..420
+|     |     |     |      Identifier 406..419
+|     |     |     |     |      Identifier 406..419 "add_after_mul"
+|     |     |     |      WhiteSpace 419..420
+|     |     |     |     |      WhiteSpace 419..420 " "
+|     |     |      Assign 420..421
+|     |     |     |      Assign 420..421 "="
+|     |     |      WhiteSpace 421..422
+|     |     |     |      WhiteSpace 421..422 " "
+|     |     |      Expression 422..431
+|     |     |     |      Add 422..431
+|     |     |     |     |      ExpressionAtom 422..423
+|     |     |     |     |     |      Identifier 422..423
+|     |     |     |     |     |     |      Identifier 422..423 "a"
+|     |     |     |     |      WhiteSpace 423..424
+|     |     |     |     |     |      WhiteSpace 423..424 " "
+|     |     |     |     |      Add 424..425
+|     |     |     |     |     |      Add 424..425 "+"
+|     |     |     |     |      WhiteSpace 425..426
+|     |     |     |     |     |      WhiteSpace 425..426 " "
+|     |     |     |     |      Mul 426..431
+|     |     |     |     |     |      ExpressionAtom 426..427
+|     |     |     |     |     |     |      Identifier 426..427
+|     |     |     |     |     |     |     |      Identifier 426..427 "b"
+|     |     |     |     |     |      WhiteSpace 427..428
+|     |     |     |     |     |     |      WhiteSpace 427..428 " "
+|     |     |     |     |     |      Mul 428..429
+|     |     |     |     |     |     |      Mul 428..429 "*"
+|     |     |     |     |     |      WhiteSpace 429..430
+|     |     |     |     |     |     |      WhiteSpace 429..430 " "
+|     |     |     |     |     |      ExpressionAtom 430..431
+|     |     |     |     |     |     |      Identifier 430..431
+|     |     |     |     |     |     |     |      Identifier 430..431 "c"
+|     |      Semicolon 431..432
+|     |     |      Semicolon 431..432 ";"
+|     |      EndLine 432..433
+|     |     |      EndLine 432..433 "\n"
+|     |      WhiteSpace 433..437
+|     |     |      WhiteSpace 433..437 "    "
+|     |      CommentLine 437..502
+|     |     |      CommentLine 437..502 "// ** is left-associative in circom: a ** b ** c == (a ** b) ** c"
+|     |      EndLine 502..503
+|     |     |      EndLine 502..503 "\n"
+|     |      WhiteSpace 503..507
+|     |     |      WhiteSpace 503..507 "    "
+|     |      VarDecl 507..535
+|     |     |      VarKw 507..510
+|     |     |     |      VarKw 507..510 "var"
+|     |     |      WhiteSpace 510..511
+|     |     |     |      WhiteSpace 510..511 " "
+|     |     |      ComplexIdentifier 511..522
+|     |     |     |      Identifier 511..521
+|     |     |     |     |      Identifier 511..521 "power_left"
+|     |     |     |      WhiteSpace 521..522
+|     |     |     |     |      WhiteSpace 521..522 " "
+|     |     |      Assign 522..523
+|     |     |     |      Assign 522..523 "="
+|     |     |      WhiteSpace 523..524
+|     |     |     |      WhiteSpace 523..524 " "
+|     |     |      Expression 524..535
+|     |     |     |      Power 524..535
+|     |     |     |     |      Power 524..531
+|     |     |     |     |     |      ExpressionAtom 524..525
+|     |     |     |     |     |     |      Identifier 524..525
+|     |     |     |     |     |     |     |      Identifier 524..525 "a"
+|     |     |     |     |     |      WhiteSpace 525..526
+|     |     |     |     |     |     |      WhiteSpace 525..526 " "
+|     |     |     |     |     |      Power 526..528
+|     |     |     |     |     |     |      Power 526..528 "**"
+|     |     |     |     |     |      WhiteSpace 528..529
+|     |     |     |     |     |     |      WhiteSpace 528..529 " "
+|     |     |     |     |     |      ExpressionAtom 529..530
+|     |     |     |     |     |     |      Identifier 529..530
+|     |     |     |     |     |     |     |      Identifier 529..530 "b"
+|     |     |     |     |     |      WhiteSpace 530..531
+|     |     |     |     |     |     |      WhiteSpace 530..531 " "
+|     |     |     |     |      Power 531..533
+|     |     |     |     |     |      Power 531..533 "**"
+|     |     |     |     |      WhiteSpace 533..534
+|     |     |     |     |     |      WhiteSpace 533..534 " "
+|     |     |     |     |      ExpressionAtom 534..535
+|     |     |     |     |     |      Identifier 534..535
+|     |     |     |     |     |     |      Identifier 534..535 "c"
+|     |      Semicolon 535..536
+|     |     |      Semicolon 535..536 ";"
+|     |      EndLine 536..537
+|     |     |      EndLine 536..537 "\n"
+|     |      WhiteSpace 537..541
+|     |     |      WhiteSpace 537..541 "    "
+|     |      CommentLine 541..593
+|     |     |      CommentLine 541..593 "// prefix - is looser than ** : -a ** b == -(a ** b)"
+|     |      EndLine 593..594
+|     |     |      EndLine 593..594 "\n"
+|     |      WhiteSpace 594..598
+|     |     |      WhiteSpace 594..598 "    "
+|     |      VarDecl 598..627
+|     |     |      VarKw 598..601
+|     |     |     |      VarKw 598..601 "var"
+|     |     |      WhiteSpace 601..602
+|     |     |     |      WhiteSpace 601..602 " "
+|     |     |      ComplexIdentifier 602..618
+|     |     |     |      Identifier 602..617
+|     |     |     |     |      Identifier 602..617 "prefix_vs_power"
+|     |     |     |      WhiteSpace 617..618
+|     |     |     |     |      WhiteSpace 617..618 " "
+|     |     |      Assign 618..619
+|     |     |     |      Assign 618..619 "="
+|     |     |      WhiteSpace 619..620
+|     |     |     |      WhiteSpace 619..620 " "
+|     |     |      Expression 620..627
+|     |     |     |      Sub 620..627
+|     |     |     |     |      Sub 620..621
+|     |     |     |     |     |      Sub 620..621 "-"
+|     |     |     |     |      Power 621..627
+|     |     |     |     |     |      ExpressionAtom 621..622
+|     |     |     |     |     |     |      Identifier 621..622
+|     |     |     |     |     |     |     |      Identifier 621..622 "a"
+|     |     |     |     |     |      WhiteSpace 622..623
+|     |     |     |     |     |     |      WhiteSpace 622..623 " "
+|     |     |     |     |     |      Power 623..625
+|     |     |     |     |     |     |      Power 623..625 "**"
+|     |     |     |     |     |      WhiteSpace 625..626
+|     |     |     |     |     |     |      WhiteSpace 625..626 " "
+|     |     |     |     |     |      ExpressionAtom 626..627
+|     |     |     |     |     |     |      Identifier 626..627
+|     |     |     |     |     |     |     |      Identifier 626..627 "b"
+|     |      Semicolon 627..628
+|     |     |      Semicolon 627..628 ";"
+|     |      EndLine 628..629
+|     |     |      EndLine 628..629 "\n"
+|     |      WhiteSpace 629..633
+|     |     |      WhiteSpace 629..633 "    "
+|     |      CommentLine 633..684
+|     |     |      CommentLine 633..684 "// || looser than && : a || b && c == a || (b && c)"
+|     |      EndLine 684..685
+|     |     |      EndLine 684..685 "\n"
+|     |      WhiteSpace 685..689
+|     |     |      WhiteSpace 685..689 "    "
+|     |      VarDecl 689..722
+|     |     |      VarKw 689..692
+|     |     |     |      VarKw 689..692 "var"
+|     |     |      WhiteSpace 692..693
+|     |     |     |      WhiteSpace 692..693 " "
+|     |     |      ComplexIdentifier 693..709
+|     |     |     |      Identifier 693..708
+|     |     |     |     |      Identifier 693..708 "bool_precedence"
+|     |     |     |      WhiteSpace 708..709
+|     |     |     |     |      WhiteSpace 708..709 " "
+|     |     |      Assign 709..710
+|     |     |     |      Assign 709..710 "="
+|     |     |      WhiteSpace 710..711
+|     |     |     |      WhiteSpace 710..711 " "
+|     |     |      Expression 711..722
+|     |     |     |      BoolOr 711..722
+|     |     |     |     |      ExpressionAtom 711..712
+|     |     |     |     |     |      Identifier 711..712
+|     |     |     |     |     |     |      Identifier 711..712 "a"
+|     |     |     |     |      WhiteSpace 712..713
+|     |     |     |     |     |      WhiteSpace 712..713 " "
+|     |     |     |     |      BoolOr 713..715
+|     |     |     |     |     |      BoolOr 713..715 "||"
+|     |     |     |     |      WhiteSpace 715..716
+|     |     |     |     |     |      WhiteSpace 715..716 " "
+|     |     |     |     |      BoolAnd 716..722
+|     |     |     |     |     |      ExpressionAtom 716..717
+|     |     |     |     |     |     |      Identifier 716..717
+|     |     |     |     |     |     |     |      Identifier 716..717 "b"
+|     |     |     |     |     |      WhiteSpace 717..718
+|     |     |     |     |     |     |      WhiteSpace 717..718 " "
+|     |     |     |     |     |      BoolAnd 718..720
+|     |     |     |     |     |     |      BoolAnd 718..720 "&&"
+|     |     |     |     |     |      WhiteSpace 720..721
+|     |     |     |     |     |     |      WhiteSpace 720..721 " "
+|     |     |     |     |     |      ExpressionAtom 721..722
+|     |     |     |     |     |     |      Identifier 721..722
+|     |     |     |     |     |     |     |      Identifier 721..722 "c"
+|     |      Semicolon 722..723
+|     |     |      Semicolon 722..723 ";"
+|     |      EndLine 723..724
+|     |     |      EndLine 723..724 "\n"
+|     |      WhiteSpace 724..728
+|     |     |      WhiteSpace 724..728 "    "
+|     |      CommentLine 728..761
+|     |     |      CommentLine 728..761 "// ternary (branches at || level)"
+|     |      EndLine 761..762
+|     |     |      EndLine 761..762 "\n"
+|     |      WhiteSpace 762..766
+|     |     |      WhiteSpace 762..766 "    "
+|     |      VarDecl 766..789
+|     |     |      VarKw 766..769
+|     |     |     |      VarKw 766..769 "var"
+|     |     |      WhiteSpace 769..770
+|     |     |     |      WhiteSpace 769..770 " "
+|     |     |      ComplexIdentifier 770..778
+|     |     |     |      Identifier 770..777
+|     |     |     |     |      Identifier 770..777 "ternary"
+|     |     |     |      WhiteSpace 777..778
+|     |     |     |     |      WhiteSpace 777..778 " "
+|     |     |      Assign 778..779
+|     |     |     |      Assign 778..779 "="
+|     |     |      WhiteSpace 779..780
+|     |     |     |      WhiteSpace 779..780 " "
+|     |     |      Expression 780..789
+|     |     |     |      TenaryConditional 780..789
+|     |     |     |     |      ExpressionAtom 780..781
+|     |     |     |     |     |      Identifier 780..781
+|     |     |     |     |     |     |      Identifier 780..781 "a"
+|     |     |     |     |      WhiteSpace 781..782
+|     |     |     |     |     |      WhiteSpace 781..782 " "
+|     |     |     |     |      MarkQuestion 782..783
+|     |     |     |     |     |      MarkQuestion 782..783 "?"
+|     |     |     |     |      WhiteSpace 783..784
+|     |     |     |     |     |      WhiteSpace 783..784 " "
+|     |     |     |     |      Expression 784..786
+|     |     |     |     |     |      ExpressionAtom 784..785
+|     |     |     |     |     |     |      Identifier 784..785
+|     |     |     |     |     |     |     |      Identifier 784..785 "b"
+|     |     |     |     |     |      WhiteSpace 785..786
+|     |     |     |     |     |     |      WhiteSpace 785..786 " "
+|     |     |     |     |      Colon 786..787
+|     |     |     |     |     |      Colon 786..787 ":"
+|     |     |     |     |      WhiteSpace 787..788
+|     |     |     |     |     |      WhiteSpace 787..788 " "
+|     |     |     |     |      Expression 788..789
+|     |     |     |     |     |      ExpressionAtom 788..789
+|     |     |     |     |     |     |      Identifier 788..789
+|     |     |     |     |     |     |     |      Identifier 788..789 "c"
+|     |      Semicolon 789..790
+|     |     |      Semicolon 789..790 ";"
+|     |      EndLine 790..791
+|     |     |      EndLine 790..791 "\n"
+|      RCurly 791..792
+|     |      RCurly 791..792 "}"

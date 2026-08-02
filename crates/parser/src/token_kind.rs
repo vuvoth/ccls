@@ -26,9 +26,16 @@ pub enum TokenKind {
     PragmaKw,
     #[token("circom")]
     Circom,
-    #[regex("2.[0-9].[0-9]")]
+    // Version used by `pragma circom <version>`; grammar form is N.N.N (e.g. 2.0.0, 2.1.12).
+    // Each component is one or more digits. Declared before `Number` so the longest match
+    // (`2.0.0`) wins over a bare numeric literal (`2`).
+    #[regex(r"[0-9]+\.[0-9]+\.[0-9]+")]
     Version,
     // Literals
+    // Hexadecimal literal (grammar terminal `0x[0-9A-Fa-f]+`). Declared before `Number` so the
+    // longest match wins: `0x1F` lexes as a single HexNumber, not Number `0` + Identifier `x1F`.
+    #[regex(r"0x[0-9A-Fa-f]+")]
+    HexNumber,
     #[regex("[0-9]+")]
     Number,
     #[regex("[$_]*[a-zA-Z][a-zA-Z0-9_$]*")]
@@ -241,6 +248,31 @@ pub enum TokenKind {
     __LAST,
 }
 
+/// Pratt binding powers (higher binds tighter). These mirror the precedence tiers of the
+/// official circom grammar (`lang.lalrpop`, `Expression0`..`Expression13`):
+///
+/// ```text
+/// postfix () [] .  >  prefix ! ~ -  >  **  >  * / \ %  >  + -  >  << >>
+///   >  &  >  ^  >  |  >  == != < > <= >=  >  &&  >  ||
+/// ```
+///
+/// All core circom infix operators are **left-associative**, so `infix()` returns
+/// `(lbp, lbp + 1)`; there are no right-associative infix operators in core circom.
+pub const BP_POSTFIX: u16 = 250;
+/// Prefix `!`/`~`/`-` sits between `**` (`BP_POWER`) and `*` (`BP_MUL`), so `-a ** b` parses as
+/// `-(a ** b)` and `-a * b` as `(-a) * b` (grammar tiers `Expression2`/`Expression3`/`Expression4`).
+pub const BP_PREFIX: u16 = 175;
+pub const BP_POWER: u16 = 181;
+pub const BP_MUL: u16 = 171;
+pub const BP_ADD: u16 = 161;
+pub const BP_SHIFT: u16 = 151;
+pub const BP_BIT_AND: u16 = 141;
+pub const BP_BIT_XOR: u16 = 131;
+pub const BP_BIT_OR: u16 = 121;
+pub const BP_CMP: u16 = 111;
+pub const BP_BOOL_AND: u16 = 101;
+pub const BP_BOOL_OR: u16 = 91;
+
 impl From<u16> for TokenKind {
     #[inline]
     fn from(d: u16) -> TokenKind {
@@ -273,101 +305,70 @@ impl From<TokenKind> for rowan::SyntaxKind {
 impl TokenKind {
     // a + 10 --> a and 10 are literals
     pub fn is_literal(self) -> bool {
-        matches!(self, Self::Number | Self::Identifier)
+        matches!(self, Self::Number | Self::HexNumber | Self::Identifier)
     }
 
-    // these tokens have the lowest priority
-    // <identifier1> infix_operator <identifier2>
-    // eg: a + b --> + is an infix token
+    // Infix binding powers `(lbp, rbp)`. Returns `None` for non-infix tokens.
+    //
+    // The ladder follows the official circom grammar (lang.lalrpop Expression4..Expression12).
+    // Notably bitwise operators bind TIGHTER than comparisons (e.g. `a & b == c` parses as
+    // `(a & b) == c`), and `**` is left-associative. Every operator is left-associative, hence
+    // `rbp = lbp + 1`.
+    //
+    // NOTE: comma is intentionally NOT an infix operator here — in circom it is only a separator
+    // in argument/tuple lists, never an expression operator.
     pub fn infix(self) -> Option<(u16, u16)> {
-        match self {
-            // arithmetic operators
-            Self::Power => Some((99, 100)),
-            Self::Mul | Self::Div | Self::IntDiv | Self::Mod => Some((94, 95)),
-            Self::Add | Self::Sub => Some((89, 90)),
-            // shift bitwise operators
-            Self::ShiftL | Self::ShiftR => Some((84, 85)),
-            // relational operators
-            Self::LessThan
+        let lbp = match self {
+            Self::Power => BP_POWER,
+            Self::Mul | Self::Div | Self::IntDiv | Self::Mod => BP_MUL,
+            Self::Add | Self::Sub => BP_ADD,
+            Self::ShiftL | Self::ShiftR => BP_SHIFT,
+            Self::BitAnd => BP_BIT_AND,
+            Self::BitXor => BP_BIT_XOR,
+            Self::BitOr => BP_BIT_OR,
+            Self::Equal
+            | Self::NotEqual
+            | Self::LessThan
             | Self::GreaterThan
             | Self::LessThanAndEqual
-            | Self::GreaterThanAndEqual => Some((79, 80)),
-            Self::Equal | Self::NotEqual => Some((74, 75)),
-            // other bitwise operators
-            Self::BitAnd => Some((69, 70)),
-            Self::BitXor => Some((64, 65)), // exclusive or
-            Self::BitOr => Some((59, 60)),
-            // boolean operators
-            Self::BoolAnd => Some((54, 55)),
-            Self::BoolOr => Some((49, 50)),
-            // ----------
-            // TODO: how about conditional operation ( ? : )
-            // associativity: right to left [ a ? b : c --> ??? ]
-
-            // ----------
-            // associativity: right to left [ a = b = c --> a = (b = c) ]
-            // DO NOT CONSIDER ASSIGMENT OPERATORS AS INFIX TOKENS
-            /*
-            // assignment operators
-            Self::Assign
-            // signal assigment operators
-            | Self::EqualSignal
-            | Self::LAssignSignal
-            | Self::LAssignContraintSignal
-            | Self::RAssignSignal
-            | Self::RAssignConstraintSignal
-            // bitwise asignment operators
-            | Self::BitOrAssign
-            | Self::BitXorAssign
-            | Self::BitAndAssign
-            | Self::ShiftLAssign
-            | Self::ShiftRAssign
-            // arithmetic asignament operators
-            | Self::AddAssign
-            | Self::SubAssign
-            | Self::MulAssign
-            | Self::DivAssign
-            | Self::IntDivAssign
-            | Self::ModAssign
-            | Self::PowerAssign => Some((44, 45)),
-            */
-            // TODO: how about comma (expression separator)
-            Self::Comma => Some((39, 40)),
-            // not an infix operator
-            _ => None,
-        }
+            | Self::GreaterThanAndEqual => BP_CMP,
+            Self::BoolAnd => BP_BOOL_AND,
+            Self::BoolOr => BP_BOOL_OR,
+            _ => return None,
+        };
+        Some((lbp, lbp + 1))
     }
 
     // priority: post > pre > in
     // associativity: right to left [ --!a --> --(!a) ]
     // prefix_operator <literal>
-    // eg: -10, !a, ++a, --a
+    // eg: -10, !a. Note: circom only allows prefix `! ~ -` (grammar ParseExpressionPrefixOpcode);
+    // unary `+` and prefix `++`/`--` are NOT valid circom.
     pub fn prefix(self) -> Option<u16> {
         match self {
-            Self::UnitDec | Self::UnitInc | Self::Sub | Self::Add | Self::Not | Self::BitNot => {
-                Some(200)
-            }
-
+            Self::Not | Self::BitNot | Self::Sub => Some(BP_PREFIX),
             _ => None,
         }
     }
 
     // these tokens have the highest priority
     // <literal> postfix_operator
-    // eg: a[10], b++, c.att1
+    // eg: a[10], b++, c.att1. In circom `++`/`--` are statement substitutions, not expression
+    // postfix operators, so expression postfix is only call `()`, index `[]`, member `.`.
     pub fn postfix(self) -> Option<u16> {
         match self {
-            Self::LParen // function call
-            | Self::LBracket // array subscript
-            | Self::Dot // attribute access
-            | Self::UnitDec | Self::UnitInc => Some(300),
-
+            Self::LParen | Self::LBracket | Self::Dot => Some(BP_POSTFIX),
             _ => None,
         }
     }
 
     pub fn is_declaration_kw(self) -> bool {
-        matches!(self, Self::VarKw | Self::ComponentKw | Self::SignalKw)
+        matches!(
+            self,
+            Self::VarKw | Self::ComponentKw | Self::SignalKw
+            // `input signal` / `output signal` also start a signal declaration
+            | Self::InputKw | Self::OutputKw
+        )
     }
 
     pub fn is_assign_token(self) -> bool {

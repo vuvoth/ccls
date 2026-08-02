@@ -1,6 +1,6 @@
 ---
 source: crates/syntax/src/syntax.rs
-expression: "crate :: view_syntax :: view_ast(& syntax)"
+expression: view_ast(& syntax)
 ---
  Block 0..533
 |      LCurly 0..1
@@ -150,13 +150,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      WhiteSpace 194..195
 |     |     |     |      WhiteSpace 194..195 " "
 |     |     |      AssignStatement 195..198
-|     |     |     |      Expression 195..198
-|     |     |     |     |      UnitInc 195..198
-|     |     |     |     |     |      ExpressionAtom 195..196
-|     |     |     |     |     |     |      Identifier 195..196
-|     |     |     |     |     |     |     |      Identifier 195..196 "i"
-|     |     |     |     |     |      UnitInc 196..198
-|     |     |     |     |     |     |      UnitInc 196..198 "++"
+|     |     |     |      Expression 195..196
+|     |     |     |     |      ExpressionAtom 195..196
+|     |     |     |     |     |      Identifier 195..196
+|     |     |     |     |     |     |      Identifier 195..196 "i"
+|     |     |     |      UnitInc 196..198
+|     |     |     |     |      UnitInc 196..198 "++"
 |     |     |      RParen 198..199
 |     |     |     |      RParen 198..199 ")"
 |     |     |      Block 199..257
@@ -348,13 +347,12 @@ expression: "crate :: view_syntax :: view_ast(& syntax)"
 |     |     |      WhiteSpace 366..367
 |     |     |     |      WhiteSpace 366..367 " "
 |     |     |      AssignStatement 367..370
-|     |     |     |      Expression 367..370
-|     |     |     |     |      UnitInc 367..370
-|     |     |     |     |     |      ExpressionAtom 367..368
-|     |     |     |     |     |     |      Identifier 367..368
-|     |     |     |     |     |     |     |      Identifier 367..368 "i"
-|     |     |     |     |     |      UnitInc 368..370
-|     |     |     |     |     |     |      UnitInc 368..370 "++"
+|     |     |     |      Expression 367..368
+|     |     |     |     |      ExpressionAtom 367..368
+|     |     |     |     |     |      Identifier 367..368
+|     |     |     |     |     |     |      Identifier 367..368 "i"
+|     |     |     |      UnitInc 368..370
+|     |     |     |     |      UnitInc 368..370 "++"
 |     |     |      RParen 370..371
 |     |     |     |      RParen 370..371 ")"
 |     |     |      Block 371..481

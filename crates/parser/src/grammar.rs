@@ -12,38 +12,41 @@ mod pragma;
 mod statement;
 mod template;
 
-/**
- * parse circom program
- */
+// Top-level program parsing.
 
 pub mod entry {
 
-    use crate::token_kind::TokenKind;
-
     use super::*;
 
+    /// Parse a whole circom program (grammar: `ParseAst`).
+    ///
+    /// Structure: `pragma* include* (template | function | main)*`. Pragmas precede includes,
+    /// which precede definitions, mirroring the official grammar. Trivia between constructs is
+    /// skipped by `Parser::current`/`at`. An out-of-order or unexpected token is recovered with an
+    /// error rather than panicking.
     pub fn circom_program(p: &mut Parser) {
         let m = p.open();
 
-        while p.at_any(&[
-            TokenKind::BlockComment,
-            TokenKind::CommentLine,
-            TokenKind::EndLine,
-            TokenKind::WhiteSpace,
-        ]) {
-            p.skip();
+        // pragma*
+        while p.at(PragmaKw) {
+            pragma::pragma(p);
         }
 
+        // include*
+        while p.at(IncludeKw) {
+            include::include(p);
+        }
+
+        // definitions* + optional main component
         while !p.eof() {
             match p.current() {
-                PragmaKw => pragma::pragma(p),
                 TemplateKw => template::template(p),
-                IncludeKw => include::include(p),
-                ComponentKw => main_component::main_component(p),
                 FunctionKw => function::function_parse(p),
-                _ => p.advance_with_error("invalid token"),
+                ComponentKw => main_component::main_component(p),
+                other => p.advance_with_error(&format!("invalid top-level token {:?}", other)),
             }
         }
+
         p.close(m, CircomProgram);
     }
 

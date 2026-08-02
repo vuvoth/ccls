@@ -163,23 +163,26 @@ fn return_statement(p: &mut Parser) {
     p.close(open_marker, ReturnStatement);
 }
 
-/*
-<left-expression> <assignment-token> <right-expression>
-optional: <assignment-token> <right-expression>
-eg: out[1] <== in[0] + in[2]
-*/
+/// Substitution statement (grammar: `ParseSubstitution`).
+///
+/// Forms:
+/// - `<expr> (= | <-- | <== | === | --> | ==> | += | -= | ...) <expr>` — assignment / reverse
+///   signal assignment / constraint equality / compound assignment.
+/// - `<var> ++` / `<var> --` — postfix increment/decrement (these are statement-level in circom,
+///   NOT expression postfix operators).
 fn assignment_statement(p: &mut Parser) {
     let open_marker = p.open();
 
-    // left expression
+    // left-hand expression / variable
     expression(p);
 
-    // assign part
     if p.at_assign_token() {
+        // <left> <assign-op> <right>
         p.advance();
-
-        // right expression
         expression(p);
+    } else if p.at(UnitInc) || p.at(UnitDec) {
+        // <var> ++ / <var> --  (postfix; prefix ++/-- is illegal in circom and errors elsewhere)
+        p.advance();
     }
 
     p.close(open_marker, AssignStatement);

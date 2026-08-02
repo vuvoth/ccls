@@ -4,13 +4,8 @@ use crate::{
     event::Event, grammar::entry::Scope, input::Input, output::Output, token_kind::TokenKind,
 };
 
-pub struct Context {
-    pub r_curly_count: i32,
-}
-
 pub struct Parser<'a> {
     pub(crate) input: &'a Input<'a>,
-    pub context: Context,
     pos: usize,
     fuel: Cell<u32>,
     pub(crate) events: Vec<Event>,
@@ -32,7 +27,7 @@ impl<'a> Parser<'a> {
         loop {
             let kind = self.input.kind_of(self.pos);
 
-            if kind.is_trivial() == false {
+            if !kind.is_trivial() {
                 return kind;
             }
 
@@ -43,7 +38,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn open(&mut self) -> Marker {
-        if self.events.len() > 0 {
+        if !self.events.is_empty() {
             self.wrap_trivial_tokens();
         }
 
@@ -122,27 +117,22 @@ impl<'a> Parser<'a> {
         Self {
             input,
             pos: 0,
-            context: Context { r_curly_count: 0 },
             fuel: Cell::new(256),
             events: Vec::new(),
         }
-    }
-
-    pub fn inc_rcurly(&mut self) {
-        self.context.r_curly_count += 1;
-    }
-
-    pub fn dec_rcurly(&mut self) {
-        self.context.r_curly_count -= 1;
     }
 
     pub fn current(&mut self) -> TokenKind {
         self.wrap_trivial_tokens()
     }
 
-    pub fn next(&mut self) -> TokenKind {
+    /// Advance one token and return its kind (named `bump` to avoid confusion with
+    /// `Iterator::next`). Returns `TokenKind::EOF` once past the end of input.
+    pub fn bump(&mut self) -> TokenKind {
         if self.fuel.get() == 0 {
-            panic!("parser is stuck");
+            // Fuel exhaustion means the parser consumed 256 tokens without emitting an event — a
+            // grammar bug (e.g. a loop that never advances), not user input.
+            panic!("parser made no progress (fuel exhausted); likely a grammar bug");
         }
         self.fuel.set(self.fuel.get() - 1);
         if self.pos < self.input.size() {
@@ -178,7 +168,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn skip(&mut self) {
-        self.next();
+        self.bump();
     }
 
     pub fn skip_if(&mut self, kinds: &[TokenKind]) {

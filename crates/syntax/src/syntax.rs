@@ -137,4 +137,24 @@ mod tests {
             Scope::CircomProgram
         );
     }
+
+    #[test]
+    fn precedence_test() {
+        // Exercises the Pratt precedence/associativity rewrite (left-assoc subtraction/division,
+        // bitwise tighter than comparisons, `**` left-assoc, prefix `-` looser than `**`, ternary).
+        test_syntax!(
+            "/src/test_files/happy/precedence.circom",
+            Scope::Block
+        );
+    }
+
+    #[test]
+    fn signal_header_test() {
+        // Exercises both signal-header keyword orders (`signal input` / `input signal`) and
+        // optional tag lists (`{t1}`, `{t1, t2}`).
+        test_syntax!(
+            "/src/test_files/happy/signal_header.circom",
+            Scope::Block
+        );
+    }
 }
