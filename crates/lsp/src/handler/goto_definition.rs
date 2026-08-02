@@ -357,7 +357,11 @@ mod tests {
         // `o` occurrences in main: [0]=the `Lib()().o` field.
         let locs = jump(&state, &main_url, main_src, "o", 0);
 
-        assert_eq!(locs.len(), 1, "cross-file anonymous member-field jump: {locs:?}");
+        assert_eq!(
+            locs.len(),
+            1,
+            "cross-file anonymous member-field jump: {locs:?}"
+        );
         assert!(
             locs[0].uri.to_file_path().unwrap().ends_with("lib.circom"),
             "jumps into the included lib: {}",
