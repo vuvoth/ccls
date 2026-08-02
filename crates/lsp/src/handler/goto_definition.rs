@@ -244,4 +244,134 @@ mod tests {
 
         let _ = fs::remove_dir_all(&base);
     }
+
+    /// Goto-definition on a **named** component member field (`c.out`) jumps to the `out` signal
+    /// declaration in the receiver's template — the type-inference path the flat resolver omits.
+    #[test]
+    fn member_field_named_jump_test() {
+        let source = "pragma circom 2.0.0;\ntemplate Multiplier2() {\n    signal input in[2];\n    signal output out;\n    out <== in[0] * in[1];\n}\ntemplate Main() {\n    component c = Multiplier2();\n    signal output res;\n    res <== c.out;\n}\n";
+        let url = Url::from_file_path("/tmp/mf_named.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // `out` occurrences: [0]=decl, [1]=usage in Multiplier2, [2]=the `c.out` field.
+        let locs = jump(&state, &url, source, "out", 2);
+
+        assert_eq!(locs.len(), 1, "named member-field jump: {locs:?}");
+        assert_eq!(locs[0].uri, url, "jumps within the same file");
+        // The `signal output out;` declaration is on line 4 (0-indexed 3).
+        assert_eq!(
+            locs[0].range.start.line, 3,
+            "lands on the out signal: {locs:?}"
+        );
+    }
+
+    /// Goto-definition on an **anonymous** component member field (`Multiplier2()([a, b]).out`)
+    /// jumps to the `out` signal — the reported case. The receiver is a `Call` (no named component
+    /// variable), so the template name comes from the callee.
+    #[test]
+    fn member_field_anonymous_jump_test() {
+        let source = "pragma circom 2.0.0;\ntemplate Multiplier2() {\n    signal input in[2];\n    signal output out;\n    out <== in[0] * in[1];\n}\ntemplate Main() {\n    signal input a;\n    signal input b;\n    signal output c;\n    c <== Multiplier2()([a, b]).out;\n}\n";
+        let url = Url::from_file_path("/tmp/mf_anon.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // `out` occurrences: [0]=decl, [1]=usage in Multiplier2, [2]=the anonymous `.out` field.
+        let locs = jump(&state, &url, source, "out", 2);
+
+        assert_eq!(locs.len(), 1, "anonymous member-field jump: {locs:?}");
+        assert_eq!(locs[0].uri, url, "jumps within the same file");
+        assert_eq!(
+            locs[0].range.start.line, 3,
+            "lands on the out signal: {locs:?}"
+        );
+    }
+
+    /// Goto-definition on a **named** member field where the template lives in an `include`d file
+    /// jumps across the include to the signal declaration.
+    #[test]
+    fn member_field_cross_file_jump_test() {
+        use std::fs;
+
+        let base = std::env::temp_dir().join(format!("ccls_mf_xfile_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(
+            ws.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal output o;\n}\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate Main() {\n    component c = Lib();\n    signal output res;\n    res <== c.o;\n}\n";
+        let main_path = ws.join("main.circom");
+        fs::write(&main_path, main_src).unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+        state.source_db.load_include(&main_url, "lib.circom");
+
+        // `o` occurrences in main: [0]=the `c.o` field (lib's `o` is in another file).
+        let locs = jump(&state, &main_url, main_src, "o", 0);
+
+        assert_eq!(locs.len(), 1, "cross-file member-field jump: {locs:?}");
+        assert!(
+            locs[0].uri.to_file_path().unwrap().ends_with("lib.circom"),
+            "jumps into the included lib: {}",
+            locs[0].uri
+        );
+        // lib's `signal output o;` is on line 3 (0-indexed 2).
+        assert_eq!(
+            locs[0].range.start.line, 2,
+            "lands on the lib signal: {locs:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Goto-definition on an **anonymous** member field whose template lives in an `include`d file
+    /// (`Lib()().o`) jumps across the include to the signal. Combines the anonymous callee
+    /// extraction with cross-file template resolution — both exercised only separately above.
+    #[test]
+    fn member_field_anonymous_cross_file_jump_test() {
+        use std::fs;
+
+        let base = std::env::temp_dir().join(format!("ccls_mfax_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(
+            ws.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal output o;\n}\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate Main() {\n    signal output res;\n    res <== Lib()().o;\n}\n";
+        let main_path = ws.join("main.circom");
+        fs::write(&main_path, main_src).unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+        state.source_db.load_include(&main_url, "lib.circom");
+
+        // `o` occurrences in main: [0]=the `Lib()().o` field.
+        let locs = jump(&state, &main_url, main_src, "o", 0);
+
+        assert_eq!(
+            locs.len(),
+            1,
+            "cross-file anonymous member-field jump: {locs:?}"
+        );
+        assert!(
+            locs[0].uri.to_file_path().unwrap().ends_with("lib.circom"),
+            "jumps into the included lib: {}",
+            locs[0].uri
+        );
+        assert_eq!(
+            locs[0].range.start.line, 2,
+            "lands on the lib signal: {locs:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
 }

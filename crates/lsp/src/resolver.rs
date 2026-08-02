@@ -15,7 +15,7 @@ use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::TextSize;
 
-use syntax::abstract_syntax_tree::AstCircomProgram;
+use syntax::abstract_syntax_tree::{AstCall, AstCircomProgram, AstComponentCall};
 use syntax::syntax_node::{SyntaxNode, SyntaxToken};
 
 use crate::semantic::{Symbol, SymbolTable};
@@ -53,6 +53,46 @@ pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> 
 pub fn identifier_at(ast: &AstCircomProgram, offset: TextSize) -> Option<SyntaxToken> {
     let token = token_at_offset(ast, offset)?;
     (token.kind() == TokenKind::Identifier).then_some(token)
+}
+
+/// The enclosing `ComponentCall` iff `token` is its **field** — the `Identifier` *node* directly
+/// under the `ComponentCall` (e.g. `out` in `c.out` or `T()(...).out`). An identifier token is
+/// wrapped in an `Identifier` node, so the field is the one whose wrapping node's parent is the
+/// `ComponentCall`; the receiver/arg identifiers sit deeper (under `ExpressionAtom`/`ArrayQuery`/
+/// `Call`/`InlineArray`) and are rejected. Shared by goto-definition and hover to route
+/// member-access fields to `resolve_member`.
+pub(crate) fn component_field(token: &SyntaxToken) -> Option<AstComponentCall> {
+    if token.kind() != TokenKind::Identifier {
+        return None;
+    }
+    let parent = token.parent()?;
+    let wrapping = if parent.kind() == TokenKind::Identifier {
+        parent.parent()?
+    } else {
+        parent
+    };
+    AstComponentCall::cast(wrapping)
+}
+
+/// The receiver expression node of a `ComponentCall` (`obj` in `obj.field`): its first child node
+/// (document order puts the receiver before the field). For a named receiver this is an
+/// `ExpressionAtom`/`ArrayQuery`; for an anonymous `T()(...)` it is the outer `Call`.
+pub(crate) fn receiver_of(call: &AstComponentCall) -> Option<SyntaxNode> {
+    call.syntax().children().next()
+}
+
+/// The leftmost `Identifier` token in `node` (document order): the callee of an anonymous
+/// instantiation (`T` in `T()(...)`), or the receiver name (`c` in `c.x`).
+pub(crate) fn first_identifier(node: &SyntaxNode) -> Option<SyntaxToken> {
+    node.descendants_with_tokens()
+        .filter_map(|e| e.into_token())
+        .find(|t| t.kind() == TokenKind::Identifier)
+}
+
+/// `true` if `node` is, or contains, a `Call` node — i.e. the receiver is an anonymous component
+/// instantiation `T()(...)` rather than a named component.
+pub(crate) fn contains_call(node: &SyntaxNode) -> bool {
+    AstCall::can_cast(node.kind()) || node.descendants().any(|n| AstCall::can_cast(n.kind()))
 }
 
 /// A resolved reference — what the token means and where defined (one declaration per symbol;

@@ -10,7 +10,7 @@ use anyhow::Result;
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};
 
 use crate::global_state::GlobalState;
-use crate::resolver::{identifier_at, SymbolKind};
+use crate::resolver::{component_field, identifier_at, SymbolKind};
 use crate::source_db::SourceDatabase;
 
 /// Entry point for the `textDocument/hover` request. Returns `None` (no hover) when the cursor
@@ -25,7 +25,14 @@ pub fn handle(state: &GlobalState, params: HoverParams) -> Result<Option<Hover>>
     let Some(token) = identifier_at(&ctx.ast, ctx.offset) else {
         return Ok(None);
     };
-    let Some((def_id, sym)) = state.resolve_use(&ctx.file_db, &token).into_iter().next() else {
+    // A component member-access field (`c.x` / `T()(...).x`) resolves via type inference; everything
+    // else uses the flat name resolver.
+    let resolved = if component_field(&token).is_some() {
+        state.resolve_member(&ctx.file_db, &token)
+    } else {
+        state.resolve_use(&ctx.file_db, &token)
+    };
+    let Some((def_id, sym)) = resolved.into_iter().next() else {
         return Ok(None);
     };
 
@@ -74,7 +81,10 @@ fn kind_label(kind: SymbolKind) -> &'static str {
 mod tests {
     use lsp_types::{Position, Url};
 
+    use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
+    use parser::token_kind::TokenKind;
+    use syntax::syntax::syntax_tree;
 
     use super::handle;
     use lsp_types::{
@@ -85,6 +95,25 @@ mod tests {
         let mut state = GlobalState::new(Vec::new());
         state.source_db.set_document(url, source.to_string());
         state
+    }
+
+    /// LSP `Position` of the `occurrence`-th (0-indexed) `Identifier` token whose text is `name`.
+    fn position_of(source: &str, name: &str, occurrence: usize) -> Position {
+        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
+        let node = syntax_tree(source);
+        let mut count = 0;
+        for t in node
+            .descendants_with_tokens()
+            .filter_map(|e| e.into_token())
+        {
+            if t.kind() == TokenKind::Identifier && t.text() == name {
+                if count == occurrence {
+                    return file.position(t.text_range().start());
+                }
+                count += 1;
+            }
+        }
+        panic!("token {name}#{occurrence} not found");
     }
 
     /// The hover markdown value for the cursor's position, or `None`.
@@ -147,5 +176,20 @@ mod tests {
 
         // Cursor on `template` (a keyword — identifier_at returns None).
         assert!(hover_value(&state, &url, Position::new(1, 1)).is_none());
+    }
+
+    /// Hover on an anonymous component's member field (`T()().out`) shows the signal declaration
+    /// from the template (the member-resolution path), not `None`.
+    #[test]
+    fn hover_member_field_anonymous_test() {
+        let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal output out;\n    out <== 0;\n}\ntemplate Main() {\n    signal output c;\n    c <== T()().out;\n}\n";
+        let url = Url::from_file_path("/tmp/hmem.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // `out` occurrences: [0]=decl, [1]=usage in T, [2]=the `.out` field.
+        let v = hover_value(&state, &url, position_of(source, "out", 2)).expect("hover present");
+        assert!(v.contains("**signal**"), "kind shown: {v}");
+        assert!(v.contains("`out`"), "name shown: {v}");
+        assert!(v.contains("signal output out"), "declaration shown: {v}");
     }
 }
