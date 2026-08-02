@@ -18,18 +18,17 @@
     "ZKP"
   ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.82.0"
   },
   "activationEvents": [
     "onLanguage:circom"
   ],
-  "main": "./out/main",
+  "main": "./out/extension",
   "contributes": {
     "languages": [
       {
         "id": "circom",
         "aliases": [
-          "circom",
           "circom"
         ],
         "extensions": [
@@ -62,42 +61,33 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run build-base -- --minify",
+    "vscode:prepublish": "bun build ./src/extension.ts --outdir=out --external=vscode --format=cjs --target=node --minify",
     "package": "vsce package -o circom-plus.vsix",
-    "build-base": "esbuild ./src/main.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node16",
-    "build": "npm run build-base -- --sourcemap",
-    "watch": "npm run build-base -- --sourcemap --watch",
+    "build": "bun build ./src/extension.ts --outdir=out --external=vscode --format=cjs --target=node --sourcemap=linked",
+    "watch": "bun build ./src/extension.ts --outdir=out --external=vscode --format=cjs --target=node --sourcemap=linked --watch",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint -c .eslintrc.js --ext ts ./src ./tests",
-    "lint:fix": "npm run lint -- --fix",
+    "lint": "eslint src",
     "typecheck": "tsc",
-    "pretest": "npm run typecheck && npm run build",
-    "test": "node ./out/tests/runTests.js"
+    "verify": "bun run typecheck && bun run lint && bun run build"
   },
   "dependencies": {
-    "@hpcc-js/wasm": "^2.13.0",
-    "@types/which": "^3.0.3",
-    "anser": "^2.1.1",
-    "d3": "^7.8.5",
-    "d3-graphviz": "^5.0.2",
-    "vscode-languageclient": "^8.1.0",
-    "which": "^4.0.0"
+    "vscode-languageclient": "^9.0.0",
+    "which": "^5.0.0"
   },
   "devDependencies": {
-    "@tsconfig/strictest": "^2.0.1",
-    "@types/node": "~16.11.7",
-    "@types/vscode": "~1.75",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "@vscode/test-electron": "^2.3.3",
-    "@vscode/vsce": "^2.19.0",
-    "esbuild": "^0.25.5",
-    "eslint": "^8.44.0",
-    "eslint-config-prettier": "^8.8.0",
-    "ovsx": "^0.8.2",
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20",
+    "@types/vscode": "^1.82",
+    "@types/which": "^3.0.4",
+    "@vscode/test-electron": "^2.5.0",
+    "@vscode/vsce": "^3.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "globals": "^15.0.0",
+    "ovsx": "^1.0.0",
     "prettier": "^3.0.0",
-    "tslib": "^2.6.0",
-    "typescript": "^5.1.6"
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0"
   }
 }
