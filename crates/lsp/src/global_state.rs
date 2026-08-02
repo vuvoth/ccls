@@ -146,7 +146,14 @@ impl GlobalState {
         if token.kind() == TokenKind::CircomString {
             return jump_to_lib(file_db, token, self.source_db.vfs());
         }
-        self.resolve_use(file_db, token)
+        // A component member-access field (`c.x` / `T()(...).x`) resolves via type inference
+        // (`resolve_member`), not the flat name resolver (which returns empty for fields by design).
+        let resolved = if resolver::component_field(token).is_some() {
+            self.resolve_member(file_db, token)
+        } else {
+            self.resolve_use(file_db, token)
+        };
+        resolved
             .into_iter()
             .map(|(id, s)| Location::new(self.source_db.file_db(id).file_path.clone(), s.def_range))
             .collect()
@@ -210,6 +217,62 @@ impl GlobalState {
             }
         }
         out
+    }
+
+    /// Resolve a component member-access **field** token (`c.x` / `T()(...).x`) to its signal
+    /// declaration in the receiver's template — the type-inference path the flat [`resolve`]
+    /// deliberately omits. Returns the file-tagged signal declaration(s), or empty if the receiver
+    /// isn't a (instantiated) component, its template isn't found, or the field isn't one of its
+    /// signals. Shared by goto-definition and hover. References/rename of fields are intentionally
+    /// NOT handled here (they need per-template occurrence search) and remain no-ops.
+    pub(crate) fn resolve_member(
+        &self,
+        origin: &FileDB,
+        field: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let Some(call) = resolver::component_field(field) else {
+            return Vec::new();
+        };
+        let Some(receiver) = resolver::receiver_of(&call) else {
+            return Vec::new();
+        };
+        let Some(recv_tok) = resolver::first_identifier(&receiver) else {
+            return Vec::new();
+        };
+
+        // Template name: for an anonymous instantiation the receiver's callee IS the template; for
+        // a named component, look the receiver up as a component to get its instantiated template.
+        let table = self.source_db.symbol_table(origin.file_id);
+        let template_name = if resolver::contains_call(&receiver) {
+            recv_tok.text().to_string()
+        } else {
+            match table.component_type_at(recv_tok.text_range().start(), recv_tok.text()) {
+                Some(t) => t.to_string(),
+                None => return Vec::new(),
+            }
+        };
+
+        let Some(template_file) = self.resolve_template_file(origin, &template_name) else {
+            return Vec::new();
+        };
+        let field_name = field.text();
+        self.source_db
+            .symbol_table(template_file)
+            .members_of(&template_name)
+            .into_iter()
+            .filter(|s| s.name == field_name)
+            .map(|s| {
+                (
+                    template_file,
+                    ResolvedSymbol {
+                        kind: s.kind,
+                        name: s.name.clone(),
+                        def_range: s.def_range,
+                        decl_range: s.decl_range,
+                    },
+                )
+            })
+            .collect()
     }
 
     /// The file defining top-level `name`: `origin` if it declares it, else the first loaded
