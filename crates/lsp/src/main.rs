@@ -22,7 +22,8 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
 
     let (connection, io_threads) = Connection::stdio();
 
-    let server_capabilities = serde_json::to_value(server_capabilities()).unwrap();
+    let server_capabilities =
+        serde_json::to_value(server_capabilities()).expect("ServerCapabilities is serializable");
     let initialization_params = match connection.initialize(server_capabilities) {
         Ok(it) => it,
         Err(e) => {

@@ -297,4 +297,28 @@ mod tests {
             "a same-named symbol in another file must not be touched"
         );
     }
+
+    /// Renaming a loop variable (`var i` in `for (var i = …; i < N; i++)`) finds all occurrences:
+    /// the declaration in the for-init, the condition `i < N`, the increment `i++`, and usages in
+    /// the loop body. Regression for the `find_children` → `descendants` fix (loop vars were
+    /// previously not indexed).
+    #[test]
+    fn rename_loop_variable_test() {
+        let source = "pragma circom 2.0.0;\ntemplate Loop() {\n    signal input in[4];\n    signal output out;\n    var acc = 0;\n    for (var i = 0; i < 4; i++) {\n        acc += in[i];\n    }\n    out <== acc;\n}\n";
+        let url = Url::from_file_path("/tmp/loop.circom").unwrap();
+        let state = state_with(&url, source);
+
+        // Cursor on `i` in `i < 4` (the condition — the 2nd `i` occurrence).
+        let pos = position_of(source, "i", 1);
+        let edits = rename(&state, &url, pos, "idx")
+            .unwrap()
+            .changes
+            .unwrap()
+            .remove(&url)
+            .unwrap();
+
+        // All four `i` occurrences: declaration, condition, increment, body (`in[i]`).
+        assert_eq!(edits.len(), 4, "all loop-variable occurrences: {edits:?}");
+        assert!(edits.iter().all(|e| e.new_text == "idx"));
+    }
 }

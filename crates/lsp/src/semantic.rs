@@ -35,6 +35,10 @@ pub enum SymbolKind {
 /// One declaration. One symbol == one definition [`Range`] (the former `Vec<Range>` merge was an
 /// artifact of `hash(text)` collapsing same-named decls into one id).
 ///
+/// `def_range` is the **identifier** (the name token) — used by goto-definition/rename/references
+/// so they jump to the name, not the start of the statement. `decl_range` is the **whole
+/// declaration** (statement/unit) — used by hover to show the full declaration text.
+///
 /// `type_name` is set only for [`SymbolKind::Component`] — the name of the template it instantiates
 /// (`component c = T();` → `Some("T")`); it's the component's "type" used by member completion.
 #[derive(Debug, Clone)]
@@ -42,6 +46,7 @@ pub struct Symbol {
     pub kind: SymbolKind,
     pub name: String,
     pub def_range: Range,
+    pub decl_range: Range,
     pub type_name: Option<String>,
 }
 
@@ -77,11 +82,12 @@ impl SymbolTable {
             let Some(name) = template.identifier() else {
                 continue;
             };
-            let name = name.syntax().text().to_string();
+            let name_text = name.syntax().text().to_string();
             table.index_unit(
                 file_db,
                 template.syntax(),
-                &name,
+                name.syntax(),
+                &name_text,
                 SymbolKind::Template,
                 template.parameter_list(),
                 template.statements(),
@@ -92,11 +98,12 @@ impl SymbolTable {
             let Some(name) = function.identifier() else {
                 continue;
             };
-            let name = name.syntax().text().to_string();
+            let name_text = name.syntax().text().to_string();
             table.index_unit(
                 file_db,
                 function.syntax(),
-                &name,
+                name.syntax(),
+                &name_text,
                 SymbolKind::Function,
                 function.parameter_list(),
                 function.statements(),
@@ -107,11 +114,12 @@ impl SymbolTable {
             let Some(name) = bus.identifier() else {
                 continue;
             };
-            let name = name.syntax().text().to_string();
+            let name_text = name.syntax().text().to_string();
             table.index_unit(
                 file_db,
                 bus.syntax(),
-                &name,
+                name.syntax(),
+                &name_text,
                 SymbolKind::Bus,
                 bus.parameter_list(),
                 bus.statements(),
@@ -125,17 +133,20 @@ impl SymbolTable {
     /// `definition_body` grammar (`name (params)? block`), so their indexing is identical apart
     /// from `kind` and whether signal declarations are allowed (templates and buses have signals;
     /// functions do not). Centralizing it keeps the three from drifting.
+    #[allow(clippy::too_many_arguments)]
     fn index_unit(
         &mut self,
         file_db: &FileDB,
         unit_syntax: &SyntaxNode,
+        name_syntax: &SyntaxNode,
         name: &str,
         kind: SymbolKind,
         params: Option<AstParameterList>,
         statements: Option<AstStatementList>,
     ) {
         let scope_range = unit_syntax.text_range();
-        let def_range = file_db.range(unit_syntax);
+        let decl_range = file_db.range(unit_syntax);
+        let def_range = file_db.range(name_syntax);
         // Templates and buses carry signal declarations in their bodies; functions do not.
         let with_signals = kind != SymbolKind::Function;
 
@@ -146,6 +157,7 @@ impl SymbolTable {
                 kind,
                 name: name.to_string(),
                 def_range,
+                decl_range,
                 type_name: None,
             });
 
@@ -240,12 +252,14 @@ fn index_decl<N: Named>(
     kind: SymbolKind,
     decl: &N,
 ) {
+    let decl_range = file_db.range(decl.syntax());
     if let Some(id) = decl.identifier() {
         let name = id.syntax().text().to_string();
         symbols.entry(name.clone()).or_default().push(Symbol {
             kind,
             name,
-            def_range: file_db.range(decl.syntax()),
+            def_range: file_db.range(id.syntax()),
+            decl_range,
             type_name: None,
         });
         return;
@@ -257,6 +271,7 @@ fn index_decl<N: Named>(
             kind,
             name,
             def_range: file_db.range(id.syntax()),
+            decl_range,
             type_name: None,
         });
     }
@@ -273,53 +288,78 @@ fn index_params(
     };
     for param in params.parameters() {
         let name = param.syntax().text().to_string();
+        let range = file_db.range(param.syntax());
         symbols.entry(name.clone()).or_default().push(Symbol {
             kind: SymbolKind::Param,
             name,
-            def_range: file_db.range(param.syntax()),
+            def_range: range,
+            decl_range: range,
             type_name: None,
         });
     }
 }
 
 /// Index input/output/intermediate signal declarations (templates only) as
-/// [`SymbolKind::Signal`].
+/// [`SymbolKind::Signal`]. Uses `descendants` (not `find_children`) so signals inside nested blocks
+/// (`for`/`if`/`while` bodies) are also indexed.
 fn index_signals(
     symbols: &mut HashMap<String, Vec<Symbol>>,
     file_db: &FileDB,
     statements: &AstStatementList,
 ) {
-    for signal in statements.find_children::<AstInputSignalDecl>() {
+    for signal in statements
+        .syntax()
+        .descendants()
+        .filter_map(AstInputSignalDecl::cast)
+    {
         index_decl(symbols, file_db, SymbolKind::Signal, &signal);
     }
-    for signal in statements.find_children::<AstOutputSignalDecl>() {
+    for signal in statements
+        .syntax()
+        .descendants()
+        .filter_map(AstOutputSignalDecl::cast)
+    {
         index_decl(symbols, file_db, SymbolKind::Signal, &signal);
     }
-    for signal in statements.find_children::<AstSignalDecl>() {
+    for signal in statements
+        .syntax()
+        .descendants()
+        .filter_map(AstSignalDecl::cast)
+    {
         index_decl(symbols, file_db, SymbolKind::Signal, &signal);
     }
 }
 
-/// Index `var` declarations as [`SymbolKind::Variable`].
+/// Index `var` declarations as [`SymbolKind::Variable`]. Uses `descendants` so loop variables
+/// (`for (var i = …)`) and vars inside nested blocks are also indexed.
 fn index_vars(
     symbols: &mut HashMap<String, Vec<Symbol>>,
     file_db: &FileDB,
     statements: &AstStatementList,
 ) {
-    for var in statements.find_children::<AstVarDecl>() {
+    for var in statements
+        .syntax()
+        .descendants()
+        .filter_map(AstVarDecl::cast)
+    {
         index_decl(symbols, file_db, SymbolKind::Variable, &var);
     }
 }
 
 /// Index `component` declarations as [`SymbolKind::Component`], recording the instantiated template
 /// name (`component c = T();` → `type_name = Some("T")`) for member completion. Components have no
-/// tuple form in circom, so the symbol is built directly (not via `index_decl`).
+/// tuple form in circom, so the symbol is built directly (not via `index_decl`). Uses `descendants`
+/// so components inside nested blocks are also indexed.
 fn index_components(
     symbols: &mut HashMap<String, Vec<Symbol>>,
     file_db: &FileDB,
     statements: &AstStatementList,
 ) {
-    for component in statements.find_children::<AstComponentDecl>() {
+    for component in statements
+        .syntax()
+        .descendants()
+        .filter_map(AstComponentDecl::cast)
+    {
         let Some(id) = component.identifier() else {
             continue;
         };
@@ -332,7 +372,8 @@ fn index_components(
         symbols.entry(name.clone()).or_default().push(Symbol {
             kind: SymbolKind::Component,
             name,
-            def_range: file_db.range(component.syntax()),
+            def_range: file_db.range(id.syntax()),
+            decl_range: file_db.range(component.syntax()),
             type_name,
         });
     }

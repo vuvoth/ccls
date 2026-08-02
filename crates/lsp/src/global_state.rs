@@ -209,6 +209,7 @@ impl GlobalState {
                             kind: sym.kind,
                             name: sym.name.clone(),
                             def_range: sym.def_range,
+                            decl_range: sym.decl_range,
                         },
                     ));
                 }

@@ -29,10 +29,11 @@ pub fn handle(state: &GlobalState, params: HoverParams) -> Result<Option<Hover>>
         return Ok(None);
     };
 
-    // The declaration's source text, sliced from the defining file via `def_range`.
+    // The declaration's source text, sliced from the defining file via `decl_range` (the whole
+    // declaration — `def_range` is just the identifier, which is too narrow for a useful hover).
     let def_db = state.source_db.file_db(def_id);
-    let start = u32::from(def_db.offset(sym.def_range.start)) as usize;
-    let end = u32::from(def_db.offset(sym.def_range.end)) as usize;
+    let start = u32::from(def_db.offset(sym.decl_range.start)) as usize;
+    let end = u32::from(def_db.offset(sym.decl_range.end)) as usize;
     let decl = def_db.text().get(start..end).unwrap_or_default();
     let value = format!(
         "**{}** `{}`\n\n```circom\n{}\n```",

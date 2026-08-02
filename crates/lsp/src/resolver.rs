@@ -64,6 +64,7 @@ pub struct ResolvedSymbol {
     pub kind: SymbolKind,
     pub name: String,
     pub def_range: Range,
+    pub decl_range: Range,
 }
 
 /// Resolve `token` against `table`: look up `token.text()` in the body scope containing the token's
@@ -87,6 +88,7 @@ pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> 
             kind: sym.kind,
             name: sym.name.clone(),
             def_range: sym.def_range,
+            decl_range: sym.decl_range,
         });
     }
     resolved
