@@ -5,7 +5,7 @@ use lsp_types::request::{
     Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest,
     PrepareRenameRequest, References, Rename, Request as _,
 };
-use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
+use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Range, Url};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::TextSize;
@@ -141,18 +141,29 @@ impl GlobalState {
     }
 
     /// Goto-definition shaper: an include-path string routes to [`jump_to_lib`]; any other token
-    /// resolves via [`Self::resolve_use`] (possibly cross-file), file-tagged.
+    /// resolves via [`Self::resolve_token`], file-tagged.
     pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
             return jump_to_lib(file_db, token, self.source_db.vfs());
         }
-        // A component member-access field (`c.x` / `T()(...).x`) resolves via type inference
-        // (`resolve_member`), not the flat name resolver (which returns empty for fields by design).
-        let resolved = if resolver::component_field(token).is_some() {
-            self.resolve_member(file_db, token)
+        self.to_locations(self.resolve_token(file_db, token))
+    }
+
+    /// Resolve `token`: a component field (`c.x`) via [`Self::resolve_member`]; else [`Self::resolve_use`].
+    pub(crate) fn resolve_token(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        if resolver::component_field(token).is_some() {
+            self.resolve_member(origin, token)
         } else {
-            self.resolve_use(file_db, token)
-        };
+            self.resolve_use(origin, token)
+        }
+    }
+
+    /// File-tagged resolved declarations → file-tagged LSP [`Location`]s (at the name token).
+    fn to_locations(&self, resolved: Vec<(FileId, ResolvedSymbol)>) -> Vec<Location> {
         resolved
             .into_iter()
             .map(|(id, s)| Location::new(self.source_db.file_db(id).file_path.clone(), s.def_range))
@@ -204,15 +215,7 @@ impl GlobalState {
             for lib_id in self.loaded_includes(origin) {
                 let lib_table = self.source_db.symbol_table(lib_id);
                 for sym in lib_table.lookup_top_level(name) {
-                    out.push((
-                        lib_id,
-                        ResolvedSymbol {
-                            kind: sym.kind,
-                            name: sym.name.clone(),
-                            def_range: sym.def_range,
-                            decl_range: sym.decl_range,
-                        },
-                    ));
+                    out.push((lib_id, sym.into()));
                 }
             }
         }
@@ -261,17 +264,7 @@ impl GlobalState {
             .members_of(&template_name)
             .into_iter()
             .filter(|s| s.name == field_name)
-            .map(|s| {
-                (
-                    template_file,
-                    ResolvedSymbol {
-                        kind: s.kind,
-                        name: s.name.clone(),
-                        def_range: s.def_range,
-                        decl_range: s.decl_range,
-                    },
-                )
-            })
+            .map(|s| (template_file, s.into()))
             .collect()
     }
 
@@ -311,6 +304,17 @@ impl GlobalState {
         };
         let table = self.source_db.symbol_table(*def_file);
         resolver::occurrences_in(ast.syntax(), &table, sym)
+    }
+
+    /// Defining-file URL + every occurrence range of `target` (shared by references and rename).
+    pub(crate) fn occurrence_ranges(&self, target: &(FileId, ResolvedSymbol)) -> (Url, Vec<Range>) {
+        let def_file_db = self.source_db.file_db(target.0);
+        let ranges = self
+            .find_occurrences(target)
+            .into_iter()
+            .map(|t| def_file_db.token_range(&t))
+            .collect();
+        (def_file_db.file_path.clone(), ranges)
     }
 
     /// Register an updated document: set its text (dropping derived caches) and load each `include`

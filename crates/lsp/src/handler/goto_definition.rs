@@ -86,6 +86,7 @@ mod tests {
     use crate::file_db::FileDB;
     use crate::global_state::GlobalState;
     use crate::source_db::SourceDatabase;
+    use crate::test_util::state_with;
     use parser::token_kind::TokenKind;
 
     use super::token_at_offset;
@@ -146,13 +147,6 @@ mod tests {
         let parent = Path::new(path).parent().unwrap().to_str().unwrap();
 
         assert_eq!("/hello", parent);
-    }
-
-    /// A `GlobalState` seeded with one open document (no workspace roots — in-file only).
-    fn state_with(url: &Url, source: &str) -> GlobalState {
-        let mut state = GlobalState::new(Vec::new());
-        state.source_db.set_document(url, source.to_string());
-        state
     }
 
     /// `lookup_definition` for the `occurrence`-th `Identifier` token named `name`, using the db's

@@ -76,9 +76,10 @@ impl FileDB {
     /// UTF-16 units from the line start.
     pub fn position(&self, offset: TextSize) -> Position {
         let offset = u32::from(offset) as usize;
+        // `binary_search` returns the index both on hit (offset is exactly a `\n`) and on miss
+        // (insertion point) — for line numbering both yield the same line, so collapse the arms.
         let line = match self.newline_offsets.binary_search(&(offset as u32)) {
-            Ok(l) => l,
-            Err(l) => l,
+            Ok(line) | Err(line) => line,
         };
         let line_start = self.line_start_byte(line as u32);
         // `line_start` and `offset` are both char boundaries (rowan token offsets always are, and

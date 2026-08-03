@@ -9,7 +9,6 @@ use lsp_types::{Location, ReferenceParams};
 
 use crate::global_state::GlobalState;
 use crate::resolver::identifier_at;
-use crate::source_db::SourceDatabase;
 
 /// Entry point for the `textDocument/references` request. Returns the declaration plus every
 /// in-scope use as `Location`s (file-tagged), or `None` if the cursor isn't on a referenceable
@@ -30,11 +29,10 @@ pub fn handle(state: &GlobalState, params: ReferenceParams) -> Result<Option<Vec
     };
 
     // In-file references: all occurrences live in the symbol's defining file.
-    let def_file_db = state.source_db.file_db(target.0);
-    let locations: Vec<Location> = state
-        .find_occurrences(&target)
+    let (file_uri, ranges) = state.occurrence_ranges(&target);
+    let locations: Vec<Location> = ranges
         .into_iter()
-        .map(|t| Location::new(def_file_db.file_path.clone(), def_file_db.token_range(&t)))
+        .map(|r| Location::new(file_uri.clone(), r))
         .collect();
     Ok(Some(locations))
 }

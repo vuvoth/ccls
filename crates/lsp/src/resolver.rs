@@ -38,13 +38,10 @@ pub fn token_at_offset(ast: &AstCircomProgram, offset: TextSize) -> Option<Synta
     })
 }
 
-/// The token's wrapping nodes: parent then all ancestors. Mirrors `parent_ancestors()` (absent on
-/// `SyntaxToken` in this rowan version).
+/// The token's parent then all ancestors (mirrors `parent_ancestors()`, absent on `SyntaxToken`).
+/// Walks owned nodes via [`std::iter::successors`] — no `Vec` allocation.
 pub fn token_ancestors(token: &SyntaxToken) -> impl Iterator<Item = SyntaxNode> {
-    token
-        .parent()
-        .into_iter()
-        .flat_map(|p| p.ancestors().collect::<Vec<_>>())
+    std::iter::successors(token.parent(), |node| node.parent())
 }
 
 /// The `Identifier` token covering `offset`, or `None` (`token_at_offset` narrowed). Shared by
@@ -105,6 +102,18 @@ pub struct ResolvedSymbol {
     pub decl_range: Range,
 }
 
+/// Lift a [`Symbol`] into a [`ResolvedSymbol`] (drops `type_name`).
+impl From<&Symbol> for ResolvedSymbol {
+    fn from(sym: &Symbol) -> Self {
+        Self {
+            kind: sym.kind,
+            name: sym.name.clone(),
+            def_range: sym.def_range,
+            decl_range: sym.decl_range,
+        }
+    }
+}
+
 /// Symbols named `name` visible at `offset`: the body scope containing it, then the file top-level.
 /// Shared by [`resolve`] and [`resolves_to`] so the lookup source set lives in one place.
 fn lookup_all<'a>(
@@ -125,12 +134,7 @@ pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> 
     let offset: TextSize = token.text_range().start();
 
     lookup_all(table, offset, name)
-        .map(|sym| ResolvedSymbol {
-            kind: sym.kind,
-            name: sym.name.clone(),
-            def_range: sym.def_range,
-            decl_range: sym.decl_range,
-        })
+        .map(ResolvedSymbol::from)
         .collect()
 }
 

@@ -10,7 +10,7 @@ use anyhow::Result;
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};
 
 use crate::global_state::GlobalState;
-use crate::resolver::{component_field, identifier_at, SymbolKind};
+use crate::resolver::{identifier_at, SymbolKind};
 use crate::source_db::SourceDatabase;
 
 /// Entry point for the `textDocument/hover` request. Returns `None` (no hover) when the cursor
@@ -26,12 +26,8 @@ pub fn handle(state: &GlobalState, params: HoverParams) -> Result<Option<Hover>>
         return Ok(None);
     };
     // A component member-access field (`c.x` / `T()(...).x`) resolves via type inference; everything
-    // else uses the flat name resolver.
-    let resolved = if component_field(&token).is_some() {
-        state.resolve_member(&ctx.file_db, &token)
-    } else {
-        state.resolve_use(&ctx.file_db, &token)
-    };
+    // else uses the flat name resolver. `resolve_token` picks the path.
+    let resolved = state.resolve_token(&ctx.file_db, &token);
     let Some((def_id, sym)) = resolved.into_iter().next() else {
         return Ok(None);
     };
@@ -81,40 +77,13 @@ fn kind_label(kind: SymbolKind) -> &'static str {
 mod tests {
     use lsp_types::{Position, Url};
 
-    use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
-    use parser::token_kind::TokenKind;
-    use syntax::tree::syntax_tree;
+    use crate::test_util::{position_of, state_with};
 
     use super::handle;
     use lsp_types::{
         HoverContents, HoverParams, MarkupKind, TextDocumentIdentifier, TextDocumentPositionParams,
     };
-
-    fn state_with(url: &Url, source: &str) -> GlobalState {
-        let mut state = GlobalState::new(Vec::new());
-        state.source_db.set_document(url, source.to_string());
-        state
-    }
-
-    /// LSP `Position` of the `occurrence`-th (0-indexed) `Identifier` token whose text is `name`.
-    fn position_of(source: &str, name: &str, occurrence: usize) -> Position {
-        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
-        let node = syntax_tree(source);
-        let mut count = 0;
-        for t in node
-            .descendants_with_tokens()
-            .filter_map(|e| e.into_token())
-        {
-            if t.kind() == TokenKind::Identifier && t.text() == name {
-                if count == occurrence {
-                    return file.position(t.text_range().start());
-                }
-                count += 1;
-            }
-        }
-        panic!("token {name}#{occurrence} not found");
-    }
 
     /// The hover markdown value for the cursor's position, or `None`.
     fn hover_value(state: &GlobalState, url: &Url, position: Position) -> Option<String> {

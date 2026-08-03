@@ -17,7 +17,6 @@ use parser::token_kind::TokenKind;
 use crate::file_db::FileId;
 use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::{identifier_at, ResolvedSymbol};
-use crate::source_db::SourceDatabase;
 use syntax::node::SyntaxToken;
 
 /// Entry point for `textDocument/rename`. Returns `None` (no edits) when the cursor isn't on a
@@ -37,18 +36,17 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
     };
 
     // All occurrences live in the symbol's defining file (in-file rename; cross-file is a
-    // follow-up). One edit per occurrence token.
-    let def_file_db = state.source_db.file_db(target.0);
-    let edits: Vec<TextEdit> = state
-        .find_occurrences(&target)
+    // follow-up). One edit per occurrence range.
+    let (file_uri, ranges) = state.occurrence_ranges(&target);
+    let edits: Vec<TextEdit> = ranges
         .into_iter()
-        .map(|t| TextEdit {
-            range: def_file_db.token_range(&t),
+        .map(|range| TextEdit {
+            range,
             new_text: new_name.clone(),
         })
         .collect();
 
-    let changes = HashMap::from([(def_file_db.file_path.clone(), edits)]);
+    let changes = HashMap::from([(file_uri, edits)]);
     Ok(Some(WorkspaceEdit {
         changes: Some(changes),
         document_changes: None,
@@ -113,33 +111,9 @@ mod tests {
 
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
+    use crate::test_util::{position_of, position_of_token, state_with};
 
     use super::handle;
-
-    fn state_with(url: &Url, source: &str) -> GlobalState {
-        let mut state = GlobalState::new(Vec::new());
-        state.source_db.set_document(url, source.to_string());
-        state
-    }
-
-    /// LSP `Position` of the `occurrence`-th (0-indexed) `Identifier` token whose text is `name`.
-    fn position_of(source: &str, name: &str, occurrence: usize) -> Position {
-        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
-        let node = syntax_tree(source);
-        let mut count = 0;
-        for t in node
-            .descendants_with_tokens()
-            .filter_map(|e| e.into_token())
-        {
-            if t.kind() == TokenKind::Identifier && t.text() == name {
-                if count == occurrence {
-                    return file.position(t.text_range().start());
-                }
-                count += 1;
-            }
-        }
-        panic!("token {name}#{occurrence} not found");
-    }
 
     fn rename(
         state: &GlobalState,
@@ -255,22 +229,6 @@ mod tests {
                 "refuse invalid name {bad:?}"
             );
         }
-    }
-
-    /// LSP `Position` of the first token of *any* kind whose text equals `text` (for keyword /
-    /// include-string cursors, which `position_of` skips because it only matches identifiers).
-    fn position_of_token(source: &str, text: &str) -> Position {
-        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
-        let node = syntax_tree(source);
-        for t in node
-            .descendants_with_tokens()
-            .filter_map(|e| e.into_token())
-        {
-            if t.text() == text {
-                return file.position(t.text_range().start());
-            }
-        }
-        panic!("token {text:?} not found");
     }
 
     /// A cursor on a keyword or an include-path string yields no edits (only identifiers rename).
