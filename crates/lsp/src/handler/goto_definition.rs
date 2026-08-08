@@ -37,7 +37,9 @@ pub fn handle(
 
 // If `token` is an include path (`include "lib.circom";`), jump to that file's URL. Routed here
 // (not the resolver) because a `CircomString` carries a path, not a symbol name. Same resolution
-// order as `load_include` so the jump target and the load always agree.
+// order as `load_include` so the jump target and the load always agree. A relative include jumps
+// to its file (resolved like circom, relative to the source — independent of the workspace root);
+// the basename fallback jumps to a workspace-indexed file.
 pub fn include_target_location(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
     let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
@@ -52,21 +54,24 @@ pub fn include_target_location(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs)
     };
     let lib_path = parent_dir.join(&rel);
 
-    // Same-dir: canonicalize + confine (defense-in-depth — `load_include` refuses escapes; mirror it
-    // so goto-def never surfaces an unreachable path).
-    if let Ok(canon) = lib_path.canonicalize() {
-        if vfs.is_confined(&canon) {
-            if let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) {
-                if let Ok(lib_url) = Url::from_file_path(vpath.as_path()) {
-                    return vec![Location::new(lib_url, Range::default())];
-                }
+    // Relative include: jump to it iff it's a real file on disk (circom resolves includes relative
+    // to the source file, regardless of the editor's workspace root). Refuse absolute `rel`
+    // (`PathBuf::join` would replace the base → arbitrary path) and non-files, matching what
+    // `load_include` would actually load; on a miss we fall through to the workspace-indexed
+    // basename fallback below.
+    let rel_is_absolute = std::path::Path::new(&rel).is_absolute();
+    if !rel_is_absolute && lib_path.is_file() {
+        if let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) {
+            if let Ok(lib_url) = Url::from_file_path(vpath.as_path()) {
+                return vec![Location::new(lib_url, Range::default())];
             }
         }
     }
 
-    // Same-dir miss → basename fallback. `parent` is the includer file (matching `load_include`) so
-    // `find_include` ranks identically. Canonicalize + confine the winner too (it may have been
-    // deleted between the walk and this jump).
+    // Same-dir miss → basename fallback over the workspace index. `parent` is the includer file
+    // (matching `load_include`) so `find_include` ranks identically. Re-check the winner exists on
+    // disk so the jump never targets a file the walk indexed but that has since been deleted (and
+    // that `load_include` would therefore refuse to load).
     let Some(parent_vpath) = vfs::VfsPath::from_abs_path(&path) else {
         return Vec::new();
     };
@@ -76,10 +81,7 @@ pub fn include_target_location(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs)
     let Some(winner_path) = vfs.path(winner) else {
         return Vec::new();
     };
-    let Ok(canon) = winner_path.as_path().canonicalize() else {
-        return Vec::new();
-    };
-    if !vfs.is_confined(&canon) {
+    if !winner_path.as_path().is_file() {
         return Vec::new();
     }
     let Ok(lib_url) = Url::from_file_path(winner_path.as_path()) else {
@@ -570,6 +572,120 @@ mod tests {
             locs[0].uri, c_url,
             "B's includes load on demand → resolves to C"
         );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    // --- real-client-flow helpers (didOpen via handle_update, not set_document) ----------------
+
+    use lsp_types::{
+        DidOpenTextDocumentParams, GotoDefinitionParams, TextDocumentIdentifier, TextDocumentItem,
+        TextDocumentPositionParams,
+    };
+
+    use crate::global_state::TextDocument;
+
+    /// didOpen a document through the real notification path (`handle_update`).
+    fn open_doc(state: &mut GlobalState, url: &Url, src: &str) {
+        state
+            .handle_update(TextDocument::from(DidOpenTextDocumentParams {
+                text_document: TextDocumentItem {
+                    uri: url.clone(),
+                    language_id: "circom".to_string(),
+                    version: 0,
+                    text: src.to_string(),
+                },
+            }))
+            .unwrap();
+    }
+
+    /// Drive the real `textDocument/definition` handler at the `occurrence`-th token whose
+    /// kind+text match (covers `Identifier` symbols and `CircomString` include paths).
+    fn goto_def(
+        state: &GlobalState,
+        url: &Url,
+        source: &str,
+        kind: parser::token_kind::TokenKind,
+        text: &str,
+        occurrence: usize,
+    ) -> Vec<Location> {
+        let id = state.source_db.id_for_url(url).expect("doc registered");
+        let file_db = state.source_db.file_db(id);
+        let ast = AstCircomProgram::cast(syntax_tree(source)).expect("program");
+        let token = ast
+            .syntax()
+            .descendants_with_tokens()
+            .filter_map(|e| e.into_token())
+            .filter(|t| t.kind() == kind && t.text() == text)
+            .nth(occurrence)
+            .unwrap_or_else(|| panic!("token {text:?}#{occurrence} not found"));
+        let pos = file_db.position(token.text_range().start());
+        super::handle(
+            state,
+            GotoDefinitionParams {
+                text_document_position_params: TextDocumentPositionParams {
+                    text_document: TextDocumentIdentifier { uri: url.clone() },
+                    position: pos,
+                },
+                work_done_progress_params: Default::default(),
+                partial_result_params: Default::default(),
+            },
+        )
+        .unwrap()
+        .map(|r| match r {
+            lsp_types::GotoDefinitionResponse::Array(v) => v,
+            _ => Vec::new(),
+        })
+        .unwrap_or_default()
+    }
+
+    /// Reproduction of the reported bug: a circom project whose files live **outside** the
+    /// configured workspace root (the editor pointed ccls at the wrong/incomplete folder). Every
+    /// relative `include` must still resolve the way circom resolves it — relative to the source
+    /// file — so goto-lib and goto-def into the lib work. Confining includes to the (wrong)
+    /// workspace root refused them, breaking all cross-file navigation.
+    #[test]
+    fn goto_works_when_project_outside_workspace_root_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_outside_{}", std::process::id()));
+        let proj = base.join("proj"); // the real circom project
+        let wrong_root = base.join("wrong_root"); // the (wrong) workspace root
+        fs::create_dir_all(&proj).unwrap();
+        fs::create_dir_all(&wrong_root).unwrap();
+        fs::write(
+            proj.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal output o;\n    o <== 0;\n}\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ncomponent main = Lib();\n";
+        fs::write(proj.join("main.circom"), main_src).unwrap();
+
+        let main_url = Url::from_file_path(proj.join("main.circom")).unwrap();
+        let lib_url = Url::from_file_path(proj.join("lib.circom")).unwrap();
+        // Workspace root is the WRONG folder — `proj` is not under it.
+        let mut state = GlobalState::new(vec![wrong_root.canonicalize().unwrap()]);
+        open_doc(&mut state, &main_url, main_src);
+
+        // 1. Goto-def on the `include "lib.circom"` string → jumps to lib.circom.
+        let inc = goto_def(
+            &state,
+            &main_url,
+            main_src,
+            TokenKind::CircomString,
+            "\"lib.circom\"",
+            0,
+        );
+        assert_eq!(
+            inc.len(),
+            1,
+            "goto-lib jumps to the include target: {inc:?}"
+        );
+        assert_eq!(inc[0].uri, lib_url, "lands on lib.circom");
+
+        // 2. Goto-def on `Lib` in `component main = Lib()` → jumps into lib.circom.
+        let def = goto_def(&state, &main_url, main_src, TokenKind::Identifier, "Lib", 0);
+        assert_eq!(def.len(), 1, "cross-file goto-def into the lib: {def:?}");
+        assert_eq!(def[0].uri, lib_url, "jumps into lib.circom");
 
         let _ = fs::remove_dir_all(&base);
     }

@@ -72,12 +72,12 @@ pub struct Vfs {
     path_to_id: HashMap<VfsPath, FileId>,
     files: Vec<FileState>,
     changes: Vec<ChangedFile>,
-    /// Canonicalized workspace root folders. The containment primitive for confining untrusted
-    /// `include "…"` resolution (path-traversal defense): an include may only resolve to a file
-    /// inside one of these. Set once via [`Vfs::set_workspace_roots`]; empty (fail-closed) until
-    /// then. The roots themselves are stored already-canonicalized by the caller, so
-    /// [`Vfs::is_confined`] stays pure (no disk I/O) — the `canonicalize` stat is the LSP layer's
-    /// job, keeping this crate I/O-free and unit-testable.
+    /// Canonicalized workspace root folders. The scope of the project-wide `.circom` walk
+    /// (`collect_circom_files`) that feeds the basename index — the search surface for include
+    /// resolution when a same-dir lookup misses. Includes themselves resolve relative to the
+    /// source file (circom semantics), so these roots are an *indexing* scope, not a confinement
+    /// gate. Set via [`Vfs::set_workspace_roots`]; stored already-canonicalized by the caller so
+    /// this crate stays I/O-free and unit-testable.
     workspace_roots: Vec<PathBuf>,
     /// Project-wide basename index: `file_name` (e.g. `lib.circom`) → every interned [`FileId`]
     /// with that basename. The search surface for include resolution when the same-dir lookup
@@ -104,28 +104,17 @@ impl Vfs {
         }
     }
 
-    /// Set the workspace roots used by [`Self::is_confined`]. Callers (the LSP `initialize`
-    /// handshake) pass already-canonicalized absolute paths; no disk I/O happens here.
+    /// Set the workspace roots scoped by the project `.circom` walk (the basename-index source).
+    /// Callers (the LSP `initialize` handshake) pass already-canonicalized absolute paths; no disk
+    /// I/O happens here.
     pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
         self.workspace_roots = roots;
     }
 
-    /// The workspace roots confining [`Self::is_confined`] (already canonicalized by the caller).
-    /// Read accessor so the LSP layer's workspace walker can re-walk the same roots it set.
+    /// The workspace roots (already canonicalized by the caller) that scope the project walk. A
+    /// read accessor so the LSP layer's walker can re-walk the same roots it set.
     pub fn workspace_roots(&self) -> &[PathBuf] {
         &self.workspace_roots
-    }
-
-    /// Pure containment check: is `canonical` (an already-canonicalized absolute path) inside one of
-    /// the workspace roots? **Fail-closed** — with no roots configured nothing is confined, so the
-    /// LSP refuses to load any include rather than risk an arbitrary read. No disk I/O: the caller
-    /// canonicalizes the candidate path (resolving `..`/symlinks) before calling.
-    pub fn is_confined(&self, canonical: &Path) -> bool {
-        !self.workspace_roots.is_empty()
-            && self
-                .workspace_roots
-                .iter()
-                .any(|root| canonical.starts_with(root))
     }
 
     /// The id for `path` if it has been interned, else `None`.

@@ -102,7 +102,15 @@ impl ContentCacheDb {
     }
 
     /// Resolve a relative include `rel` against `parent_url`'s dir to an absolutized [`VfsPath`].
+    /// An **absolute** `rel` is refused: `PathBuf::join` would *replace* the base (`include
+    /// "/etc/passwd"`), enabling an arbitrary local-file read. circom's legitimate includes are
+    /// relative (`..` allowed) and resolve against the project tree; absolute include strings are
+    /// not a real circom idiom. (The basename fallback still fields any `rel` but only over the
+    /// workspace-indexed set, so it stays safe.)
     fn resolve_include(parent_url: &Url, rel: &str) -> Option<VfsPath> {
+        if std::path::Path::new(rel).is_absolute() {
+            return None;
+        }
         let parent_path = parent_url.to_file_path().ok()?;
         let parent_dir = parent_path.parent()?;
         let lib_path = parent_dir.join(rel);
@@ -191,14 +199,13 @@ impl ContentCacheDb {
         }
     }
 
-    /// Canonicalize + confine + read one include path — the single disk boundary. `canonicalize`
-    /// resolves `..`/symlinks; `is_confined` is the pure prefix check. Path-traversal escapes are
-    /// refused here, so the pure lookup/jump paths only ever surface already-confined files.
+    /// Read one include path from disk — the single disk boundary. A relative include resolves the
+    /// way circom resolves it: relative to the **including source file**, so it loads regardless of
+    /// the editor's (possibly missing/wrong) workspace root. Both callers produce trusted paths:
+    /// the relative path is built from an opened doc's location, and the basename fallback
+    /// ([`Vfs::find_include`]) only returns files the workspace walk already indexed. Serves a
+    /// cached id when the text is already loaded.
     fn load_from_disk(&mut self, vpath: &VfsPath) -> Option<FileId> {
-        let canonical = vpath.as_path().canonicalize().ok()?;
-        if !self.vfs.is_confined(&canonical) {
-            return None;
-        }
         // Serve the cached id if text is already loaded; a path-only id (from the walk) reads below.
         if let Some(id) = self.vfs.file_id(vpath) {
             if self.vfs.file_text(id).is_some() {
@@ -446,55 +453,53 @@ template Multiplier2() {
         );
     }
 
-    /// Path-traversal confinement: an `include` that resolves outside the workspace root is refused
-    /// (never read), whether via `..`, an absolute path, or a symlink. Set up a workspace dir, a
-    /// main file inside it, and a secret file one level above; both escape forms must return `None`.
+    /// Includes resolve relative to the **source file** the way circom resolves them — independent
+    /// of the editor's workspace root. So a relative include loads even with no roots configured,
+    /// and even when it points outside the (possibly wrong) root. (The basename fallback is still
+    /// workspace-index-scoped.) Sanity: a same-directory include loads, a missing one does not.
     #[test]
-    fn include_confined_to_workspace_root_test() {
+    fn relative_include_resolves_without_workspace_root_test() {
         use std::fs;
-        use std::path::PathBuf;
 
         let base = std::env::temp_dir().join(format!("ccls_confine_{}", std::process::id()));
         let ws = base.join("ws");
-        let secret = base.join("secret.circom");
         let main_path = ws.join("main.circom");
         fs::create_dir_all(&ws).unwrap();
-        fs::write(&secret, "pragma circom 2.0.0;").unwrap();
         fs::write(&main_path, "pragma circom 2.0.0;").unwrap();
+        fs::write(ws.join("lib.circom"), "pragma circom 2.0.0;").unwrap();
+        fs::write(base.join("sibling.circom"), "pragma circom 2.0.0;").unwrap();
 
         let main_url = Url::from_file_path(&main_path).unwrap();
+
+        // No roots configured: a same-directory include still resolves (circom semantics).
+        let mut no_roots = ContentCacheDb::new();
+        assert!(
+            no_roots.load_include(&main_url, "lib.circom").is_some(),
+            "a relative include resolves even with no workspace roots"
+        );
+
+        // A `..` include to a sibling outside the root resolves too (circom allows `..`).
+        let mut no_roots2 = ContentCacheDb::new();
+        assert!(
+            no_roots2
+                .load_include(&main_url, "../sibling.circom")
+                .is_some(),
+            "a `..` include resolves relative to the source (circom allows it)"
+        );
+
+        // A non-existent include resolves to None (file simply isn't there).
         let mut db = ContentCacheDb::new();
-        // Root is the workspace dir only — `secret.circom` lives above it.
         db.set_workspace_roots(vec![ws.canonicalize().unwrap()]);
-
-        // No roots configured yet in the empty case: every include is refused (fail closed).
-        let mut empty = ContentCacheDb::new();
         assert!(
-            empty.load_include(&main_url, "lib.circom").is_none(),
-            "with no workspace roots, no include may be loaded (fail closed)"
+            db.load_include(&main_url, "missing.circom").is_none(),
+            "a missing include resolves to None"
         );
-
-        // `..` escape to a sibling file outside the root is refused.
-        assert!(
-            db.load_include(&main_url, "../secret.circom").is_none(),
-            "include escaping the workspace via `..` must be refused"
-        );
-        // Absolute path outside the root is refused (`PathBuf::join` would otherwise replace base).
-        assert!(
-            db.load_include(&main_url, secret.to_str().unwrap())
-                .is_none(),
-            "an absolute include outside the workspace must be refused"
-        );
-
-        // Sanity: a same-directory include inside the root loads (file must exist).
-        let in_root = ws.join("lib.circom");
-        fs::write(&in_root, "pragma circom 2.0.0;").unwrap();
+        // And a present same-directory include loads.
         assert!(
             db.load_include(&main_url, "lib.circom").is_some(),
-            "an include inside the workspace root must load"
+            "a same-directory include loads"
         );
 
-        let _ = PathBuf::from(&base);
         let _ = fs::remove_dir_all(&base);
     }
 }
