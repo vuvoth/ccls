@@ -7,7 +7,7 @@
 //! resending unchanged text records no change (no reparse).
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -83,42 +83,57 @@ impl ContentCacheDb {
         self.vfs.set_workspace_roots(roots);
     }
 
-    /// Read-only [`Vfs`] handle (e.g. so `jump_to_lib` applies the same containment check as
+    /// Read-only [`Vfs`] handle (e.g. so `include_target_location` applies the same containment check as
     /// `load_include`).
     pub(crate) fn vfs(&self) -> &Vfs {
         &self.vfs
     }
 
-    /// Convert a `file:` URL to its absolutized [`VfsPath`], or `None` for non-`file:` schemes or
-    /// non-absolutizable paths. Single source for the URI→path step so interning and lookup can't
-    /// disagree (a split would intern under one key and look up another, silently breaking
-    /// resolution).
+    /// Mutable [`Vfs`] handle for the workspace walker and file-watcher refresh.
+    pub(crate) fn vfs_mut(&mut self) -> &mut Vfs {
+        &mut self.vfs
+    }
+
+    /// `file:` URL → absolutized [`VfsPath`] (`None` for other schemes). Single source so interning
+    /// and lookup agree on the path key.
     fn url_to_vpath(url: &Url) -> Option<VfsPath> {
         let path = url.to_file_path().ok()?;
         VfsPath::from_abs_path(&path)
     }
 
     /// Resolve a relative include `rel` against `parent_url`'s dir to an absolutized [`VfsPath`].
-    /// Shared by [`Self::load_include`], [`Self::id_for_include`], and goto-def so all three agree
-    /// on the resolved path.
+    /// An **absolute** `rel` is refused: `PathBuf::join` would *replace* the base (`include
+    /// "/etc/passwd"`), enabling an arbitrary local-file read. circom's legitimate includes are
+    /// relative (`..` allowed) and resolve against the project tree; absolute include strings are
+    /// not a real circom idiom. (The basename fallback still fields any `rel` but only over the
+    /// workspace-indexed set, so it stays safe.)
     fn resolve_include(parent_url: &Url, rel: &str) -> Option<VfsPath> {
+        if std::path::Path::new(rel).is_absolute() {
+            return None;
+        }
         let parent_path = parent_url.to_file_path().ok()?;
         let parent_dir = parent_path.parent()?;
         let lib_path = parent_dir.join(rel);
         VfsPath::from_abs_path(&lib_path)
     }
 
-    /// The `FileId` for `url`, from its absolutized path (so aliased paths collapse to one id).
-    /// `None` for non-`file:` schemes or non-absolutizable paths — callers skip indexing those.
+    /// The `FileId` for `url` (`None` for non-`file:` URIs).
     pub fn id_for_url(&self, url: &Url) -> Option<FileId> {
         self.vfs.file_id(&Self::url_to_vpath(url)?)
     }
 
-    /// The already-interned `FileId` for an include, without reading disk. `None` if unresolvable
-    /// or not yet loaded. Used by cross-file goto-def (the include loads once in `handle_update`).
+    /// The already-interned `FileId` for an include, without reading disk. Same-dir lookup first,
+    /// then the project-wide basename fallback ([`Vfs::find_include`]). Pure — it does NOT confine
+    /// (no `canonicalize`); stale removed-folder includes are dropped at removal time instead
+    /// (`Vfs::unregister_under`).
     pub fn id_for_include(&self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        let vpath = Self::resolve_include(parent_url, rel)?;
-        self.vfs.file_id(&vpath)
+        if let Some(vpath) = Self::resolve_include(parent_url, rel) {
+            if let Some(id) = self.vfs.file_id(&vpath) {
+                return Some(id);
+            }
+        }
+        let parent_vpath = Self::url_to_vpath(parent_url)?;
+        self.vfs.find_include(&parent_vpath, rel)
     }
 
     /// Register/update a document's text. Returns `(FileId, changed)`; `changed` is `false` when
@@ -131,37 +146,93 @@ impl ContentCacheDb {
         Some((id, changed))
     }
 
-    /// Load a relative include from disk **once**, then serve the interned `FileId` from cache — a
-    /// keystroke in the main file never re-reads its includes. `None` (skipped) for non-`file:`
-    /// schemes, missing parent dir, unreadable file, or non-absolutizable path.
+    /// Load a relative include from disk once (then serve the cached id), and load its includes
+    /// transitively — so goto-def/hover *inside* an include (e.g. one opened via peek/jump without a
+    /// full didOpen) can still resolve across that include's own includes. Same-dir path first, then
+    /// the project-wide basename fallback. `None` for non-`file:` URIs, missing/unreadable files, or
+    /// includes escaping the workspace roots.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        let vpath = Self::resolve_include(parent_url, rel)?;
+        let id = self.load_one_include(parent_url, rel)?;
+        let mut visited = HashSet::new();
+        visited.insert(id);
+        self.load_transitive_includes(id, &mut visited);
+        Some(id)
+    }
 
-        // Security: confine the resolved include to a workspace root. `canonicalize` (the one disk
-        // stat — kept in this LSP layer so Vfs stays I/O-free) resolves `..`/`.`/symlinks to a real
-        // absolute path; `is_confined` then checks it's inside a root. Escapes (`include
-        // "/etc/passwd"`, `../../.ssh/id_rsa`, or a root symlink pointing out) are refused. This is
-        // the single read boundary; lookup/jump paths only surface includes loaded (and thus
-        // confined) here.
-        let canonical = vpath.as_path().canonicalize().ok()?;
-        if !self.vfs.is_confined(&canonical) {
-            return None;
+    /// The on-disk target of include `rel` from `parent_url`, mirroring [`Self::load_one_include`]'s
+    /// path selection: the same-dir relative target if it is a real file, else the workspace-indexed
+    /// basename winner (also confirmed to still exist). Refuses absolute `rel`. **Pure** (no read) —
+    /// shared by goto-lib (build a URL) and the loader (read + intern), so the jump target and the
+    /// loaded file always agree and there is one resolution order to maintain.
+    pub(crate) fn resolve_include_vpath(&self, parent_url: &Url, rel: &str) -> Option<VfsPath> {
+        if let Some(vpath) = Self::resolve_include(parent_url, rel) {
+            if vpath.as_path().is_file() {
+                return Some(vpath);
+            }
         }
+        let parent_vpath = Self::url_to_vpath(parent_url)?;
+        let winner = self.vfs.find_include(&parent_vpath, rel)?;
+        let winner_path = self.vfs.path(winner)?;
+        winner_path.as_path().is_file().then(|| winner_path.clone())
+    }
 
-        // Already loaded — serve the cached id (never re-read).
-        if let Some(id) = self.vfs.file_id(&vpath) {
-            return Some(id);
+    /// Load a single include (no transitive closure) via [`Self::resolve_include_vpath`].
+    fn load_one_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
+        let vpath = self.resolve_include_vpath(parent_url, rel)?;
+        self.load_from_disk(&vpath)
+    }
+
+    /// Recursively load `id`'s own includes (its include-closure) so resolution works from within
+    /// `id`. `visited` breaks include cycles; already-loaded files are served from cache (no re-read).
+    fn load_transitive_includes(&mut self, id: FileId, visited: &mut HashSet<FileId>) {
+        let Some(path) = self.vfs.path(id) else {
+            return;
+        };
+        let Ok(parent_url) = Url::from_file_path(path.as_path()) else {
+            return;
+        };
+        let includes: Vec<String> = self
+            .ast(id)
+            .map(|a| {
+                a.libs()
+                    .into_iter()
+                    .filter_map(|i| i.lib().map(|l| l.value()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        for rel in includes {
+            if let Some(child) = self.load_one_include(&parent_url, &rel) {
+                if visited.insert(child) {
+                    self.load_transitive_includes(child, visited);
+                }
+            }
         }
+    }
 
+    /// Read one include path from disk — the single disk boundary. A relative include resolves the
+    /// way circom resolves it: relative to the **including source file**, so it loads regardless of
+    /// the editor's (possibly missing/wrong) workspace root. Both callers produce trusted paths:
+    /// the relative path is built from an opened doc's location, and the basename fallback
+    /// ([`Vfs::find_include`]) only returns files the workspace walk already indexed. Serves a
+    /// cached id when the text is already loaded.
+    fn load_from_disk(&mut self, vpath: &VfsPath) -> Option<FileId> {
+        // Serve the cached id if text is already loaded; a path-only id (from the walk) reads below.
+        if let Some(id) = self.vfs.file_id(vpath) {
+            if self.vfs.file_text(id).is_some() {
+                return Some(id);
+            }
+        }
         let src = std::fs::read_to_string(vpath.as_path()).ok()?;
-        let id = self.vfs.set_file_contents(vpath, Some(Arc::from(src)));
+        let id = self
+            .vfs
+            .set_file_contents(vpath.clone(), Some(Arc::from(src)));
         self.invalidate_changed();
         Some(id)
     }
 
-    /// Drain the VFS change log and drop every changed id's derived caches (others untouched).
-    /// `parse_count` is intentionally preserved — it tracks total parses, not cache state.
-    fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
+    /// Drain the VFS change log and drop changed ids' derived caches (`pub(crate)` so the watcher
+    /// can flush a `Delete`). `parse_count` is preserved — it tracks total parses, not cache state.
+    pub(crate) fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
         let changes = self.vfs.take_changes();
         if !changes.is_empty() {
             let mut caches = self.caches.borrow_mut();
@@ -392,55 +463,53 @@ template Multiplier2() {
         );
     }
 
-    /// Path-traversal confinement: an `include` that resolves outside the workspace root is refused
-    /// (never read), whether via `..`, an absolute path, or a symlink. Set up a workspace dir, a
-    /// main file inside it, and a secret file one level above; both escape forms must return `None`.
+    /// Includes resolve relative to the **source file** the way circom resolves them — independent
+    /// of the editor's workspace root. So a relative include loads even with no roots configured,
+    /// and even when it points outside the (possibly wrong) root. (The basename fallback is still
+    /// workspace-index-scoped.) Sanity: a same-directory include loads, a missing one does not.
     #[test]
-    fn include_confined_to_workspace_root_test() {
+    fn relative_include_resolves_without_workspace_root_test() {
         use std::fs;
-        use std::path::PathBuf;
 
         let base = std::env::temp_dir().join(format!("ccls_confine_{}", std::process::id()));
         let ws = base.join("ws");
-        let secret = base.join("secret.circom");
         let main_path = ws.join("main.circom");
         fs::create_dir_all(&ws).unwrap();
-        fs::write(&secret, "pragma circom 2.0.0;").unwrap();
         fs::write(&main_path, "pragma circom 2.0.0;").unwrap();
+        fs::write(ws.join("lib.circom"), "pragma circom 2.0.0;").unwrap();
+        fs::write(base.join("sibling.circom"), "pragma circom 2.0.0;").unwrap();
 
         let main_url = Url::from_file_path(&main_path).unwrap();
+
+        // No roots configured: a same-directory include still resolves (circom semantics).
+        let mut no_roots = ContentCacheDb::new();
+        assert!(
+            no_roots.load_include(&main_url, "lib.circom").is_some(),
+            "a relative include resolves even with no workspace roots"
+        );
+
+        // A `..` include to a sibling outside the root resolves too (circom allows `..`).
+        let mut no_roots2 = ContentCacheDb::new();
+        assert!(
+            no_roots2
+                .load_include(&main_url, "../sibling.circom")
+                .is_some(),
+            "a `..` include resolves relative to the source (circom allows it)"
+        );
+
+        // A non-existent include resolves to None (file simply isn't there).
         let mut db = ContentCacheDb::new();
-        // Root is the workspace dir only — `secret.circom` lives above it.
         db.set_workspace_roots(vec![ws.canonicalize().unwrap()]);
-
-        // No roots configured yet in the empty case: every include is refused (fail closed).
-        let mut empty = ContentCacheDb::new();
         assert!(
-            empty.load_include(&main_url, "lib.circom").is_none(),
-            "with no workspace roots, no include may be loaded (fail closed)"
+            db.load_include(&main_url, "missing.circom").is_none(),
+            "a missing include resolves to None"
         );
-
-        // `..` escape to a sibling file outside the root is refused.
-        assert!(
-            db.load_include(&main_url, "../secret.circom").is_none(),
-            "include escaping the workspace via `..` must be refused"
-        );
-        // Absolute path outside the root is refused (`PathBuf::join` would otherwise replace base).
-        assert!(
-            db.load_include(&main_url, secret.to_str().unwrap())
-                .is_none(),
-            "an absolute include outside the workspace must be refused"
-        );
-
-        // Sanity: a same-directory include inside the root loads (file must exist).
-        let in_root = ws.join("lib.circom");
-        fs::write(&in_root, "pragma circom 2.0.0;").unwrap();
+        // And a present same-directory include loads.
         assert!(
             db.load_include(&main_url, "lib.circom").is_some(),
-            "an include inside the workspace root must load"
+            "a same-directory include loads"
         );
 
-        let _ = PathBuf::from(&base);
         let _ = fs::remove_dir_all(&base);
     }
 }

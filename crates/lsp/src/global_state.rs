@@ -1,11 +1,16 @@
 use anyhow::Result;
 use lsp_server::{Notification, Request, RequestId, Response};
-use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument, Notification as _};
+use lsp_types::notification::{
+    DidChangeTextDocument, DidChangeWatchedFiles, DidChangeWorkspaceFolders, DidCloseTextDocument,
+    DidOpenTextDocument, Notification as _,
+};
 use lsp_types::request::{
     Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest,
     PrepareRenameRequest, References, Rename, Request as _,
 };
-use lsp_types::{DidChangeTextDocumentParams, DidOpenTextDocumentParams, Location, Url};
+use lsp_types::{
+    DidChangeTextDocumentParams, DidOpenTextDocumentParams, FileChangeType, Location, Range, Url,
+};
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
 use rowan::TextSize;
@@ -14,13 +19,17 @@ use syntax::abstract_syntax_tree::{
 };
 use syntax::node::SyntaxToken;
 
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::file_db::{FileDB, FileId};
 use crate::handler;
-use crate::handler::goto_definition::jump_to_lib;
+use crate::handler::goto_definition::include_target_location;
 use crate::resolver::{self, token_ancestors, ResolvedSymbol};
 use crate::source_db::{ContentCacheDb, SourceDatabase};
+use crate::symbol_table::{Symbol, SymbolKind};
 
 /// A didOpen/didChange notification normalized to its full text + URI.
 #[derive(Debug)]
@@ -60,6 +69,14 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 /// cache.
 pub struct GlobalState {
     pub source_db: ContentCacheDb,
+    /// URIs the client has open (didOpen, not yet didClose). The watcher's Deleted/Changed arms
+    /// skip these so an external disk touch can't clobber an open doc's unsaved buffer.
+    pub(crate) open_documents: HashSet<Url>,
+    /// Memoized [`Self::loaded_includes`] per origin; interior-mutable for the `&self` read path.
+    /// Cleared by [`Self::drop_include_cache`] on any text/index mutation.
+    loaded_includes_cache: RefCell<HashMap<FileId, Vec<FileId>>>,
+    /// Eagerly loaded workspace `.circom` files — the scan set for workspace occurrences/symbol.
+    pub(crate) workspace_files: HashSet<FileId>,
 }
 
 /// A resolved cursor location (id, parse, file DB, byte offset) — the shared prologue of every
@@ -78,22 +95,45 @@ impl Default for GlobalState {
 }
 
 impl GlobalState {
-    /// Construct with workspace `roots` confining `include` resolution. Empty roots ⇒ no include
-    /// ever loads (fail-closed against path traversal).
+    /// Construct with workspace `roots`. Roots scope the project `.circom` walk that feeds the
+    /// basename index; `include` resolution itself is circom-style (relative to the source file),
+    /// not confined to the roots. Absolute include paths are rejected; relative/`..` includes
+    /// resolve (and may reach files outside the roots, matching the circom compiler).
     pub fn new(roots: Vec<PathBuf>) -> Self {
         let mut source_db = ContentCacheDb::new();
         source_db.set_workspace_roots(roots);
-        Self { source_db }
+        Self {
+            source_db,
+            open_documents: HashSet::new(),
+            loaded_includes_cache: RefCell::new(HashMap::new()),
+            workspace_files: HashSet::new(),
+        }
     }
 
-    /// Resolve `(uri, position)` to a [`CursorContext`], or `None` if the file is unknown or fails
-    /// to parse.
+    /// Drop the memoized [`Self::loaded_includes`] — call after any text/index mutation so a stale
+    /// include-id list can't be served.
+    pub(crate) fn drop_include_cache(&mut self) {
+        self.loaded_includes_cache.borrow_mut().clear();
+    }
+
+    /// Flush derived caches after a VFS mutation that may record a change-log entry (text
+    /// delete/modify). Register-only mutations (no change recorded) call `drop_include_cache` only.
+    fn after_vfs_mutation(&mut self) {
+        self.source_db.invalidate_changed();
+        self.drop_include_cache();
+    }
+
+    /// Resolve `(uri, position)` to a [`CursorContext`], or `None` if unknown, text-less, or
+    /// unparseable. The no-text guard is load-bearing: the workspace walk interns paths with no text
+    /// and a watcher `DELETED` can null an open doc's text — without it such an id would reach
+    /// `file_text().expect()` and crash the single-threaded server.
     pub(crate) fn cursor_context(
         &self,
         uri: &Url,
         position: lsp_types::Position,
     ) -> Option<CursorContext> {
         let id = self.source_db.id_for_url(uri)?;
+        self.source_db.vfs().file_text(id)?;
         let ast = self.source_db.ast(id)?;
         let file_db = self.source_db.file_db(id);
         let offset = file_db.offset(position);
@@ -120,11 +160,14 @@ impl GlobalState {
             Formatting::METHOD => dispatch(self, id, req, handler::formatting::handle),
             Rename::METHOD => dispatch(self, id, req, handler::rename::handle),
             PrepareRenameRequest::METHOD => dispatch(self, id, req, handler::rename::prepare),
+            "workspace/symbol" => dispatch(self, id, req, handler::workspace_symbol::handle),
             _ => Ok(None),
         }
     }
 
-    /// Dispatch an LSP notification; only document open/change are handled.
+    /// Dispatch an LSP notification. Document open/change load includes; didClose drops open-doc
+    /// tracking; watched-file changes keep the project basename index fresh (created/deleted
+    /// `.circom` files); workspace-folder changes walk the newly-added roots.
     pub fn handle_notification(&mut self, not: Notification) -> Result<()> {
         match not.method.as_str() {
             DidOpenTextDocument::METHOD => {
@@ -135,33 +178,206 @@ impl GlobalState {
                 let params: DidChangeTextDocumentParams = serde_json::from_value(not.params)?;
                 self.handle_update(TextDocument::from(params))?;
             }
+            DidCloseTextDocument::METHOD => {
+                if let Ok(params) =
+                    serde_json::from_value::<lsp_types::DidCloseTextDocumentParams>(not.params)
+                {
+                    self.open_documents.remove(&params.text_document.uri);
+                }
+            }
+            DidChangeWatchedFiles::METHOD => {
+                let params: lsp_types::DidChangeWatchedFilesParams =
+                    serde_json::from_value(not.params)?;
+                for change in params.changes {
+                    self.handle_watched_file_change(change);
+                }
+            }
+            DidChangeWorkspaceFolders::METHOD => {
+                let params: lsp_types::DidChangeWorkspaceFoldersParams =
+                    serde_json::from_value(not.params)?;
+                self.handle_workspace_folders_change(params);
+            }
             _ => {}
         }
         Ok(())
     }
 
-    /// Goto-definition shaper: an include-path string routes to [`jump_to_lib`]; any other token
-    /// resolves via [`Self::resolve_use`] (possibly cross-file), file-tagged.
+    /// Apply one watched-file change to the index. `*.circom` only. Created → intern; Deleted →
+    /// unregister; Changed → re-read iff loaded. Deleted/Changed skip open docs (a build tool
+    /// deleting/recreating/touching the file must not clobber the open doc's unsaved buffer —
+    /// `didChange` is authoritative for it).
+    fn handle_watched_file_change(&mut self, change: lsp_types::FileEvent) {
+        let Ok(path) = change.uri.to_file_path() else {
+            return;
+        };
+        if path.extension().and_then(|e| e.to_str()) != Some("circom") {
+            return;
+        }
+        match change.typ {
+            FileChangeType::CREATED => {
+                // Skip open docs: a build tool deleting+recreating a file must not clobber an open
+                // doc's dirty buffer (`didChange` is authoritative for it) — mirrors DELETED/CHANGED.
+                if self.open_documents.contains(&change.uri) {
+                    return;
+                }
+                if let Ok(canon) = path.canonicalize() {
+                    if let Some(vpath) = vfs::VfsPath::from_abs_path(&canon) {
+                        let id = self.source_db.vfs_mut().register_path(vpath.clone());
+                        self.workspace_files.insert(id);
+                        if let Ok(src) = std::fs::read_to_string(&path) {
+                            self.source_db
+                                .vfs_mut()
+                                .set_file_contents(vpath, Some(Arc::from(src)));
+                            self.after_vfs_mutation();
+                        } else {
+                            self.drop_include_cache();
+                        }
+                    }
+                }
+            }
+            FileChangeType::DELETED => {
+                if self.open_documents.contains(&change.uri) {
+                    return;
+                }
+                // The file is gone, so `canonicalize` fails; absolutize and look up by identity.
+                // Best-effort: a symlinked path that doesn't match the interned canonical VfsPath
+                // isn't found, leaving a stale entry until the next re-walk.
+                if let Some(vpath) = vfs::VfsPath::from_abs_path(&path) {
+                    if let Some(id) = self.source_db.vfs().file_id(&vpath) {
+                        self.workspace_files.remove(&id);
+                    }
+                    self.source_db.vfs_mut().unregister_path(&vpath);
+                    self.after_vfs_mutation();
+                }
+            }
+            FileChangeType::CHANGED => {
+                if self.open_documents.contains(&change.uri) {
+                    return;
+                }
+                if let Some(vpath) = vfs::VfsPath::from_abs_path(&path) {
+                    let needs_reload = self
+                        .source_db
+                        .vfs()
+                        .file_id(&vpath)
+                        .is_some_and(|id| self.source_db.vfs().file_text(id).is_some());
+                    if needs_reload {
+                        if let Ok(src) = std::fs::read_to_string(&path) {
+                            self.source_db
+                                .vfs_mut()
+                                .set_file_contents(vpath, Some(Arc::from(src)));
+                            self.after_vfs_mutation();
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Merge added/removed folders into the roots. Added → walk only that root; removed → unregister
+    /// its files so they stop resolving (the pure read path can't confine them).
+    fn handle_workspace_folders_change(
+        &mut self,
+        params: lsp_types::DidChangeWorkspaceFoldersParams,
+    ) {
+        let mut roots: Vec<PathBuf> = self.source_db.vfs().workspace_roots().to_vec();
+        let mut added_canon: Vec<PathBuf> = Vec::new();
+        for added in &params.event.added {
+            if let Some(canon) = canon_folder(&added.uri) {
+                if !roots.contains(&canon) {
+                    roots.push(canon.clone());
+                    added_canon.push(canon);
+                }
+            }
+        }
+        let mut removed_canon: Vec<PathBuf> = Vec::new();
+        for removed_folder in &params.event.removed {
+            if let Some(canon) = canon_folder(&removed_folder.uri) {
+                roots.retain(|r| r != &canon);
+                removed_canon.push(canon);
+            }
+        }
+        self.source_db.set_workspace_roots(roots.clone());
+        if !removed_canon.is_empty() {
+            // Drop only files no longer under ANY remaining root — a removed folder may be nested
+            // inside one, in which case its files must stay resolvable. `unregister_under` is too
+            // blunt (it would null their text), so unregister the uncovered paths individually.
+            let still_under = |id: FileId| -> bool {
+                self.source_db
+                    .vfs()
+                    .path(id)
+                    .is_some_and(|p| roots.iter().any(|r| p.as_path().starts_with(r)))
+            };
+            let mut to_drop: Vec<FileId> = Vec::new();
+            for canon in &removed_canon {
+                for id in self.source_db.vfs().ids_under(canon) {
+                    if !still_under(id) {
+                        to_drop.push(id);
+                    }
+                }
+            }
+            for id in &to_drop {
+                self.workspace_files.remove(id);
+                if let Some(p) = self.source_db.vfs().path(*id).cloned() {
+                    self.source_db.vfs_mut().unregister_path(&p);
+                }
+            }
+            if !to_drop.is_empty() {
+                self.after_vfs_mutation();
+            }
+        }
+        if !added_canon.is_empty() {
+            self.register_indexed_paths(crate::project_index::collect_circom_files_with_content(
+                &added_canon,
+            ));
+        }
+    }
+
+    /// Goto-definition shaper: an include-path string routes to [`include_target_location`]; any other token
+    /// resolves via [`Self::resolve_token`], file-tagged.
     pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
-            return jump_to_lib(file_db, token, self.source_db.vfs());
+            return include_target_location(file_db, token, &self.source_db);
         }
-        // A component member-access field (`c.x` / `T()(...).x`) resolves via type inference
-        // (`resolve_member`), not the flat name resolver (which returns empty for fields by design).
-        let resolved = if resolver::component_field(token).is_some() {
-            self.resolve_member(file_db, token)
+        self.to_locations(self.resolve_token(file_db, token))
+    }
+
+    /// Resolve `token`: a component field (`c.x`) via [`Self::resolve_member`]; else [`Self::resolve_use`].
+    pub(crate) fn resolve_token(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        if resolver::component_field(token).is_some() {
+            self.resolve_member(origin, token)
         } else {
-            self.resolve_use(file_db, token)
-        };
+            self.resolve_use(origin, token)
+        }
+    }
+
+    /// File-tagged resolved declarations → file-tagged LSP [`Location`]s (at the name token).
+    fn to_locations(&self, resolved: Vec<(FileId, ResolvedSymbol)>) -> Vec<Location> {
         resolved
             .into_iter()
             .map(|(id, s)| Location::new(self.source_db.file_db(id).file_path.clone(), s.def_range))
             .collect()
     }
 
-    /// The [`FileId`]s of every include loaded for `origin`. Shared by [`Self::resolve_use`] and
-    /// [`Self::resolve_template_file`] so the include walk lives in one place.
+    /// The [`FileId`]s of every text-bearing include loaded for `origin`. Path-only ids (interned
+    /// by the walk but unread) are filtered: `symbol_table` parses the result and would panic on a
+    /// None-text id. Memoized per origin; cleared by [`Self::drop_include_cache`].
     fn loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
+        if let Some(cached) = self.loaded_includes_cache.borrow().get(&origin.file_id) {
+            return cached.clone();
+        }
+        let result = self.compute_loaded_includes(origin);
+        self.loaded_includes_cache
+            .borrow_mut()
+            .insert(origin.file_id, result.clone());
+        result
+    }
+
+    fn compute_loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
         let Some(ast) = self.source_db.ast(origin.file_id) else {
             return Vec::new();
         };
@@ -169,54 +385,88 @@ impl GlobalState {
             .into_iter()
             .filter_map(|inc| inc.lib())
             .filter_map(|path| {
-                self.source_db
-                    .id_for_include(&origin.file_path, &path.value())
+                let id = self
+                    .source_db
+                    .id_for_include(&origin.file_path, &path.value())?;
+                let has_text = self.source_db.vfs().file_text(id).is_some();
+                has_text.then_some(id)
             })
             .collect()
     }
 
-    /// Resolve `token` to its file-tagged declaration(s): in-file first; then, for a component
-    /// decl/call — or the top-level `component main = X()` instantiation — each loaded include's
-    /// top-level by name. Cross-file is file-scope only (template/function names) — the shared
-    /// core for goto-def, rename, references.
-    pub(crate) fn resolve_use(
+    /// In-file resolution of `token` against `origin`'s own `SymbolTable` (file-tagged).
+    fn resolve_in_file(
         &self,
         origin: &FileDB,
         token: &SyntaxToken,
     ) -> Vec<(FileId, ResolvedSymbol)> {
         let table = self.source_db.symbol_table(origin.file_id);
-        let mut out: Vec<(FileId, ResolvedSymbol)> = resolver::resolve(&table, token)
+        resolver::resolve(&table, token)
             .into_iter()
             .map(|s| (origin.file_id, s))
-            .collect();
+            .collect()
+    }
 
-        // A component declaration/call — or the top-level `component main = X()` instantiation —
-        // also resolves to template/function defs in loaded includes. `MainComponent` is a distinct
-        // node kind from `ComponentDecl`/`ComponentCall`, so it is listed explicitly (without it,
-        // `component main = Lib()` where `Lib` is in an include would never resolve).
+    /// Each **direct** include's top-level declarations named like `token` (circom's non-transitive
+    /// include visibility), file-tagged with the include's `FileId`.
+    fn resolve_in_includes(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let name = token.text();
+        let mut out = Vec::new();
+        for lib_id in self.loaded_includes(origin) {
+            let lib_table = self.source_db.symbol_table(lib_id);
+            for sym in lib_table.lookup_top_level(name) {
+                out.push((lib_id, ResolvedSymbol::from(sym)));
+            }
+        }
+        out
+    }
+
+    /// Resolve `token` to its file-tagged declaration(s) for goto-def/hover: in-file first
+    /// (shadowing); if empty, for a component decl/call — or the top-level `component main = X()`
+    /// instantiation — each loaded include's top-level by name. `MainComponent` is a distinct node
+    /// kind from `ComponentDecl`/`ComponentCall`, so it is listed explicitly (without it,
+    /// `component main = Lib()` where `Lib` is in an include would never resolve).
+    pub(crate) fn resolve_use(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let in_file = self.resolve_in_file(origin, token);
+        if !in_file.is_empty() {
+            return in_file;
+        }
         let is_component_use = token_ancestors(token).any(|n| {
             AstComponentDecl::can_cast(n.kind())
                 || AstComponentCall::can_cast(n.kind())
                 || AstMainComponent::can_cast(n.kind())
         });
         if is_component_use {
-            let name = token.text();
-            for lib_id in self.loaded_includes(origin) {
-                let lib_table = self.source_db.symbol_table(lib_id);
-                for sym in lib_table.lookup_top_level(name) {
-                    out.push((
-                        lib_id,
-                        ResolvedSymbol {
-                            kind: sym.kind,
-                            name: sym.name.clone(),
-                            def_range: sym.def_range,
-                            decl_range: sym.decl_range,
-                        },
-                    ));
-                }
-            }
+            self.resolve_in_includes(origin, token)
+        } else {
+            Vec::new()
         }
-        out
+    }
+
+    /// Resolve `token` with workspace visibility — [`Self::resolve_use`] **without** the
+    /// component-use gate: in-file first (precedence/shadowing); when non-empty it wins outright, so
+    /// an in-file def shadows an include's same-named def; otherwise every direct include's
+    /// top-level by name. References/rename need this ungated path to find usages of *any* included
+    /// top-level symbol (a template/function referenced by name inside a body), not just component
+    /// instantiations.
+    pub(crate) fn resolve_visible(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let in_file = self.resolve_in_file(origin, token);
+        if !in_file.is_empty() {
+            return in_file;
+        }
+        self.resolve_in_includes(origin, token)
     }
 
     /// Resolve a component member-access **field** token (`c.x` / `T()(...).x`) to its signal
@@ -261,17 +511,7 @@ impl GlobalState {
             .members_of(&template_name)
             .into_iter()
             .filter(|s| s.name == field_name)
-            .map(|s| {
-                (
-                    template_file,
-                    ResolvedSymbol {
-                        kind: s.kind,
-                        name: s.name.clone(),
-                        def_range: s.def_range,
-                        decl_range: s.decl_range,
-                    },
-                )
-            })
+            .map(|s| (template_file, s.into()))
             .collect()
     }
 
@@ -296,29 +536,88 @@ impl GlobalState {
         })
     }
 
-    /// Occurrences of `target` in its defining file, as tokens. In-file by design: each
-    /// `SymbolTable` indexes only its own file, so a token resolves unambiguously. Cross-file rename
-    /// is deferred — it needs a workspace symbol graph, not name/`def_range` matching across files
-    /// (that both misses real cross-file usages and can collide when two files define a same-named
-    /// symbol at the same line:column).
-    pub(crate) fn find_occurrences(
+    /// Every occurrence of `target` across the workspace, as `(FileId, Range)`. Scans
+    /// [`Self::workspace_files`] plus the cursor's `origin` file and the target's defining file
+    /// (the latter two cover the no-index / in-file case). For each candidate file, finds
+    /// `Identifier` tokens named `target.name` and keeps those that [`Self::resolve_visible`]
+    /// resolves to `(target FileId, kind, def_range)`. Resolution-based, so shadowing and same-name
+    /// collisions across files are sound: a token matches only if it genuinely refers to `target`.
+    /// Files with no loaded text or no parse are skipped (the `cursor_context` None-text guard,
+    /// workspace-wide).
+    pub(crate) fn workspace_occurrences(
         &self,
         target: &(FileId, ResolvedSymbol),
-    ) -> Vec<syntax::node::SyntaxToken> {
+        origin: FileId,
+    ) -> Vec<(FileId, Range)> {
         let (def_file, sym) = target;
-        let Some(ast) = self.source_db.ast(*def_file) else {
-            return Vec::new();
-        };
-        let table = self.source_db.symbol_table(*def_file);
-        resolver::occurrences_in(ast.syntax(), &table, sym)
+        let name = sym.name.as_str();
+
+        let mut scan = self.workspace_files.clone();
+        scan.insert(origin);
+        scan.insert(*def_file);
+
+        let mut out = Vec::new();
+        for f in scan {
+            if self.source_db.vfs().file_text(f).is_none() {
+                continue;
+            }
+            let file_db = self.source_db.file_db(f);
+            // A token in `f` can only resolve to `target` if `f` IS the defining file, is the
+            // cursor's file, or directly includes the defining file (circom's non-transitive
+            // visibility). Skip the rest — they can't reference `target`, so walking their tokens
+            // (an O(file_text) walk each) is wasted work on large workspaces.
+            let visible =
+                f == *def_file || f == origin || self.loaded_includes(&file_db).contains(def_file);
+            if !visible {
+                continue;
+            }
+            let Some(ast) = self.source_db.ast(f) else {
+                continue;
+            };
+            for tok in resolver::identifiers_named(ast.syntax(), name) {
+                let matched = self
+                    .resolve_visible(&file_db, &tok)
+                    .into_iter()
+                    .any(|(fid, r)| {
+                        fid == *def_file && r.kind == sym.kind && r.def_range == sym.def_range
+                    });
+                if matched {
+                    out.push((f, file_db.token_range(&tok)));
+                }
+            }
+        }
+        out
     }
 
-    /// Register an updated document: set its text (dropping derived caches) and load each `include`
-    /// once. No eager index — the symbol table builds lazily and invalidates on edit; a no-op
-    /// (identical text) short-circuits; non-`file:` URIs and unreadable includes are skipped, not
-    /// crashed. Takes the document by value so `text` moves (not clones) — drops one `String` clone
-    /// per keystroke.
+    /// Every top-level template/function/bus in the workspace whose name matches `query` (empty
+    /// query ⇒ all), as owned `(FileId, Symbol)` (each file's `SymbolTable` is cached behind a
+    /// short-lived borrow). Powers `workspace/symbol`.
+    pub(crate) fn workspace_symbols(&self, query: &str) -> Vec<(FileId, Symbol)> {
+        let q = query.trim().to_lowercase();
+        let mut out = Vec::new();
+        for f in &self.workspace_files {
+            if self.source_db.vfs().file_text(*f).is_none() {
+                continue;
+            }
+            if self.source_db.ast(*f).is_none() {
+                continue;
+            }
+            let table = self.source_db.symbol_table(*f);
+            for sym in table.top_level_symbols() {
+                if is_workspace_symbol_kind(sym.kind) && matches_query(&q, &sym.name) {
+                    out.push((*f, sym.clone()));
+                }
+            }
+        }
+        out
+    }
+
+    /// Register an updated document: set text (dropping derived caches) and load each include once.
+    /// Identical text short-circuits; non-`file:` URIs and unreadable includes are skipped, not
+    /// crashed. Takes the doc by value so `text` moves.
     pub fn handle_update(&mut self, text_document: TextDocument) -> Result<()> {
+        self.open_documents.insert(text_document.uri.clone());
+
         let Some((id, changed)) = self
             .source_db
             .set_document(&text_document.uri, text_document.text)
@@ -331,6 +630,9 @@ impl GlobalState {
         if !changed {
             return Ok(());
         }
+
+        // An edit can change which includes are loaded → drop the resolved-include memo.
+        self.drop_include_cache();
 
         // Includes load from disk once then cache; symbol tables build lazily on first query.
         if let Some(ast) = self.source_db.ast(id) {
@@ -346,6 +648,25 @@ impl GlobalState {
 
         Ok(())
     }
+}
+
+/// Canonical absolute path of a workspace-folder URI (`None` for non-`file:` or un-canonicalizable).
+fn canon_folder(uri: &Url) -> Option<PathBuf> {
+    uri.to_file_path().ok().and_then(|p| p.canonicalize().ok())
+}
+
+/// `true` for top-level kinds surfaced by `workspace/symbol` (templates/functions/buses).
+fn is_workspace_symbol_kind(kind: SymbolKind) -> bool {
+    matches!(
+        kind,
+        SymbolKind::Template | SymbolKind::Function | SymbolKind::Bus
+    )
+}
+
+/// Case-insensitive substring match against an already-lowercased `query` (callers hoist the
+/// `to_lowercase` once per request); an empty query matches everything.
+fn matches_query(query_lower: &str, name: &str) -> bool {
+    query_lower.is_empty() || name.to_lowercase().contains(query_lower)
 }
 
 /// Deserialize params, run the handler, wrap the result in a success `Response`. Generic so
@@ -449,5 +770,409 @@ mod tests {
             .handle_update(doc(&untitled, "pragma circom 2.0.0;".to_string()))
             .unwrap();
         assert!(state.source_db.id_for_url(&untitled).is_none());
+    }
+
+    /// Regression: a same-dir `include "lib.circom"` resolves **without** `index_workspace` — the
+    /// basename index is an addition, not a gate, so the pre-index behavior is unchanged.
+    #[test]
+    fn sibling_include_resolves_without_index_test() {
+        let main_uri = fixture_uri("with_include/main.circom");
+        let lib_uri = fixture_uri("with_include/lib.circom");
+        let src = std::fs::read_to_string(main_uri.to_file_path().unwrap()).unwrap();
+        let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&crate_path)
+            .join("src/test_files/handler/with_include")
+            .canonicalize()
+            .unwrap();
+        let mut state = GlobalState::new(vec![root]);
+        // NOTE: no index_workspace() — same-dir resolution must work exactly as before.
+        state.handle_update(doc(&main_uri, src)).unwrap();
+        assert!(
+            state.source_db.id_for_url(&lib_uri).is_some(),
+            "sibling include loads without the basename index"
+        );
+    }
+
+    /// A non-sibling `include "lib.circom"` (lib under `circuits/`) resolves via the basename index
+    /// after `index_workspace`: the same-dir lookup misses, `find_include` picks the indexed
+    /// `circuits/lib.circom`, and `load_include` reads it. `id_for_include` then surfaces it for
+    /// cross-file resolve.
+    #[test]
+    fn nonsibling_include_resolves_via_index_test() {
+        let main_uri = fixture_uri("with_include_nonsibling/main.circom");
+        let src = std::fs::read_to_string(main_uri.to_file_path().unwrap()).unwrap();
+        let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&crate_path)
+            .join("src/test_files/handler/with_include_nonsibling")
+            .canonicalize()
+            .unwrap();
+        let mut state = GlobalState::new(vec![root]);
+        state.index_workspace();
+        state.handle_update(doc(&main_uri, src)).unwrap();
+
+        // The lib lives under circuits/ — a same-dir lookup would miss, so loading proves the
+        // basename fallback fired.
+        let lib_id = state
+            .source_db
+            .load_include(&main_uri, "lib.circom")
+            .expect("non-sibling include must resolve via the basename index");
+        assert!(
+            state.source_db.vfs().file_text(lib_id).is_some(),
+            "the resolved lib has loaded text"
+        );
+
+        // `id_for_include` (the pure path used by cross-file resolve) also finds it.
+        assert_eq!(
+            state.source_db.id_for_include(&main_uri, "lib.circom"),
+            Some(lib_id),
+            "id_for_include surfaces the same winner as load_include"
+        );
+    }
+
+    /// With two files sharing the basename `lib.circom`, an `include "circuits/lib.circom"` resolves
+    /// to the suffix-matching candidate (`circuits/lib.circom`), not the decoy (`other/lib.circom`).
+    #[test]
+    fn duplicate_basename_picks_suffix_match_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_dup_{}", std::process::id()));
+        let ws = base.join("ws");
+        let circuits = ws.join("circuits");
+        let other = ws.join("other");
+        fs::create_dir_all(&circuits).unwrap();
+        fs::create_dir_all(&other).unwrap();
+        let lib_body = "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n";
+        fs::write(circuits.join("lib.circom"), lib_body).unwrap();
+        fs::write(other.join("lib.circom"), lib_body).unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"circuits/lib.circom\";\n";
+        fs::write(ws.join("main.circom"), main_src).unwrap();
+
+        let main_url = Url::from_file_path(ws.join("main.circom")).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+
+        let id = state
+            .source_db
+            .load_include(&main_url, "circuits/lib.circom")
+            .expect("include resolves among duplicate basenames");
+        let resolved = state
+            .source_db
+            .vfs()
+            .path(id)
+            .expect("winner is interned")
+            .as_path()
+            .to_path_buf();
+        assert!(
+            resolved.ends_with("circuits/lib.circom"),
+            "suffix match wins over the decoy: {resolved:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (CRITICAL fix): an interned file with **no text** must NOT crash
+    /// `cursor_context`/`file_text().expect()`. `id_for_url` returns `Some` for the interned id;
+    /// the query path must treat it as unreadable and return `None`. (Eager loading means
+    /// `index_workspace` no longer produces text-less ids, so this interns a path-only id directly
+    /// to exercise the guard.)
+    #[test]
+    fn cursor_context_no_panic_on_textless_file_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_panic_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        fs::write(ws.join("main.circom"), "pragma circom 2.0.0;\n").unwrap();
+        let canon = ws.join("main.circom").canonicalize().unwrap();
+
+        let url = Url::from_file_path(&canon).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        // Intern the path with NO text (path-only), simulating a not-yet-loaded/leaked id.
+        if let Some(vpath) = vfs::VfsPath::from_abs_path(&canon) {
+            state.source_db.vfs_mut().register_path(vpath);
+        }
+
+        assert!(
+            state.source_db.id_for_url(&url).is_some(),
+            "file is interned"
+        );
+        assert!(
+            state
+                .cursor_context(&url, lsp_types::Position::new(0, 0))
+                .is_none(),
+            "None-text file must not crash cursor_context"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (dirty-buffer fix): a `workspace/didChangeWatchedFiles` CHANGED event for a file
+    /// the client has open must NOT overwrite its in-memory (dirty) text from disk — `didChange` is
+    /// authoritative for open docs.
+    #[test]
+    fn watched_changed_skips_open_document_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_open_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_path = ws.join("lib.circom");
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        // Open with dirty text not yet on disk.
+        state
+            .handle_update(doc(
+                &lib_url,
+                "pragma circom 2.0.0;\ntemplate Dirty() {}\n".to_string(),
+            ))
+            .unwrap();
+
+        // Disk content changes underneath; watcher fires CHANGED.
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+        state.handle_watched_file_change(lsp_types::FileEvent {
+            uri: lib_url.clone(),
+            typ: lsp_types::FileChangeType::CHANGED,
+        });
+
+        // The open doc's dirty text is preserved (reload was skipped).
+        let id = state.source_db.id_for_url(&lib_url).unwrap();
+        let text = state.source_db.file_text(id);
+        assert!(
+            text.contains("Dirty"),
+            "open-doc buffer must be preserved across a watcher CHANGED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (CREATED fix): a `workspace/didChangeWatchedFiles` CREATED event for a file the
+    /// client has open must NOT overwrite its dirty buffer. A build tool that deletes+recreates a
+    /// file while it's open fires CREATED; the open doc's unsaved edits must survive (mirrors the
+    /// CHANGED/DELETED open-doc guards).
+    #[test]
+    fn watched_created_skips_open_document_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_created_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_path = ws.join("lib.circom");
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        // Open with dirty text; the file does not yet exist on disk.
+        state
+            .handle_update(doc(
+                &lib_url,
+                "pragma circom 2.0.0;\ntemplate Dirty() {}\n".to_string(),
+            ))
+            .unwrap();
+
+        // The file is (re)created on disk underneath; watcher fires CREATED.
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+        state.handle_watched_file_change(lsp_types::FileEvent {
+            uri: lib_url.clone(),
+            typ: lsp_types::FileChangeType::CREATED,
+        });
+
+        let id = state.source_db.id_for_url(&lib_url).unwrap();
+        let text = state.source_db.file_text(id);
+        assert!(
+            text.contains("Dirty"),
+            "open-doc buffer must be preserved across a watcher CREATED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (DELETED fix): a `workspace/didChangeWatchedFiles` DELETED event for a file the
+    /// client has open must NOT null its in-memory text (a build tool deleting+recreating the file
+    /// must not make the open doc unresolvable). Mirrors the CHANGED open-doc guard.
+    #[test]
+    fn watched_deleted_skips_open_document_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_del_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_path = ws.join("lib.circom");
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state
+            .handle_update(doc(
+                &lib_url,
+                "pragma circom 2.0.0;\ntemplate Dirty() {}\n".to_string(),
+            ))
+            .unwrap();
+
+        // File deleted on disk while the doc is open; watcher fires DELETED.
+        let _ = fs::remove_file(&lib_path);
+        state.handle_watched_file_change(lsp_types::FileEvent {
+            uri: lib_url.clone(),
+            typ: lsp_types::FileChangeType::DELETED,
+        });
+
+        // The open doc's text is preserved (the unregister was skipped).
+        let id = state.source_db.id_for_url(&lib_url).unwrap();
+        let text = state.source_db.file_text(id);
+        assert!(
+            text.contains("Dirty"),
+            "open-doc text must be preserved across a watcher DELETED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (removed-folder fix): after a workspace folder is removed, an already-loaded
+    /// include that lived under it must stop resolving (the read path now checks confinement).
+    #[test]
+    fn removed_folder_include_stops_resolving_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_rm_{}", std::process::id()));
+        let ws1 = base.join("ws1");
+        let ws2 = base.join("ws2");
+        fs::create_dir_all(&ws1).unwrap();
+        fs::create_dir_all(&ws2).unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\n";
+        fs::write(ws1.join("main.circom"), main_src).unwrap();
+        fs::write(
+            ws2.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let main_url = Url::from_file_path(ws1.join("main.circom")).unwrap();
+        let mut state = GlobalState::new(vec![
+            ws1.canonicalize().unwrap(),
+            ws2.canonicalize().unwrap(),
+        ]);
+        state.index_workspace();
+        state
+            .handle_update(doc(&main_url, main_src.to_string()))
+            .unwrap();
+        // The non-sibling lib (under ws2) resolves via the basename fallback.
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_some(),
+            "lib resolves while its root is present"
+        );
+
+        // Remove ws2 from the workspace.
+        state.handle_workspace_folders_change(lsp_types::DidChangeWorkspaceFoldersParams {
+            event: lsp_types::WorkspaceFoldersChangeEvent {
+                added: Vec::new(),
+                removed: vec![lsp_types::WorkspaceFolder {
+                    uri: Url::from_file_path(&ws2).unwrap(),
+                    name: "ws2".to_string(),
+                }],
+            },
+        });
+
+        // The lib is no longer confined → must stop resolving.
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_none(),
+            "removed-folder include must stop resolving"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (nested-folder fix): removing a folder nested inside a *remaining* root must NOT
+    /// drop files that are still covered by the outer root. Previously `unregister_under` nulled
+    /// their text, silently breaking resolution.
+    #[test]
+    fn removed_nested_folder_keeps_covered_files_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_nested_{}", std::process::id()));
+        let outer = base.join("proj");
+        let inner = outer.join("sub");
+        fs::create_dir_all(&inner).unwrap();
+        fs::write(
+            inner.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let lib_url = Url::from_file_path(inner.join("lib.circom")).unwrap();
+
+        // Both the outer project and its nested sub-folder are roots.
+        let mut state = GlobalState::new(vec![
+            outer.canonicalize().unwrap(),
+            inner.canonicalize().unwrap(),
+        ]);
+        state.index_workspace();
+        let id = state.source_db.id_for_url(&lib_url).expect("lib indexed");
+        assert!(
+            state.source_db.vfs().file_text(id).is_some(),
+            "lib has loaded text"
+        );
+
+        // Remove only the nested folder — `outer` still covers `lib.circom`.
+        state.handle_workspace_folders_change(lsp_types::DidChangeWorkspaceFoldersParams {
+            event: lsp_types::WorkspaceFoldersChangeEvent {
+                added: Vec::new(),
+                removed: vec![lsp_types::WorkspaceFolder {
+                    uri: Url::from_file_path(&inner).unwrap(),
+                    name: "sub".to_string(),
+                }],
+            },
+        });
+
+        // The file is still under the outer root → it must keep its text + stay in the workspace.
+        assert!(
+            state.source_db.vfs().file_text(id).is_some(),
+            "a file still under a remaining root must keep its text"
+        );
+        assert!(
+            state.workspace_files.contains(&id),
+            "a file still under a remaining root stays in workspace_files"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (walk-landing reload fix): a doc with a non-sibling include opened BEFORE the
+    /// index is populated has its include loaded when the walk lands — without needing another edit
+    /// — so cross-file symbol features activate immediately.
+    #[test]
+    fn index_landing_reloads_open_doc_non_sibling_include_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_land_{}", std::process::id()));
+        let ws = base.join("ws");
+        let circuits = ws.join("circuits");
+        fs::create_dir_all(&circuits).unwrap();
+        fs::write(
+            circuits.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ncomponent main = Lib();\n";
+        fs::write(ws.join("main.circom"), main_src).unwrap();
+        let main_url = Url::from_file_path(ws.join("main.circom")).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+
+        // Open main BEFORE the index is built (simulates didOpen beating the background walk).
+        state
+            .handle_update(doc(&main_url, main_src.to_string()))
+            .unwrap();
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_none(),
+            "pre-index: non-sibling include is unresolved"
+        );
+
+        // The walk lands → open docs' includes are re-loaded.
+        state.index_workspace();
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_some(),
+            "post-index: include resolves after the walk reloads open docs"
+        );
+
+        let _ = fs::remove_dir_all(&base);
     }
 }

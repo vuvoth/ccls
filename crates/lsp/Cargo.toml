@@ -19,6 +19,7 @@ serde = { workspace = true, features = ["derive"] }
 
 anyhow = { workspace = true }
 path-absolutize = { workspace = true }
+walkdir = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true, features = ["yaml"] }

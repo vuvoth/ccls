@@ -25,7 +25,10 @@ pub struct FileDB {
 impl FileDB {
     pub(crate) fn new(file_id: FileId, content: &str, file_path: Url) -> Self {
         let mut newline_offsets = Vec::new();
-        for (offset, c) in content.chars().enumerate() {
+        // `char_indices` yields BYTE offsets; `chars().enumerate()` would yield char indices, which
+        // diverge from byte offsets once a multi-byte char appears and later panic in the
+        // `[line_start..]` slice (`line_start_byte` uses these as byte offsets).
+        for (offset, c) in content.char_indices() {
             if c == '\n' {
                 newline_offsets.push(offset as u32);
             }
@@ -76,9 +79,10 @@ impl FileDB {
     /// UTF-16 units from the line start.
     pub fn position(&self, offset: TextSize) -> Position {
         let offset = u32::from(offset) as usize;
+        // `binary_search` returns the index both on hit (offset is exactly a `\n`) and on miss
+        // (insertion point) — for line numbering both yield the same line, so collapse the arms.
         let line = match self.newline_offsets.binary_search(&(offset as u32)) {
-            Ok(l) => l,
-            Err(l) => l,
+            Ok(line) | Err(line) => line,
         };
         let line_start = self.line_start_byte(line as u32);
         // `line_start` and `offset` are both char boundaries (rowan token offsets always are, and
@@ -194,5 +198,32 @@ mod tests {
         // Round trip back.
         assert_eq!(file_db.position(6.into()), Position::new(0, 3));
         assert_eq!(file_db.position(2.into()), Position::new(0, 1));
+    }
+
+    /// Regression for the exit-101 panic: a multi-byte char **before a newline** must not make
+    /// `newline_offsets` (and thus `line_start_byte`'s `[line_start..]` slice) land mid-character.
+    /// The box-drawing `─` in circomlib comments (3 bytes) crashed `position()` because the offsets
+    /// were stored as char indices, not byte offsets.
+    #[test]
+    fn multibyte_before_newline_no_panic_test() {
+        // Line 0 ends with `─` (U+2500, 3 bytes); line 1 is `ab`. Bytes: ─=0..3, \n=3, a=4, b=5.
+        let source = "─\nab";
+        let file_db = FileDB::new(
+            FileId(1),
+            source,
+            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
+        );
+        // The newline is at byte 3, not char index 1.
+        assert_eq!(file_db.newline_offsets, vec![3]);
+
+        // `a` is at byte 4 → line 1, character 0 (first char on line 1).
+        assert_eq!(file_db.position(4.into()), Position::new(1, 0));
+        // `b` is at byte 5 → line 1, character 1.
+        assert_eq!(file_db.position(5.into()), Position::new(1, 1));
+        // `─` occupies line 0 characters 0..1 (1 UTF-16 unit).
+        assert_eq!(file_db.position(0.into()), Position::new(0, 0));
+
+        // Round trip: Position(1,1) → byte 5.
+        assert_eq!(file_db.offset(Position::new(1, 1)), 5.into());
     }
 }

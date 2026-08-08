@@ -182,17 +182,12 @@ mod tests {
 
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
+    use crate::test_util::state_with;
 
     use super::handle;
     use lsp_types::{
         CompletionParams, CompletionResponse, TextDocumentIdentifier, TextDocumentPositionParams,
     };
-
-    fn state_with(url: &Url, source: &str) -> GlobalState {
-        let mut state = GlobalState::new(Vec::new());
-        state.source_db.set_document(url, source.to_string());
-        state
-    }
 
     /// Position at the byte offset just past the last occurrence of `needle`.
     fn position_after_last(source: &str, needle: &str) -> Position {
