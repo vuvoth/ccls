@@ -15,6 +15,7 @@ use std::error::Error;
 use std::path::PathBuf;
 
 use lsp_server::{Connection, Message, Request, RequestId};
+use lsp_types::notification::Notification;
 use lsp_types::{
     CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
     TextDocumentSyncCapability, TextDocumentSyncKind,
@@ -69,6 +70,7 @@ fn server_capabilities() -> ServerCapabilities {
             prepare_provider: Some(true),
             work_done_progress_options: Default::default(),
         })),
+        workspace_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     }
 }
@@ -81,41 +83,33 @@ fn main_loop(
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let params: InitializeParams = serde_json::from_value(params)?;
 
-    // Capture workspace roots so `include` resolution can be confined to them (path-traversal
-    // defense). Without roots the server refuses to load any include rather than read arbitrarily.
+    // Roots confine include resolution (path-traversal defense); empty roots ⇒ no include loads.
     let roots = workspace_roots(&params);
     let mut state = GlobalState::new(roots.clone());
 
-    // Background the workspace walk so `initialize` never blocks on I/O (a large `node_modules` can
-    // take seconds). The thread only does the I/O-heavy `collect_circom_files`; it hands the
-    // canonical paths back on a side channel, and the main loop registers them between messages.
-    // The server is responsive immediately; non-sibling includes resolve once the index lands, and
-    // same-dir includes work from the start (never gated on the index).
-    let (index_tx, index_rx) = std::sync::mpsc::channel::<Vec<std::path::PathBuf>>();
+    // Background the walk so `initialize` never blocks on I/O; the thread collects canonical paths
+    // **and reads file content** (pure I/O — text interning stays on the main thread), and the main
+    // loop interns it between messages. Same-dir includes work immediately; non-sibling ones resolve
+    // once the index lands. Eager-loading all text lets workspace references/rename/symbol scan
+    // every file.
+    let (index_tx, index_rx) = std::sync::mpsc::channel::<Vec<(std::path::PathBuf, String)>>();
     if !roots.is_empty() {
         let walk_roots = roots.clone();
         std::thread::spawn(move || {
-            let paths = crate::project_index::collect_circom_files(&walk_roots);
-            // The only error is the receiver being gone (server shutting down); nothing to do then.
-            let _ = index_tx.send(paths);
+            let entries = crate::project_index::collect_circom_files_with_content(&walk_roots);
+            let _ = index_tx.send(entries); // error ⇒ receiver gone (shutdown); ignore
         });
     }
 
-    // If the client supports it, register a `**/*.circom` watcher per root so created/deleted
-    // files keep the index fresh without a full re-walk. Best-effort: a missing reply or
-    // unsupported client just leaves the index stale at the file level (refreshed on workspace
-    // folder changes); the `Message::Response(_)` no-op arm below absorbs the registration reply.
-    register_watched_files_capability(&connection, &params, &roots)?;
+    let mut watcher_registered = false;
 
     for msg in &connection.receiver {
-        // Apply any completed background-walk results without blocking, before handling this
-        // message. `try_recv` returns immediately when nothing is ready yet.
-        while let Ok(paths) = index_rx.try_recv() {
-            state.register_indexed_paths(paths);
+        // Apply any completed walk results without blocking before handling this message.
+        while let Ok(entries) = index_rx.try_recv() {
+            state.register_indexed_paths(entries);
         }
         match msg {
             Message::Request(req) => {
-                // The `shutdown` request is handled by the transport itself.
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
@@ -125,6 +119,13 @@ fn main_loop(
             }
             Message::Response(_) => {}
             Message::Notification(not) => {
+                // Register the watcher after `initialized` (LSP servers must not send requests
+                // before it; a strict client would silently drop a pre-init registration).
+                if !watcher_registered && not.method == lsp_types::notification::Initialized::METHOD
+                {
+                    watcher_registered = true;
+                    register_watched_files_capability(&connection, &params, &roots)?;
+                }
                 state.handle_notification(not)?;
             }
         }
@@ -165,12 +166,9 @@ fn workspace_roots(params: &InitializeParams) -> Vec<PathBuf> {
         .collect()
 }
 
-/// If the client advertised `workspace.didChangeWatchedFiles` dynamic-registration support,
-/// register one `**/*.circom` file watcher per workspace root via a `client/registerCapability`
-/// request. Best-effort: no-op if unsupported or if there are no roots. The request is sent on the
-/// `connection.sender`; its (empty) reply hits the `Message::Response(_)` no-op arm in
-/// [`main_loop`]. We build the params as JSON to stay independent of the proposed
-/// `GlobPattern`/`RelativePattern` shape across `lsp_types` versions — the wire format is stable.
+/// Register a `**/*.circom` watcher per root via `client/registerCapability`, if the client
+/// supports dynamic registration. No-op if unsupported or no roots. Params are built as JSON to
+/// avoid the proposed `GlobPattern` shape across `lsp_types` versions.
 fn register_watched_files_capability(
     connection: &Connection,
     params: &InitializeParams,

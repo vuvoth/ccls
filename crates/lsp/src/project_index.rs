@@ -1,42 +1,41 @@
-//! Project-wide `.circom` file discovery + indexing (the only place in the server that walks the
-//! filesystem).
-//!
-//! The pure basename index lives in [`vfs`]; this module is the I/O boundary that feeds it. At
-//! `initialize` (and on workspace-folder changes) [`collect_circom_files`] walks each root once and
-//! [`GlobalState::index_workspace`] interns every found path with **no text** (cheap — no file
-//! reads). Text loads lazily, on demand, the first time an `include` resolves to that path.
+//! Project-wide `.circom` file discovery + indexing — the only place that walks the filesystem.
+//! `collect_circom_files` runs (backgrounded) at `initialize` and on workspace-folder changes; it
+//! interns paths with no text, and text loads lazily on first `include` resolution.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use vfs::VfsPath;
 
 use crate::global_state::GlobalState;
+use crate::source_db::SourceDatabase;
 
-/// Recursively collect every `*.circom` file under `roots`, returning each as a **canonical**
-/// absolute path. Descends into `node_modules` (circomlib lives there), so this deliberately does
-/// NOT use an ignore-respecting walker. Symlinks are not followed (`walkdir` default), which breaks
-/// symlink loops; entries that fail to canonicalize (raced-away, permission-denied) are skipped.
+/// `.git`/`target` never hold circom sources; `node_modules` is kept (circomlib lives there).
+fn is_pruned_dir(file_name: &std::ffi::OsStr) -> bool {
+    matches!(file_name.to_str(), Some(".git") | Some("target"))
+}
+
+/// Recursively collect every `*.circom` file under `roots` as canonical absolute paths. Descends
+/// into `node_modules`, prunes `.git`/`target`, and doesn't follow symlinks.
 pub(crate) fn collect_circom_files(roots: &[PathBuf]) -> Vec<PathBuf> {
     let mut out = Vec::new();
     for root in roots {
         for entry in walkdir::WalkDir::new(root)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|e| !is_pruned_dir(e.file_name()))
             .filter_map(|e| e.ok())
         {
             let path = entry.path();
-            // Use the type walkdir already determined (often via `d_type`, no extra syscall) instead
-            // of `path.is_file()` which issues a fresh `stat` per entry. `file_type()` also skips
-            // symlinks-to-files, consistent with `follow_links(false)` above.
+            // `file_type()` reuses walkdir's cached type (no extra `stat`) and skips symlinks.
             if !entry.file_type().is_file() {
                 continue;
             }
             if path.extension().and_then(|e| e.to_str()) != Some("circom") {
                 continue;
             }
-            // Canonicalize BEFORE interning: `VfsPath::from_abs_path` only *absolutizes* (lexical,
-            // no symlink/`..` resolution), so confinement's `starts_with` against canonical roots
-            // needs a real canonical path here. Skip entries that vanish mid-walk.
+            // Canonicalize here: `VfsPath::from_abs_path` only absolutizes, but confinement needs a
+            // real canonical path. Skip entries that vanish mid-walk.
             if let Ok(canon) = path.canonicalize() {
                 out.push(canon);
             }
@@ -45,38 +44,106 @@ pub(crate) fn collect_circom_files(roots: &[PathBuf]) -> Vec<PathBuf> {
     out
 }
 
+/// Walk `roots` and return each `*.circom` file as a canonical path **plus** its content. Pure I/O —
+/// safe to run on the background thread (text interning stays on the main thread). Files that
+/// vanish between the walk and the read are skipped.
+pub(crate) fn collect_circom_files_with_content(roots: &[PathBuf]) -> Vec<(PathBuf, String)> {
+    let mut out = Vec::new();
+    for canon in collect_circom_files(roots) {
+        if let Ok(content) = std::fs::read_to_string(&canon) {
+            out.push((canon, content));
+        }
+    }
+    out
+}
+
 impl GlobalState {
-    /// Intern a pre-collected list of **canonical** `.circom` paths (path-only, no text) into the
-    /// basename index. The I/O-heavy collection ([`collect_circom_files`]) can run on a background
-    /// thread and hand its result here; this step is pure interning + cache flush. Idempotent —
-    /// re-registering existing paths never clobbers text a `load_include`/`didOpen` loaded.
-    pub(crate) fn register_indexed_paths(&mut self, paths: Vec<PathBuf>) {
-        if paths.is_empty() {
+    /// Intern workspace `.circom` paths **with their text** (eager load so workspace occurrences/
+    /// symbol can scan every file), record their ids, and re-load each open doc's includes — a
+    /// non-sibling include that missed at open time (walk hadn't landed) becomes resolvable now.
+    /// Idempotent; never clobbers loaded text.
+    pub(crate) fn register_indexed_paths(&mut self, entries: Vec<(PathBuf, String)>) {
+        if entries.is_empty() {
             return;
         }
-        for canon in paths {
-            if let Some(vpath) = VfsPath::from_abs_path(&canon) {
-                self.source_db.vfs_mut().register_path(vpath);
-            }
+        for (canon, content) in entries {
+            let Some(vpath) = VfsPath::from_abs_path(&canon) else {
+                continue;
+            };
+            let id = self.source_db.vfs_mut().register_path(vpath.clone());
+            self.workspace_files.insert(id);
+            self.source_db
+                .vfs_mut()
+                .set_file_contents(vpath, Some(Arc::from(content)));
         }
-        // register_path records no change-log entry, so this flush is usually a no-op; new files in
-        // the index can newly satisfy an include, so the resolved-include cache is dropped too.
         self.source_db.invalidate_changed();
+        self.reload_open_doc_includes();
         self.drop_include_cache();
     }
 
-    /// Eagerly intern every `.circom` file under the **current** workspace roots (path-only, no
-    /// text). Used by tests and as the synchronous fallback; the live `main_loop` backgrounds the
-    /// walk and calls [`Self::register_indexed_paths`] instead so init never blocks on I/O.
+    /// Re-load includes for every open document. Includes are collected first so the AST borrow is
+    /// dropped before the mutable `load_include`.
+    fn reload_open_doc_includes(&mut self) {
+        let open: Vec<lsp_types::Url> = self.open_documents.iter().cloned().collect();
+        for uri in open {
+            let Some(id) = self.source_db.id_for_url(&uri) else {
+                continue;
+            };
+            let libs: Vec<String> = self
+                .source_db
+                .ast(id)
+                .map(|a| {
+                    a.libs()
+                        .into_iter()
+                        .filter_map(|i| i.lib().map(|l| l.value()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            for rel in libs {
+                let _ = self.source_db.load_include(&uri, &rel);
+            }
+        }
+    }
+
+    /// Synchronous full re-walk of the current roots (tests / fallback). The live `main_loop`
+    /// backgrounds the walk and calls [`Self::register_indexed_paths`] instead.
     pub fn index_workspace(&mut self) {
         let roots: Vec<PathBuf> = self.source_db.vfs().workspace_roots().to_vec();
-        self.register_indexed_paths(collect_circom_files(&roots));
+        self.register_indexed_paths(collect_circom_files_with_content(&roots));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pruned_dirs_are_skipped_test() {
+        let base = std::env::temp_dir().join(format!("ccls_prune_{}", std::process::id()));
+        let ws = base.join("ws");
+        std::fs::create_dir_all(ws.join("target")).unwrap();
+        std::fs::create_dir_all(ws.join(".git")).unwrap();
+        std::fs::write(ws.join("main.circom"), "pragma circom 2.0.0;").unwrap();
+        std::fs::write(ws.join("target/out.circom"), "pragma circom 2.0.0;").unwrap();
+        std::fs::write(ws.join(".git/config.circom"), "pragma circom 2.0.0;").unwrap();
+
+        let found = collect_circom_files(std::slice::from_ref(&ws));
+        let names: Vec<String> = found
+            .iter()
+            .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(String::from))
+            .collect();
+        assert!(
+            names.contains(&"main.circom".to_string()),
+            "top-level kept: {names:?}"
+        );
+        assert!(
+            !names
+                .iter()
+                .any(|n| n.starts_with("out") || n.starts_with("config")),
+            "target/.git pruned: {names:?}"
+        );
+        let _ = std::fs::remove_dir_all(&base);
+    }
 
     #[test]
     fn collect_circom_files_walks_and_canonicalizes_test() {

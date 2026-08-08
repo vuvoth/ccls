@@ -7,7 +7,7 @@
 //! resending unchanged text records no change (no reparse).
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -83,30 +83,25 @@ impl ContentCacheDb {
         self.vfs.set_workspace_roots(roots);
     }
 
-    /// Read-only [`Vfs`] handle (e.g. so `jump_to_lib` applies the same containment check as
+    /// Read-only [`Vfs`] handle (e.g. so `include_target_location` applies the same containment check as
     /// `load_include`).
     pub(crate) fn vfs(&self) -> &Vfs {
         &self.vfs
     }
 
-    /// Mutable [`Vfs`] handle for the workspace walker (registers/unregisters project paths in the
-    /// basename index) and the file-watcher refresh.
+    /// Mutable [`Vfs`] handle for the workspace walker and file-watcher refresh.
     pub(crate) fn vfs_mut(&mut self) -> &mut Vfs {
         &mut self.vfs
     }
 
-    /// Convert a `file:` URL to its absolutized [`VfsPath`], or `None` for non-`file:` schemes or
-    /// non-absolutizable paths. Single source for the URI→path step so interning and lookup can't
-    /// disagree (a split would intern under one key and look up another, silently breaking
-    /// resolution).
+    /// `file:` URL → absolutized [`VfsPath`] (`None` for other schemes). Single source so interning
+    /// and lookup agree on the path key.
     fn url_to_vpath(url: &Url) -> Option<VfsPath> {
         let path = url.to_file_path().ok()?;
         VfsPath::from_abs_path(&path)
     }
 
     /// Resolve a relative include `rel` against `parent_url`'s dir to an absolutized [`VfsPath`].
-    /// Shared by [`Self::load_include`], [`Self::id_for_include`], and goto-def so all three agree
-    /// on the resolved path.
     fn resolve_include(parent_url: &Url, rel: &str) -> Option<VfsPath> {
         let parent_path = parent_url.to_file_path().ok()?;
         let parent_dir = parent_path.parent()?;
@@ -114,17 +109,15 @@ impl ContentCacheDb {
         VfsPath::from_abs_path(&lib_path)
     }
 
-    /// The `FileId` for `url`, from its absolutized path (so aliased paths collapse to one id).
-    /// `None` for non-`file:` schemes or non-absolutizable paths — callers skip indexing those.
+    /// The `FileId` for `url` (`None` for non-`file:` URIs).
     pub fn id_for_url(&self, url: &Url) -> Option<FileId> {
         self.vfs.file_id(&Self::url_to_vpath(url)?)
     }
 
-    /// The already-interned `FileId` for an include, without reading disk. `None` if unresolvable
-    /// or not yet loaded. Resolution order: the **same-dir** [`VfsPath`] lookup first (unchanged — a
-    /// sibling include resolves without the index), then the **project-wide basename fallback**
-    /// ([`Vfs::find_include`]) so a non-sibling `include "X.circom"` still resolves when the eager
-    /// walk indexed `X.circom` elsewhere in the project. Pure — no disk I/O.
+    /// The already-interned `FileId` for an include, without reading disk. Same-dir lookup first,
+    /// then the project-wide basename fallback ([`Vfs::find_include`]). Pure — it does NOT confine
+    /// (no `canonicalize`); stale removed-folder includes are dropped at removal time instead
+    /// (`Vfs::unregister_under`).
     pub fn id_for_include(&self, parent_url: &Url, rel: &str) -> Option<FileId> {
         if let Some(vpath) = Self::resolve_include(parent_url, rel) {
             if let Some(id) = self.vfs.file_id(&vpath) {
@@ -145,43 +138,68 @@ impl ContentCacheDb {
         Some((id, changed))
     }
 
-    /// Load a relative include from disk **once**, then serve the interned `FileId` from cache — a
-    /// keystroke in the main file never re-reads its includes. Resolution order (so a non-sibling
-    /// include resolves without regressing the sibling case):
-    /// 1. **Same-dir disk path** (unchanged): join `rel` onto the includer's dir, then
-    ///    canonicalize + confine + read.
-    /// 2. On a miss, **project-wide basename fallback**: rank indexed files via
-    ///    [`Vfs::find_include`], take the winner, canonicalize + confine + read it.
-    ///
-    /// `None` (skipped) for non-`file:` schemes, a missing/unreadable file, a non-absolutizable
-    /// path, or an include that escapes the workspace roots.
+    /// Load a relative include from disk once (then serve the cached id), and load its includes
+    /// transitively — so goto-def/hover *inside* an include (e.g. one opened via peek/jump without a
+    /// full didOpen) can still resolve across that include's own includes. Same-dir path first, then
+    /// the project-wide basename fallback. `None` for non-`file:` URIs, missing/unreadable files, or
+    /// includes escaping the workspace roots.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        // 1. Same-dir path first.
+        let id = self.load_one_include(parent_url, rel)?;
+        let mut visited = HashSet::new();
+        visited.insert(id);
+        self.load_transitive_includes(id, &mut visited);
+        Some(id)
+    }
+
+    /// Load a single include (no transitive closure): same-dir path first, then basename fallback.
+    fn load_one_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
         if let Some(vpath) = Self::resolve_include(parent_url, rel) {
             if let Some(id) = self.load_from_disk(&vpath) {
                 return Some(id);
             }
         }
-        // 2. Basename fallback against the project index.
         let parent_vpath = Self::url_to_vpath(parent_url)?;
         let winner = self.vfs.find_include(&parent_vpath, rel)?;
         let winner_path = self.vfs.path(winner)?.clone();
         self.load_from_disk(&winner_path)
     }
 
-    /// Canonicalize + confine + (read-if-needed) for one resolved include path — the single disk
-    /// boundary shared by the same-dir path and the basename-fallback winner. Returns the loaded
-    /// `FileId` (cached if already text-bearing), or `None` if the path can't be canonicalized,
-    /// escapes the workspace, or is unreadable. Security: `canonicalize` resolves `..`/`.`/symlinks;
-    /// `is_confined` is the pure prefix check. Escapes (`/etc/passwd`, `../../.ssh/id_rsa`, a root
-    /// symlink pointing out) are refused here so lookup/jump paths only ever surface confined files.
+    /// Recursively load `id`'s own includes (its include-closure) so resolution works from within
+    /// `id`. `visited` breaks include cycles; already-loaded files are served from cache (no re-read).
+    fn load_transitive_includes(&mut self, id: FileId, visited: &mut HashSet<FileId>) {
+        let Some(path) = self.vfs.path(id) else {
+            return;
+        };
+        let Ok(parent_url) = Url::from_file_path(path.as_path()) else {
+            return;
+        };
+        let includes: Vec<String> = self
+            .ast(id)
+            .map(|a| {
+                a.libs()
+                    .into_iter()
+                    .filter_map(|i| i.lib().map(|l| l.value()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        for rel in includes {
+            if let Some(child) = self.load_one_include(&parent_url, &rel) {
+                if visited.insert(child) {
+                    self.load_transitive_includes(child, visited);
+                }
+            }
+        }
+    }
+
+    /// Canonicalize + confine + read one include path — the single disk boundary. `canonicalize`
+    /// resolves `..`/symlinks; `is_confined` is the pure prefix check. Path-traversal escapes are
+    /// refused here, so the pure lookup/jump paths only ever surface already-confined files.
     fn load_from_disk(&mut self, vpath: &VfsPath) -> Option<FileId> {
         let canonical = vpath.as_path().canonicalize().ok()?;
         if !self.vfs.is_confined(&canonical) {
             return None;
         }
-        // Already interned with text → serve the cached id (never re-read). A path interned with no
-        // text (by the workspace walk's `register_path`) falls through to the read.
+        // Serve the cached id if text is already loaded; a path-only id (from the walk) reads below.
         if let Some(id) = self.vfs.file_id(vpath) {
             if self.vfs.file_text(id).is_some() {
                 return Some(id);
@@ -195,10 +213,8 @@ impl ContentCacheDb {
         Some(id)
     }
 
-    /// Drain the VFS change log and drop every changed id's derived caches (others untouched).
-    /// `pub(crate)` so the workspace walker / file-watcher refresh can flush a `Delete` (from
-    /// `unregister_path`) after mutating the index. `parse_count` is intentionally preserved — it
-    /// tracks total parses, not cache state.
+    /// Drain the VFS change log and drop changed ids' derived caches (`pub(crate)` so the watcher
+    /// can flush a `Delete`). `parse_count` is preserved — it tracks total parses, not cache state.
     pub(crate) fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
         let changes = self.vfs.take_changes();
         if !changes.is_empty() {

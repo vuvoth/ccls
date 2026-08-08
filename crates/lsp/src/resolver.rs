@@ -128,7 +128,7 @@ fn lookup_all<'a>(
 }
 
 /// Resolve `token` to its declaration(s) via [`lookup_all`]. Only `Identifier` tokens are resolved
-/// here — `CircomString` include-paths are routed to `jump_to_lib` by the handler.
+/// here — `CircomString` include-paths are routed to `include_target_location` by the handler.
 pub fn resolve(table: &SymbolTable, token: &SyntaxToken) -> Vec<ResolvedSymbol> {
     let name = token.text();
     let offset: TextSize = token.text_range().start();
@@ -148,6 +148,15 @@ fn resolves_to(table: &SymbolTable, token: &SyntaxToken, target: &ResolvedSymbol
     lookup_all(table, offset, name).any(hit)
 }
 
+/// Every `Identifier` token in `root` whose text equals `name`, in document order. The candidate
+/// set for [`occurrences_in`] and the workspace occurrence scan.
+pub fn identifiers_named(root: &SyntaxNode, name: &str) -> Vec<SyntaxToken> {
+    root.descendants_with_tokens()
+        .filter_map(|e| e.into_token())
+        .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
+        .collect()
+}
+
 /// Every `Identifier` token in `root` that resolves (against `table`) to `target` — the
 /// declaration plus all its in-scope usages, excluding shadowed same-named tokens. Document order.
 ///
@@ -159,10 +168,8 @@ pub fn occurrences_in(
     table: &SymbolTable,
     target: &ResolvedSymbol,
 ) -> Vec<SyntaxToken> {
-    let name = target.name.as_str();
-    root.descendants_with_tokens()
-        .filter_map(|e| e.into_token())
-        .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
+    identifiers_named(root, &target.name)
+        .into_iter()
         .filter(|t| resolves_to(table, t, target))
         .collect()
 }

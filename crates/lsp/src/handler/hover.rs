@@ -1,10 +1,11 @@
 //! Hover: show the declaration of the symbol under the cursor.
 //!
 //! Rides the shared resolution core ([`GlobalState::cursor_context`] +
-//! [`GlobalState::resolve_use`]). For a resolved identifier (a declared name or a usage of one) it
-//! returns the symbol's kind and its declaration signature (the source text of the defining node,
-//! trimmed to the header for block-bodied defs). Member-access fields (`c.x`) aren't resolved by the
-//! flat resolver and yield `None` (consistent with rename/references).
+//! [`GlobalState::resolve_token`]). For a resolved identifier (a declared name or a usage of one)
+//! it returns the symbol's kind and its declaration signature (the source text of the defining node,
+//! trimmed to the header for block-bodied defs). Member-access fields (`c.x`) ARE resolved here
+//! (via `resolve_token` → `resolve_member`), unlike references/rename, which intentionally ride
+//! `resolve_use` and do not handle fields.
 
 use anyhow::Result;
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};

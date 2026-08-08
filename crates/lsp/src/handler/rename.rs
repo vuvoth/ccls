@@ -1,8 +1,8 @@
 //! Symbol rename: rewrite every occurrence of the symbol under the cursor to `new_name`.
 //!
-//! Rides [`GlobalState::resolve_use`] + [`GlobalState::find_occurrences`] — occurrences are found
-//! by *resolving* each candidate (not text-matching), so shadowing is correct. In-file (the
-//! symbol's defining file); cross-file rename is a follow-up.
+//! Rides [`GlobalState::resolve_visible`] + [`GlobalState::workspace_occurrences`] — occurrences are
+//! found by *resolving* each candidate (not text-matching), so shadowing is correct, and span the
+//! whole workspace (cross-file rename groups edits by file URI into a single `WorkspaceEdit`).
 
 use std::collections::HashMap;
 
@@ -17,10 +17,12 @@ use parser::token_kind::TokenKind;
 use crate::file_db::FileId;
 use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::{identifier_at, ResolvedSymbol};
+use crate::source_db::SourceDatabase;
 use syntax::node::SyntaxToken;
 
 /// Entry point for `textDocument/rename`. Returns `None` (no edits) when the cursor isn't on a
 /// renamable `Identifier`, `new_name` isn't a legal circom identifier, or the file is unknown.
+/// Otherwise returns a `WorkspaceEdit` whose `changes` span every file referencing the symbol.
 pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
     let uri = params.text_document_position.text_document.uri;
     let position = params.text_document_position.position;
@@ -30,23 +32,19 @@ pub fn handle(state: &GlobalState, params: RenameParams) -> Result<Option<Worksp
         return Ok(None);
     }
 
-    // Shared cursor prologue; `None` for keywords/include-strings/unresolved member-access fields.
-    let Some((_ctx, _token, target)) = renamable_cursor(state, &uri, position) else {
+    let Some((ctx, _token, target)) = renamable_cursor(state, &uri, position) else {
         return Ok(None);
     };
 
-    // All occurrences live in the symbol's defining file (in-file rename; cross-file is a
-    // follow-up). One edit per occurrence range.
-    let (file_uri, ranges) = state.occurrence_ranges(&target);
-    let edits: Vec<TextEdit> = ranges
-        .into_iter()
-        .map(|range| TextEdit {
+    let mut changes: HashMap<Url, Vec<TextEdit>> = HashMap::new();
+    for (f, range) in state.workspace_occurrences(&target, ctx.id) {
+        let file_uri = state.source_db.file_db(f).file_path.clone();
+        changes.entry(file_uri).or_default().push(TextEdit {
             range,
             new_text: new_name.clone(),
-        })
-        .collect();
+        });
+    }
 
-    let changes = HashMap::from([(file_uri, edits)]);
     Ok(Some(WorkspaceEdit {
         changes: Some(changes),
         document_changes: None,
@@ -65,7 +63,10 @@ fn renamable_cursor(
 ) -> Option<(CursorContext, SyntaxToken, (FileId, ResolvedSymbol))> {
     let ctx = state.cursor_context(uri, position)?;
     let token = identifier_at(&ctx.ast, ctx.offset)?;
-    let target = state.resolve_use(&ctx.file_db, &token).into_iter().next()?;
+    let target = state
+        .resolve_visible(&ctx.file_db, &token)
+        .into_iter()
+        .next()?;
     Some((ctx, token, target))
 }
 
@@ -272,9 +273,9 @@ mod tests {
         );
     }
 
-    /// Renaming is in-file: two documents each defining `template T()` at the same line:column must
-    /// not collide — renaming in file A edits only file A, never file B. Pins the fix for the
-    /// cross-file `def_range` collision the all-files search used to have.
+    /// Renaming a symbol in one file must not touch a same-named symbol in a sibling file.
+    /// Resolution-based: B's `template T()` resolves to its own `(b, T)`, not A's, so it is never
+    /// matched. Pins the cross-file correctness that a naive name search would break.
     #[test]
     fn rename_does_not_touch_other_files_test() {
         let src = "pragma circom 2.0.0;\ntemplate T() { signal output o; o <== 0; }\n";
@@ -296,6 +297,51 @@ mod tests {
             !changes.contains_key(&url_b),
             "a same-named symbol in another file must not be touched"
         );
+    }
+
+    /// Cross-file rename: `Lib` is defined in `lib.circom` and instantiated in `main.circom`.
+    /// Renaming from the usage in main edits **both** files — the def in lib and the usage in main
+    /// — grouped by URI into one `WorkspaceEdit`.
+    #[test]
+    fn rename_spans_workspace_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_rename_x_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_src =
+            "pragma circom 2.0.0;\ntemplate Lib() {\n    signal output o;\n    o <== 0;\n}\n";
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate Main() {\n    component c = Lib();\n}\n";
+        fs::write(ws.join("lib.circom"), lib_src).unwrap();
+        fs::write(ws.join("main.circom"), main_src).unwrap();
+
+        let lib_url = Url::from_file_path(ws.join("lib.circom").canonicalize().unwrap()).unwrap();
+        let main_url = Url::from_file_path(ws.join("main.circom").canonicalize().unwrap()).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+        state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+
+        // Cursor on the `Lib` usage in main.
+        let changes = rename(&state, &main_url, position_of(main_src, "Lib", 0), "NewLib")
+            .expect("rename produces an edit")
+            .changes
+            .unwrap();
+
+        assert_eq!(changes.len(), 2, "edits span lib + main: {changes:?}");
+        let lib_edits = changes.get(&lib_url).expect("lib edited (its def)");
+        let main_edits = changes.get(&main_url).expect("main edited (its usage)");
+        assert_eq!(lib_edits.len(), 1, "lib's `Lib` def name");
+        assert_eq!(main_edits.len(), 1, "main's `Lib` usage");
+        assert!(
+            lib_edits
+                .iter()
+                .chain(main_edits.iter())
+                .all(|e| e.new_text == "NewLib"),
+            "all edits use the new name"
+        );
+
+        let _ = fs::remove_dir_all(&base);
     }
 
     /// Renaming a loop variable (`var i` in `for (var i = …; i < N; i++)`) finds all occurrences:

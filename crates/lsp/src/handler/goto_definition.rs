@@ -35,12 +35,10 @@ pub fn handle(
     Ok(Some(GotoDefinitionResponse::Array(locations)))
 }
 
-// If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.
-// Routed here (never the resolver) because the resolver only handles `Identifier` tokens — a
-// `CircomString` carries a path, not a symbol name. Resolution order matches `load_include` so the
-// jump target and the actual load always agree: same-dir path first, then a project-wide basename
-// fallback (`vfs.find_include`) for a non-sibling include.
-pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
+// If `token` is an include path (`include "lib.circom";`), jump to that file's URL. Routed here
+// (not the resolver) because a `CircomString` carries a path, not a symbol name. Same resolution
+// order as `load_include` so the jump target and the load always agree.
+pub fn include_target_location(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
     let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
     };
@@ -54,10 +52,8 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Loca
     };
     let lib_path = parent_dir.join(&rel);
 
-    // Defense-in-depth: don't offer a jump target for an include that escapes the workspace.
-    // `load_include` (the actual read boundary) already refuses these; mirror it so goto-def never
-    // surfaces an unreachable/escaped path. `canonicalize` resolves `..`/symlinks (the one disk
-    // stat, kept out of the I/O-free Vfs); `vfs.is_confined` is the pure prefix check.
+    // Same-dir: canonicalize + confine (defense-in-depth — `load_include` refuses escapes; mirror it
+    // so goto-def never surfaces an unreachable path).
     if let Ok(canon) = lib_path.canonicalize() {
         if vfs.is_confined(&canon) {
             if let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) {
@@ -68,12 +64,9 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Loca
         }
     }
 
-    // Same-dir miss → project-wide basename fallback. The winner was interned (path-only is fine —
-    // a jump only needs the URL, not the text) with an already-canonical path collected from a
-    // workspace root, so it's confined by construction; the explicit `is_confined` check is kept as
-    // defense-in-depth. `parent` is the includer **file** (matching `load_include`/`id_for_include`)
-    // so `find_include`'s nearest tiebreak ranks identically and the jump target always equals the
-    // loaded target.
+    // Same-dir miss → basename fallback. `parent` is the includer file (matching `load_include`) so
+    // `find_include` ranks identically. Canonicalize + confine the winner too (it may have been
+    // deleted between the walk and this jump).
     let Some(parent_vpath) = vfs::VfsPath::from_abs_path(&path) else {
         return Vec::new();
     };
@@ -83,7 +76,10 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Loca
     let Some(winner_path) = vfs.path(winner) else {
         return Vec::new();
     };
-    if !vfs.is_confined(winner_path.as_path()) {
+    let Ok(canon) = winner_path.as_path().canonicalize() else {
+        return Vec::new();
+    };
+    if !vfs.is_confined(&canon) {
         return Vec::new();
     }
     let Ok(lib_url) = Url::from_file_path(winner_path.as_path()) else {
@@ -192,6 +188,39 @@ mod tests {
             .nth(occurrence)
             .unwrap_or_else(|| panic!("token {name}#{occurrence} not found"));
         state.lookup_definition(&file_db, &token)
+    }
+
+    /// Faithful replica of the `textDocument/definition` handler: `cursor_context` (the real gate
+    /// the editor hits) → `token_at_offset` → `lookup_definition`, driven by the position of the
+    /// `occurrence`-th `Identifier` named `name`.
+    fn goto_at(
+        state: &GlobalState,
+        url: &Url,
+        source: &str,
+        name: &str,
+        occurrence: usize,
+    ) -> Vec<Location> {
+        let id = state
+            .source_db
+            .id_for_url(url)
+            .expect("document registered");
+        let file_db = state.source_db.file_db(id);
+        let ast = AstCircomProgram::cast(syntax_tree(source)).expect("parses to a program");
+        let token = ast
+            .syntax()
+            .descendants_with_tokens()
+            .filter_map(|e| e.into_token())
+            .filter(|t| t.kind() == TokenKind::Identifier && t.text() == name)
+            .nth(occurrence)
+            .unwrap_or_else(|| panic!("token {name}#{occurrence} not found"));
+        let Some(ctx) = state.cursor_context(url, file_db.position(token.text_range().start()))
+        else {
+            return Vec::new();
+        };
+        let Some(tok) = token_at_offset(&ctx.ast, ctx.offset) else {
+            return Vec::new();
+        };
+        state.lookup_definition(&ctx.file_db, &tok)
     }
 
     /// Goto-definition from the template reference inside `component main = X()` resolves to `X`'s
@@ -389,12 +418,12 @@ mod tests {
         let _ = fs::remove_dir_all(&base);
     }
 
-    /// `jump_to_lib` on a **non-sibling** include (`include "lib.circom"` where lib lives under
+    /// `include_target_location` on a **non-sibling** include (`include "lib.circom"` where lib lives under
     /// `circuits/`) resolves to the indexed lib's URL via the basename fallback after
     /// `index_workspace`. The same-dir lookup misses (no sibling), so the project index must drive
     /// the jump — and the jump target must agree with `load_include`'s resolution.
     #[test]
-    fn jump_to_lib_nonsibling_via_index_test() {
+    fn include_target_location_nonsibling_via_index_test() {
         use std::fs;
 
         let base = std::env::temp_dir().join(format!("ccls_jump_ns_{}", std::process::id()));
@@ -423,7 +452,7 @@ mod tests {
             .find(|t| t.kind() == TokenKind::CircomString)
             .expect("include path string present");
 
-        let locs = super::jump_to_lib(&file_db, &token, state.source_db.vfs());
+        let locs = super::include_target_location(&file_db, &token, state.source_db.vfs());
         assert_eq!(
             locs.len(),
             1,
@@ -433,6 +462,113 @@ mod tests {
         assert!(
             resolved.ends_with("circuits/lib.circom"),
             "jumps to the indexed non-sibling lib: {resolved:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Repro: open A, jump to its include B, then goto-def a component usage *inside* B. B defines
+    /// the template it uses (in-file resolve). Drives the real `cursor_context` gate. The component
+    /// usage lives inside a template body (valid circom — top-level instantiation is `main` only).
+    #[test]
+    fn goto_def_inside_included_file_infile_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_repro_infile_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let b_src = "pragma circom 2.0.0;\ntemplate Comp() {\n    signal output o;\n    o <== 0;\n}\ntemplate Foo() {\n    component c = Comp();\n}\n";
+        fs::write(ws.join("B.circom"), b_src).unwrap();
+        let a_src = "pragma circom 2.0.0;\ninclude \"B.circom\";\n";
+        let a_path = ws.join("A.circom");
+        fs::write(&a_path, a_src).unwrap();
+        let a_url = Url::from_file_path(&a_path).unwrap();
+        let b_url = Url::from_file_path(ws.join("B.circom")).unwrap();
+
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+        state.source_db.set_document(&a_url, a_src.to_string());
+        state.source_db.load_include(&a_url, "B.circom");
+        state.source_db.set_document(&b_url, b_src.to_string());
+
+        // `Comp` occurrences in B: [0]=decl, [1]=the `component c = Comp()` usage inside `Foo`.
+        let locs = goto_at(&state, &b_url, b_src, "Comp", 1);
+        assert_eq!(
+            locs.len(),
+            1,
+            "in-file goto-def inside the included B: {locs:?}"
+        );
+        assert_eq!(locs[0].uri, b_url, "resolves within B");
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Repro (transitive): A includes B; B includes C; C defines `Comp`; a template in B uses it.
+    /// After opening A then B, goto-def `Comp` inside B must resolve across B's include to C.
+    #[test]
+    fn goto_def_inside_included_file_transitive_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_repro_xfile_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let c_src =
+            "pragma circom 2.0.0;\ntemplate Comp() {\n    signal output o;\n    o <== 0;\n}\n";
+        fs::write(ws.join("C.circom"), c_src).unwrap();
+        let b_src = "pragma circom 2.0.0;\ninclude \"C.circom\";\ntemplate Foo() {\n    component c = Comp();\n}\n";
+        fs::write(ws.join("B.circom"), b_src).unwrap();
+        let a_src = "pragma circom 2.0.0;\ninclude \"B.circom\";\n";
+        let a_path = ws.join("A.circom");
+        fs::write(&a_path, a_src).unwrap();
+        let a_url = Url::from_file_path(&a_path).unwrap();
+        let b_url = Url::from_file_path(ws.join("B.circom")).unwrap();
+        let c_url = Url::from_file_path(ws.join("C.circom")).unwrap();
+
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+        state.source_db.set_document(&a_url, a_src.to_string());
+        state.source_db.load_include(&a_url, "B.circom");
+        state.source_db.set_document(&b_url, b_src.to_string());
+        state.source_db.load_include(&b_url, "C.circom");
+
+        // Only one `Comp` in B — the usage inside `Foo` (occurrence 0).
+        let locs = goto_at(&state, &b_url, b_src, "Comp", 0);
+        assert_eq!(locs.len(), 1, "transitive goto-def inside B: {locs:?}");
+        assert_eq!(locs[0].uri, c_url, "resolves across B's include to C");
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Repro (transitive, B viewed but NOT didOpen'd): A includes B; B includes C; C defines `Comp`;
+    /// a template in B uses it. Open A only (loads B as its include, but NOT B's include C). Goto-def
+    /// `Comp` inside B should still resolve — B's includes must load on demand.
+    #[test]
+    fn goto_def_inside_included_file_transitive_lazy_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_repro_lazy_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let c_src =
+            "pragma circom 2.0.0;\ntemplate Comp() {\n    signal output o;\n    o <== 0;\n}\n";
+        fs::write(ws.join("C.circom"), c_src).unwrap();
+        let b_src = "pragma circom 2.0.0;\ninclude \"C.circom\";\ntemplate Foo() {\n    component c = Comp();\n}\n";
+        fs::write(ws.join("B.circom"), b_src).unwrap();
+        let a_src = "pragma circom 2.0.0;\ninclude \"B.circom\";\n";
+        let a_path = ws.join("A.circom");
+        fs::write(&a_path, a_src).unwrap();
+        let a_url = Url::from_file_path(&a_path).unwrap();
+        let b_url = Url::from_file_path(ws.join("B.circom")).unwrap();
+        let c_url = Url::from_file_path(ws.join("C.circom")).unwrap();
+
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+        // Open A only — B is loaded (as A's include) but its include C is NOT loaded.
+        state.source_db.set_document(&a_url, a_src.to_string());
+        state.source_db.load_include(&a_url, "B.circom");
+
+        let locs = goto_at(&state, &b_url, b_src, "Comp", 0);
+        assert_eq!(locs.len(), 1, "lazy transitive goto-def inside B: {locs:?}");
+        assert_eq!(
+            locs[0].uri, c_url,
+            "B's includes load on demand → resolves to C"
         );
 
         let _ = fs::remove_dir_all(&base);

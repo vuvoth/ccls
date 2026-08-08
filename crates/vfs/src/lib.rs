@@ -216,65 +216,73 @@ impl Vfs {
 
     // --- project-wide basename index (pure, no I/O) ---------------------------
 
-    /// Intern `path` with **no text** and add it to the basename index, so a later
-    /// [`Self::find_include`] can locate it. Idempotent: a path already interned (whether by an
-    /// earlier `register_path` or by a text-bearing `set_file_contents`) keeps its existing
-    /// [`FileId`] and is added to the index at most once. **Does not clobber loaded text** — if the
-    /// path was loaded (e.g. by `load_include`), its text is preserved; only an unknown path is
-    /// interned, and interning with `None` records no change-log entry (so no spurious cache drop).
-    /// The caller canonicalizes the path *before* calling; this method stays pure.
+    /// Intern `path` with no text into the basename index, so [`Self::find_include`] can locate it.
+    /// Idempotent and never clobbers loaded text; interning an unknown path records no change. The
+    /// caller canonicalizes `path` first — this method stays pure.
     #[inline]
     pub fn register_path(&mut self, path: VfsPath) -> FileId {
         let id = if let Some(&id) = self.path_to_id.get(&path) {
             id
         } else {
-            // Unknown path: intern with no text. This is the no-change-log branch of
-            // `set_file_contents` (Create-with-None records nothing), so the path becomes known
-            // without a disk read or a cache invalidation.
             self.set_file_contents(path.clone(), None)
         };
         if let Some(key) = file_name_of(path.as_path()) {
-            push_dedup(self.index.entry(key).or_default(), id);
+            push_dedup(self.index.entry(key.to_string()).or_default(), id);
         }
         id
     }
 
-    /// Remove `path`'s [`FileId`] from the basename index and drop any loaded text. Records a
-    /// [`ChangeKind::Delete`] change **iff** the file had text, so the source db drops its
-    /// parse/symbol-table caches — a delete must not leave stale caches behind. No-op (and no
-    /// change recorded) if `path` was never interned, or was interned with no text.
+    /// Remove `path` from the index and drop its text. Records a [`ChangeKind::Delete`] iff it had
+    /// text (so caches drop); no-op if unknown or already text-less.
     pub fn unregister_path(&mut self, path: &VfsPath) {
         let Some(&id) = self.path_to_id.get(path) else {
             return;
         };
         if let Some(key) = file_name_of(path.as_path()) {
-            if let Some(vec) = self.index.get_mut(&key) {
+            if let Some(vec) = self.index.get_mut(key) {
                 vec.retain(|f| *f != id);
                 if vec.is_empty() {
-                    self.index.remove(&key);
+                    self.index.remove(key);
                 }
             }
         }
-        // Drop any loaded text. None→None is a no-op (no change); Some→None records a Delete.
         self.set_file_contents(path.clone(), None);
     }
 
-    /// Pure ranked search for the best [`FileId`] matching include `rel` (e.g. `lib.circom` or
-    /// `circuits/x.circom`) from the includer `parent` (any interned path, typically the includer
-    /// file's own [`VfsPath`]). Candidates are every indexed file sharing `rel`'s basename. Ranking
-    /// is deterministic:
-    /// 1. **Suffix match** (desc): a candidate whose path *ends with* the full `rel` (so
-    ///    `include "circuits/x.circom"` prefers `…/circuits/x.circom` over a bare `…/x.circom`).
-    /// 2. **Nearest** (desc): longest shared path-component prefix with `parent`.
-    /// 3. **Shortest path** (asc).
-    /// 4. **Alphabetical** (asc) — the final tiebreak for full determinism.
-    ///
-    /// Returns `None` if the basename isn't indexed.
+    /// Unregister every interned path at or under `prefix` (component-wise `starts_with`). Used when
+    /// a workspace folder is removed. Collects matches first: the scan borrows `self.files`
+    /// immutably while removal needs `&mut self`.
+    pub fn unregister_under(&mut self, prefix: &Path) {
+        let to_remove: Vec<VfsPath> = self
+            .files
+            .iter()
+            .filter(|s| s.path.as_path().starts_with(prefix))
+            .map(|s| s.path.clone())
+            .collect();
+        for p in to_remove {
+            self.unregister_path(&p);
+        }
+    }
+
+    /// Every interned [`FileId`] whose path is at or under `prefix` (component-wise `starts_with`).
+    /// Relies on the invariant `FileId == index in `files` (ids are stable; slots aren't compacted).
+    pub fn ids_under(&self, prefix: &Path) -> Vec<FileId> {
+        self.files
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.path.as_path().starts_with(prefix))
+            .map(|(i, _)| FileId(i as u32))
+            .collect()
+    }
+
+    /// Pure ranked search for the best [`FileId`] for include `rel` from the includer `parent`.
+    /// Ranking (deterministic): suffix-match desc, nearest (shared component prefix) desc, shortest
+    /// path asc, then alphabetical asc.
     #[inline]
     pub fn find_include(&self, parent: &VfsPath, rel: &str) -> Option<FileId> {
         let rel_path = Path::new(rel);
         let key = file_name_of(rel_path)?;
-        let candidates = self.index.get(&key)?;
+        let candidates = self.index.get(key)?;
         if candidates.is_empty() {
             return None;
         }
@@ -284,10 +292,9 @@ impl Vfs {
                 .path(id)
                 .map(|p| p.as_path())
                 .unwrap_or_else(|| Path::new(""));
-            // min_by_key picks the smallest key, so the "want-highest" fields are inverted. The
-            // final tiebreak compares the path's `OsStr` directly (`OsStr: Ord`, allocation-free,
-            // and MSRV-safe — unlike `as_encoded_bytes` which needs Rust 1.74).
             let osname = cpath.as_os_str();
+            // `OsStr: Ord` gives an allocation-free, MSRV-safe tiebreak (unlike `as_encoded_bytes`,
+            // which needs Rust 1.74). `min_by_key` picks the smallest key, so the desc fields invert.
             (
                 !cpath.ends_with(rel_path),
                 Reverse(shared_component_prefix(parent_path, cpath)),
@@ -298,23 +305,19 @@ impl Vfs {
     }
 }
 
-/// The `file_name` of `path` as a UTF-8 `String` (the index key), or `None` if it has none or is
-/// non-UTF-8. Both registration and lookup derive the key the same way, so a `&str` include and an
-/// interned path agree on their basename bucket.
-fn file_name_of(path: &Path) -> Option<String> {
-    path.file_name()?.to_str().map(|s| s.to_string())
+/// `path`'s file name as a borrowed `&str` (the index lookup key), or `None` if absent/non-UTF-8.
+fn file_name_of(path: &Path) -> Option<&str> {
+    path.file_name()?.to_str()
 }
 
-/// Push `id` into `vec` only if absent (keeps the index dedup'd under repeated registration).
+/// Push `id` only if absent.
 fn push_dedup(vec: &mut Vec<FileId>, id: FileId) {
     if !vec.contains(&id) {
         vec.push(id);
     }
 }
 
-/// Count of leading path components `candidate` shares with `parent` (component-wise, not
-/// byte-wise). Used by [`Vfs::find_include`] to prefer the include target nearest the includer.
-/// Zips the two paths' component iterators directly — no intermediate `Vec` allocation.
+/// Count of leading path components `candidate` shares with `parent` (component-wise).
 fn shared_component_prefix(parent: &Path, candidate: &Path) -> usize {
     parent
         .components()
@@ -503,5 +506,29 @@ mod tests {
         assert_eq!(changes[0].change_kind, ChangeKind::Delete);
         assert_eq!(changes[0].file_id, id);
         assert!(vfs.file_text(id).is_none());
+    }
+
+    #[test]
+    fn unregister_under_drops_whole_subtree_test() {
+        let mut vfs = Vfs::new();
+        let keep = vp("/proj/keep.circom");
+        let gone1 = vp("/proj/removed/a.circom");
+        let gone2 = vp("/proj/removed/sub/b.circom");
+        vfs.register_path(keep.clone());
+        vfs.register_path(gone1);
+        vfs.register_path(gone2);
+        // Remove everything under /proj/removed (component-wise prefix).
+        vfs.unregister_under(Path::new("/proj/removed"));
+        // The kept file survives; the removed subtree is gone from the index.
+        assert!(vfs
+            .find_include(&vp("/proj/m.circom"), "keep.circom")
+            .is_some());
+        assert!(vfs
+            .find_include(&vp("/proj/m.circom"), "a.circom")
+            .is_none());
+        assert!(vfs
+            .find_include(&vp("/proj/m.circom"), "b.circom")
+            .is_none());
+        let _ = keep;
     }
 }

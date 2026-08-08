@@ -26,9 +26,10 @@ use std::sync::Arc;
 
 use crate::file_db::{FileDB, FileId};
 use crate::handler;
-use crate::handler::goto_definition::jump_to_lib;
+use crate::handler::goto_definition::include_target_location;
 use crate::resolver::{self, token_ancestors, ResolvedSymbol};
 use crate::source_db::{ContentCacheDb, SourceDatabase};
+use crate::symbol_table::{Symbol, SymbolKind};
 
 /// A didOpen/didChange notification normalized to its full text + URI.
 #[derive(Debug)]
@@ -68,25 +69,14 @@ impl From<DidChangeTextDocumentParams> for TextDocument {
 /// cache.
 pub struct GlobalState {
     pub source_db: ContentCacheDb,
-    /// URIs of documents the client has open (didOpen, not yet didClose). The file-watcher's
-    /// `CHANGED` arm skips these so an external disk touch never clobbers a document's unsaved
-    /// (dirty) text — for an open doc, `didChange` is authoritative.
-    open_documents: HashSet<Url>,
-    /// Memoized result of [`Self::loaded_includes`] per origin [`FileId`]. Interior-mutable so the
-    /// `&self` read path can fill it; cleared by [`Self::drop_include_cache`] on any text/index
-    /// mutation (an edit, a watched create/delete, a workspace walk result) so it can't go stale.
+    /// URIs the client has open (didOpen, not yet didClose). The watcher's Deleted/Changed arms
+    /// skip these so an external disk touch can't clobber an open doc's unsaved buffer.
+    pub(crate) open_documents: HashSet<Url>,
+    /// Memoized [`Self::loaded_includes`] per origin; interior-mutable for the `&self` read path.
+    /// Cleared by [`Self::drop_include_cache`] on any text/index mutation.
     loaded_includes_cache: RefCell<HashMap<FileId, Vec<FileId>>>,
-}
-
-/// Internal (non-LSP) notification method the backgrounded workspace walker uses to hand its
-/// collected paths back to the main loop, so the eager index build never blocks `initialize`.
-pub(crate) const INDEX_WORKSPACE_RESULT_METHOD: &str = "ccls/indexWorkspaceResult";
-
-/// Payload of [`INDEX_WORKSPACE_RESULT_METHOD`]: the canonical `.circom` paths the background
-/// walker collected. Deserialized on the main thread and fed to `register_indexed_paths`.
-#[derive(serde::Deserialize)]
-struct IndexWorkspaceResult {
-    paths: Vec<PathBuf>,
+    /// Eagerly loaded workspace `.circom` files — the scan set for workspace occurrences/symbol.
+    pub(crate) workspace_files: HashSet<FileId>,
 }
 
 /// A resolved cursor location (id, parse, file DB, byte offset) — the shared prologue of every
@@ -114,31 +104,33 @@ impl GlobalState {
             source_db,
             open_documents: HashSet::new(),
             loaded_includes_cache: RefCell::new(HashMap::new()),
+            workspace_files: HashSet::new(),
         }
     }
 
-    /// Drop the memoized [`Self::loaded_includes`] entries — call after any text or basename-index
-    /// mutation (an edit, a watched create/delete/change, an index walk result, a workspace-folder
-    /// change) so a stale include-id list can't be served. Coarse but safe: edits are infrequent
-    /// relative to reads.
+    /// Drop the memoized [`Self::loaded_includes`] — call after any text/index mutation so a stale
+    /// include-id list can't be served.
     pub(crate) fn drop_include_cache(&mut self) {
         self.loaded_includes_cache.borrow_mut().clear();
     }
 
-    /// Resolve `(uri, position)` to a [`CursorContext`], or `None` if the file is unknown, has no
-    /// loaded text, or fails to parse. The no-text guard is load-bearing: the eager workspace walk
-    /// interns every `.circom` path with **no text**, and a watcher `DELETED` can null an open
-    /// doc's text — without this check such an id would reach `file_text().expect()` and crash the
-    /// single-threaded server.
+    /// Flush derived caches after a VFS mutation that may record a change-log entry (text
+    /// delete/modify). Register-only mutations (no change recorded) call `drop_include_cache` only.
+    fn after_vfs_mutation(&mut self) {
+        self.source_db.invalidate_changed();
+        self.drop_include_cache();
+    }
+
+    /// Resolve `(uri, position)` to a [`CursorContext`], or `None` if unknown, text-less, or
+    /// unparseable. The no-text guard is load-bearing: the workspace walk interns paths with no text
+    /// and a watcher `DELETED` can null an open doc's text — without it such an id would reach
+    /// `file_text().expect()` and crash the single-threaded server.
     pub(crate) fn cursor_context(
         &self,
         uri: &Url,
         position: lsp_types::Position,
     ) -> Option<CursorContext> {
         let id = self.source_db.id_for_url(uri)?;
-        // No-text guard: the eager walk interns paths with no text and a watcher DELETED can null an
-        // open doc's text — without this an id here would reach `file_text().expect()` and crash the
-        // single-threaded server. `?` returns None for an absent-text id.
         self.source_db.vfs().file_text(id)?;
         let ast = self.source_db.ast(id)?;
         let file_db = self.source_db.file_db(id);
@@ -166,6 +158,7 @@ impl GlobalState {
             Formatting::METHOD => dispatch(self, id, req, handler::formatting::handle),
             Rename::METHOD => dispatch(self, id, req, handler::rename::handle),
             PrepareRenameRequest::METHOD => dispatch(self, id, req, handler::rename::prepare),
+            "workspace/symbol" => dispatch(self, id, req, handler::workspace_symbol::handle),
             _ => Ok(None),
         }
     }
@@ -184,8 +177,6 @@ impl GlobalState {
                 self.handle_update(TextDocument::from(params))?;
             }
             DidCloseTextDocument::METHOD => {
-                // No params needed beyond the uri; just stop tracking it as open so a later disk
-                // change can reload it. Deserialize to validate shape; ignore parse errors softly.
                 if let Ok(params) =
                     serde_json::from_value::<lsp_types::DidCloseTextDocumentParams>(not.params)
                 {
@@ -204,23 +195,15 @@ impl GlobalState {
                     serde_json::from_value(not.params)?;
                 self.handle_workspace_folders_change(params);
             }
-            INDEX_WORKSPACE_RESULT_METHOD => {
-                // Background walker (spawned at initialize) hands back the collected paths;
-                // register them on the main thread (Vfs is single-threaded).
-                if let Ok(result) = serde_json::from_value::<IndexWorkspaceResult>(not.params) {
-                    self.register_indexed_paths(result.paths);
-                }
-            }
             _ => {}
         }
         Ok(())
     }
 
-    /// Apply one watched-file change to the project basename index. Only `*.circom` files matter:
-    /// Created → `register_path` (intern path-only); Deleted → `unregister_path` (drop text +
-    /// caches); Changed → re-read **iff** the file was already loaded AND is not currently open
-    /// (an open doc's unsaved buffer stays authoritative — `didChange` re-asserts it). A never-loaded
-    /// file stays path-only until an include resolves to it.
+    /// Apply one watched-file change to the index. `*.circom` only. Created → intern; Deleted →
+    /// unregister; Changed → re-read iff loaded. Deleted/Changed skip open docs (a build tool
+    /// deleting/recreating/touching the file must not clobber the open doc's unsaved buffer —
+    /// `didChange` is authoritative for it).
     fn handle_watched_file_change(&mut self, change: lsp_types::FileEvent) {
         let Ok(path) = change.uri.to_file_path() else {
             return;
@@ -232,29 +215,38 @@ impl GlobalState {
             FileChangeType::CREATED => {
                 if let Ok(canon) = path.canonicalize() {
                     if let Some(vpath) = vfs::VfsPath::from_abs_path(&canon) {
-                        self.source_db.vfs_mut().register_path(vpath);
-                        self.source_db.invalidate_changed();
-                        self.drop_include_cache();
+                        let id = self.source_db.vfs_mut().register_path(vpath.clone());
+                        self.workspace_files.insert(id);
+                        if let Ok(src) = std::fs::read_to_string(&path) {
+                            self.source_db
+                                .vfs_mut()
+                                .set_file_contents(vpath, Some(Arc::from(src)));
+                            self.after_vfs_mutation();
+                        } else {
+                            self.drop_include_cache();
+                        }
                     }
                 }
             }
             FileChangeType::DELETED => {
-                // The file is gone, so `canonicalize` fails; absolutize the reported path and look
-                // it up by identity. Best-effort: a symlinked path that doesn't match the interned
-                // canonical VfsPath simply isn't found, leaving a stale entry until the next re-walk.
-                if let Some(vpath) = vfs::VfsPath::from_abs_path(&path) {
-                    self.source_db.vfs_mut().unregister_path(&vpath);
-                    self.source_db.invalidate_changed();
-                    self.drop_include_cache();
-                }
-            }
-            FileChangeType::CHANGED => {
-                // Skip open documents: their authoritative text arrives via didChange, so a disk
-                // touch (formatter/git) must not clobber the unsaved buffer.
                 if self.open_documents.contains(&change.uri) {
                     return;
                 }
-                // Re-read only if already loaded (text present); a path-only file stays lazy.
+                // The file is gone, so `canonicalize` fails; absolutize and look up by identity.
+                // Best-effort: a symlinked path that doesn't match the interned canonical VfsPath
+                // isn't found, leaving a stale entry until the next re-walk.
+                if let Some(vpath) = vfs::VfsPath::from_abs_path(&path) {
+                    if let Some(id) = self.source_db.vfs().file_id(&vpath) {
+                        self.workspace_files.remove(&id);
+                    }
+                    self.source_db.vfs_mut().unregister_path(&vpath);
+                    self.after_vfs_mutation();
+                }
+            }
+            FileChangeType::CHANGED => {
+                if self.open_documents.contains(&change.uri) {
+                    return;
+                }
                 if let Some(vpath) = vfs::VfsPath::from_abs_path(&path) {
                     let needs_reload = self
                         .source_db
@@ -266,8 +258,7 @@ impl GlobalState {
                             self.source_db
                                 .vfs_mut()
                                 .set_file_contents(vpath, Some(Arc::from(src)));
-                            self.source_db.invalidate_changed();
-                            self.drop_include_cache();
+                            self.after_vfs_mutation();
                         }
                     }
                 }
@@ -276,10 +267,8 @@ impl GlobalState {
         }
     }
 
-    /// Merge added/removed workspace folders into the roots and walk **only the newly-added** roots
-    /// (a full re-walk on every folder change would re-traverse all of `node_modules`). Removed
-    /// folders' already-indexed files linger but become unconfined once the root is dropped, so no
-    /// include will load them.
+    /// Merge added/removed folders into the roots. Added → walk only that root; removed → unregister
+    /// its files so they stop resolving (the pure read path can't confine them).
     fn handle_workspace_folders_change(
         &mut self,
         params: lsp_types::DidChangeWorkspaceFoldersParams,
@@ -287,44 +276,42 @@ impl GlobalState {
         let mut roots: Vec<PathBuf> = self.source_db.vfs().workspace_roots().to_vec();
         let mut added_canon: Vec<PathBuf> = Vec::new();
         for added in &params.event.added {
-            if let Some(canon) = added
-                .uri
-                .to_file_path()
-                .ok()
-                .and_then(|p| p.canonicalize().ok())
-            {
+            if let Some(canon) = canon_folder(&added.uri) {
                 if !roots.contains(&canon) {
                     roots.push(canon.clone());
                     added_canon.push(canon);
                 }
             }
         }
-        let removed = !params.event.removed.is_empty();
+        let mut removed_canon: Vec<PathBuf> = Vec::new();
         for removed_folder in &params.event.removed {
-            if let Some(canon) = removed_folder
-                .uri
-                .to_file_path()
-                .ok()
-                .and_then(|p| p.canonicalize().ok())
-            {
+            if let Some(canon) = canon_folder(&removed_folder.uri) {
                 roots.retain(|r| r != &canon);
+                removed_canon.push(canon);
             }
         }
         self.source_db.set_workspace_roots(roots);
-        // Walk only the added roots; a removed root can't add files. Drop the include cache either
-        // way (confinement/roots changed, so prior resolved includes may no longer apply).
+        if !removed_canon.is_empty() {
+            for canon in &removed_canon {
+                for id in self.source_db.vfs().ids_under(canon) {
+                    self.workspace_files.remove(&id);
+                }
+                self.source_db.vfs_mut().unregister_under(canon);
+            }
+            self.after_vfs_mutation();
+        }
         if !added_canon.is_empty() {
-            self.register_indexed_paths(crate::project_index::collect_circom_files(&added_canon));
-        } else if removed {
-            self.drop_include_cache();
+            self.register_indexed_paths(crate::project_index::collect_circom_files_with_content(
+                &added_canon,
+            ));
         }
     }
 
-    /// Goto-definition shaper: an include-path string routes to [`jump_to_lib`]; any other token
+    /// Goto-definition shaper: an include-path string routes to [`include_target_location`]; any other token
     /// resolves via [`Self::resolve_token`], file-tagged.
     pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
-            return jump_to_lib(file_db, token, self.source_db.vfs());
+            return include_target_location(file_db, token, self.source_db.vfs());
         }
         self.to_locations(self.resolve_token(file_db, token))
     }
@@ -350,12 +337,9 @@ impl GlobalState {
             .collect()
     }
 
-    /// The [`FileId`]s of every include loaded for `origin`. Shared by [`Self::resolve_use`] and
-    /// [`Self::resolve_template_file`] so the include walk lives in one place. Only text-bearing
-    /// ids are surfaced: `id_for_include`'s basename fallback can return a path-only id (interned
-    /// by the workspace walk but not yet read), and `symbol_table` below parses its result — a
-    /// None-text id would panic in `file_text`, so it's filtered out here. Memoized per origin and
-    /// cleared by [`Self::drop_include_cache`] on any mutation.
+    /// The [`FileId`]s of every text-bearing include loaded for `origin`. Path-only ids (interned
+    /// by the walk but unread) are filtered: `symbol_table` parses the result and would panic on a
+    /// None-text id. Memoized per origin; cleared by [`Self::drop_include_cache`].
     fn loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
         if let Some(cached) = self.loaded_includes_cache.borrow().get(&origin.file_id) {
             return cached.clone();
@@ -367,7 +351,6 @@ impl GlobalState {
         result
     }
 
-    /// The uncached resolution behind [`Self::loaded_includes`].
     fn compute_loaded_includes(&self, origin: &FileDB) -> Vec<FileId> {
         let Some(ast) = self.source_db.ast(origin.file_id) else {
             return Vec::new();
@@ -416,6 +399,37 @@ impl GlobalState {
                 for sym in lib_table.lookup_top_level(name) {
                     out.push((lib_id, sym.into()));
                 }
+            }
+        }
+        out
+    }
+
+    /// Resolve `token` with workspace visibility — [`Self::resolve_use`] **without** the
+    /// component-use gate. In-file `resolve` first (precedence/shadowing): when non-empty it wins
+    /// outright, so an in-file def shadows an include's same-named def. Only when in-file
+    /// resolution is empty does it search each **direct** include's top-level by name (circom's
+    /// non-transitive include visibility). References/rename need this ungated path to find usages
+    /// of *any* included top-level symbol (a template/function referenced by name inside a body),
+    /// not just component instantiations.
+    pub(crate) fn resolve_visible(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let table = self.source_db.symbol_table(origin.file_id);
+        let in_file: Vec<(FileId, ResolvedSymbol)> = resolver::resolve(&table, token)
+            .into_iter()
+            .map(|s| (origin.file_id, s))
+            .collect();
+        if !in_file.is_empty() {
+            return in_file;
+        }
+        let name = token.text();
+        let mut out = Vec::new();
+        for lib_id in self.loaded_includes(origin) {
+            let lib_table = self.source_db.symbol_table(lib_id);
+            for sym in lib_table.lookup_top_level(name) {
+                out.push((lib_id, ResolvedSymbol::from(sym)));
             }
         }
         out
@@ -488,42 +502,77 @@ impl GlobalState {
         })
     }
 
-    /// Occurrences of `target` in its defining file, as tokens. In-file by design: each
-    /// `SymbolTable` indexes only its own file, so a token resolves unambiguously. Cross-file rename
-    /// is deferred — it needs a workspace symbol graph, not name/`def_range` matching across files
-    /// (that both misses real cross-file usages and can collide when two files define a same-named
-    /// symbol at the same line:column).
-    pub(crate) fn find_occurrences(
+    /// Every occurrence of `target` across the workspace, as `(FileId, Range)`. Scans
+    /// [`Self::workspace_files`] plus the cursor's `origin` file and the target's defining file
+    /// (the latter two cover the no-index / in-file case). For each candidate file, finds
+    /// `Identifier` tokens named `target.name` and keeps those that [`Self::resolve_visible`]
+    /// resolves to `(target FileId, kind, def_range)`. Resolution-based, so shadowing and same-name
+    /// collisions across files are sound: a token matches only if it genuinely refers to `target`.
+    /// Files with no loaded text or no parse are skipped (the `cursor_context` None-text guard,
+    /// workspace-wide).
+    pub(crate) fn workspace_occurrences(
         &self,
         target: &(FileId, ResolvedSymbol),
-    ) -> Vec<syntax::node::SyntaxToken> {
+        origin: FileId,
+    ) -> Vec<(FileId, Range)> {
         let (def_file, sym) = target;
-        let Some(ast) = self.source_db.ast(*def_file) else {
-            return Vec::new();
-        };
-        let table = self.source_db.symbol_table(*def_file);
-        resolver::occurrences_in(ast.syntax(), &table, sym)
+        let name = sym.name.as_str();
+
+        let mut scan = self.workspace_files.clone();
+        scan.insert(origin);
+        scan.insert(*def_file);
+
+        let mut out = Vec::new();
+        for f in scan {
+            if self.source_db.vfs().file_text(f).is_none() {
+                continue;
+            }
+            let Some(ast) = self.source_db.ast(f) else {
+                continue;
+            };
+            let file_db = self.source_db.file_db(f);
+            for tok in resolver::identifiers_named(ast.syntax(), name) {
+                let matched = self
+                    .resolve_visible(&file_db, &tok)
+                    .into_iter()
+                    .any(|(fid, r)| {
+                        fid == *def_file && r.kind == sym.kind && r.def_range == sym.def_range
+                    });
+                if matched {
+                    out.push((f, file_db.token_range(&tok)));
+                }
+            }
+        }
+        out
     }
 
-    /// Defining-file URL + every occurrence range of `target` (shared by references and rename).
-    pub(crate) fn occurrence_ranges(&self, target: &(FileId, ResolvedSymbol)) -> (Url, Vec<Range>) {
-        let def_file_db = self.source_db.file_db(target.0);
-        let ranges = self
-            .find_occurrences(target)
-            .into_iter()
-            .map(|t| def_file_db.token_range(&t))
-            .collect();
-        (def_file_db.file_path.clone(), ranges)
+    /// Every top-level template/function/bus in the workspace whose name matches `query` (empty
+    /// query ⇒ all), as owned `(FileId, Symbol)` (each file's `SymbolTable` is cached behind a
+    /// short-lived borrow). Powers `workspace/symbol`.
+    pub(crate) fn workspace_symbols(&self, query: &str) -> Vec<(FileId, Symbol)> {
+        let q = query.trim();
+        let mut out = Vec::new();
+        for f in &self.workspace_files {
+            if self.source_db.vfs().file_text(*f).is_none() {
+                continue;
+            }
+            if self.source_db.ast(*f).is_none() {
+                continue;
+            }
+            let table = self.source_db.symbol_table(*f);
+            for sym in table.top_level_symbols() {
+                if is_workspace_symbol_kind(sym.kind) && matches_query(q, &sym.name) {
+                    out.push((*f, sym.clone()));
+                }
+            }
+        }
+        out
     }
 
-    /// Register an updated document: set its text (dropping derived caches) and load each `include`
-    /// once. No eager index — the symbol table builds lazily and invalidates on edit; a no-op
-    /// (identical text) short-circuits; non-`file:` URIs and unreadable includes are skipped, not
-    /// crashed. Takes the document by value so `text` moves (not clones) — drops one `String` clone
-    /// per keystroke.
+    /// Register an updated document: set text (dropping derived caches) and load each include once.
+    /// Identical text short-circuits; non-`file:` URIs and unreadable includes are skipped, not
+    /// crashed. Takes the doc by value so `text` moves.
     pub fn handle_update(&mut self, text_document: TextDocument) -> Result<()> {
-        // Track open documents so the file-watcher never clobbers a dirty buffer (didChange is
-        // authoritative for open docs).
         self.open_documents.insert(text_document.uri.clone());
 
         let Some((id, changed)) = self
@@ -556,6 +605,25 @@ impl GlobalState {
 
         Ok(())
     }
+}
+
+/// Canonical absolute path of a workspace-folder URI (`None` for non-`file:` or un-canonicalizable).
+fn canon_folder(uri: &Url) -> Option<PathBuf> {
+    uri.to_file_path().ok().and_then(|p| p.canonicalize().ok())
+}
+
+/// `true` for top-level kinds surfaced by `workspace/symbol` (templates/functions/buses).
+fn is_workspace_symbol_kind(kind: SymbolKind) -> bool {
+    matches!(
+        kind,
+        SymbolKind::Template | SymbolKind::Function | SymbolKind::Bus
+    )
+}
+
+/// Case-insensitive substring match; an empty query matches everything (`workspace/symbol` lists
+/// all symbols when the query is blank).
+fn matches_query(query: &str, name: &str) -> bool {
+    query.is_empty() || name.to_lowercase().contains(&query.to_lowercase())
 }
 
 /// Deserialize params, run the handler, wrap the result in a success `Response`. Generic so
@@ -758,31 +826,36 @@ mod tests {
         let _ = fs::remove_dir_all(&base);
     }
 
-    /// Regression (CRITICAL fix): a workspace `.circom` file that is indexed (path-only, no text)
-    /// but never opened must NOT crash `cursor_context`/`file_text().expect()`. `id_for_url` returns
-    /// `Some` for the indexed id; the query path must treat it as unreadable and return `None`.
+    /// Regression (CRITICAL fix): an interned file with **no text** must NOT crash
+    /// `cursor_context`/`file_text().expect()`. `id_for_url` returns `Some` for the interned id;
+    /// the query path must treat it as unreadable and return `None`. (Eager loading means
+    /// `index_workspace` no longer produces text-less ids, so this interns a path-only id directly
+    /// to exercise the guard.)
     #[test]
-    fn cursor_context_no_panic_on_indexed_unloaded_file_test() {
+    fn cursor_context_no_panic_on_textless_file_test() {
         use std::fs;
         let base = std::env::temp_dir().join(format!("ccls_panic_{}", std::process::id()));
         let ws = base.join("ws");
         fs::create_dir_all(&ws).unwrap();
         fs::write(ws.join("main.circom"), "pragma circom 2.0.0;\n").unwrap();
+        let canon = ws.join("main.circom").canonicalize().unwrap();
 
-        let url = Url::from_file_path(ws.join("main.circom")).unwrap();
+        let url = Url::from_file_path(&canon).unwrap();
         let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
-        state.index_workspace(); // interns main.circom with NO text
+        // Intern the path with NO text (path-only), simulating a not-yet-loaded/leaked id.
+        if let Some(vpath) = vfs::VfsPath::from_abs_path(&canon) {
+            state.source_db.vfs_mut().register_path(vpath);
+        }
 
-        // Indexed → id resolves; text absent → query must not panic, just decline.
         assert!(
             state.source_db.id_for_url(&url).is_some(),
-            "file is indexed"
+            "file is interned"
         );
         assert!(
             state
                 .cursor_context(&url, lsp_types::Position::new(0, 0))
                 .is_none(),
-            "None-text indexed file must not crash cursor_context"
+            "None-text file must not crash cursor_context"
         );
 
         let _ = fs::remove_dir_all(&base);
@@ -823,6 +896,147 @@ mod tests {
         assert!(
             text.contains("Dirty"),
             "open-doc buffer must be preserved across a watcher CHANGED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (DELETED fix): a `workspace/didChangeWatchedFiles` DELETED event for a file the
+    /// client has open must NOT null its in-memory text (a build tool deleting+recreating the file
+    /// must not make the open doc unresolvable). Mirrors the CHANGED open-doc guard.
+    #[test]
+    fn watched_deleted_skips_open_document_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_del_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_path = ws.join("lib.circom");
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state
+            .handle_update(doc(
+                &lib_url,
+                "pragma circom 2.0.0;\ntemplate Dirty() {}\n".to_string(),
+            ))
+            .unwrap();
+
+        // File deleted on disk while the doc is open; watcher fires DELETED.
+        let _ = fs::remove_file(&lib_path);
+        state.handle_watched_file_change(lsp_types::FileEvent {
+            uri: lib_url.clone(),
+            typ: lsp_types::FileChangeType::DELETED,
+        });
+
+        // The open doc's text is preserved (the unregister was skipped).
+        let id = state.source_db.id_for_url(&lib_url).unwrap();
+        let text = state.source_db.file_text(id);
+        assert!(
+            text.contains("Dirty"),
+            "open-doc text must be preserved across a watcher DELETED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (removed-folder fix): after a workspace folder is removed, an already-loaded
+    /// include that lived under it must stop resolving (the read path now checks confinement).
+    #[test]
+    fn removed_folder_include_stops_resolving_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_rm_{}", std::process::id()));
+        let ws1 = base.join("ws1");
+        let ws2 = base.join("ws2");
+        fs::create_dir_all(&ws1).unwrap();
+        fs::create_dir_all(&ws2).unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\n";
+        fs::write(ws1.join("main.circom"), main_src).unwrap();
+        fs::write(
+            ws2.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let main_url = Url::from_file_path(ws1.join("main.circom")).unwrap();
+        let mut state = GlobalState::new(vec![
+            ws1.canonicalize().unwrap(),
+            ws2.canonicalize().unwrap(),
+        ]);
+        state.index_workspace();
+        state
+            .handle_update(doc(&main_url, main_src.to_string()))
+            .unwrap();
+        // The non-sibling lib (under ws2) resolves via the basename fallback.
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_some(),
+            "lib resolves while its root is present"
+        );
+
+        // Remove ws2 from the workspace.
+        state.handle_workspace_folders_change(lsp_types::DidChangeWorkspaceFoldersParams {
+            event: lsp_types::WorkspaceFoldersChangeEvent {
+                added: Vec::new(),
+                removed: vec![lsp_types::WorkspaceFolder {
+                    uri: Url::from_file_path(&ws2).unwrap(),
+                    name: "ws2".to_string(),
+                }],
+            },
+        });
+
+        // The lib is no longer confined → must stop resolving.
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_none(),
+            "removed-folder include must stop resolving"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (walk-landing reload fix): a doc with a non-sibling include opened BEFORE the
+    /// index is populated has its include loaded when the walk lands — without needing another edit
+    /// — so cross-file symbol features activate immediately.
+    #[test]
+    fn index_landing_reloads_open_doc_non_sibling_include_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_land_{}", std::process::id()));
+        let ws = base.join("ws");
+        let circuits = ws.join("circuits");
+        fs::create_dir_all(&circuits).unwrap();
+        fs::write(
+            circuits.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ncomponent main = Lib();\n";
+        fs::write(ws.join("main.circom"), main_src).unwrap();
+        let main_url = Url::from_file_path(ws.join("main.circom")).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+
+        // Open main BEFORE the index is built (simulates didOpen beating the background walk).
+        state
+            .handle_update(doc(&main_url, main_src.to_string()))
+            .unwrap();
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_none(),
+            "pre-index: non-sibling include is unresolved"
+        );
+
+        // The walk lands → open docs' includes are re-loaded.
+        state.index_workspace();
+        assert!(
+            state
+                .source_db
+                .id_for_include(&main_url, "lib.circom")
+                .is_some(),
+            "post-index: include resolves after the walk reloads open docs"
         );
 
         let _ = fs::remove_dir_all(&base);
