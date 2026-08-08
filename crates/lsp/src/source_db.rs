@@ -159,17 +159,27 @@ impl ContentCacheDb {
         Some(id)
     }
 
-    /// Load a single include (no transitive closure): same-dir path first, then basename fallback.
-    fn load_one_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
+    /// The on-disk target of include `rel` from `parent_url`, mirroring [`Self::load_one_include`]'s
+    /// path selection: the same-dir relative target if it is a real file, else the workspace-indexed
+    /// basename winner (also confirmed to still exist). Refuses absolute `rel`. **Pure** (no read) —
+    /// shared by goto-lib (build a URL) and the loader (read + intern), so the jump target and the
+    /// loaded file always agree and there is one resolution order to maintain.
+    pub(crate) fn resolve_include_vpath(&self, parent_url: &Url, rel: &str) -> Option<VfsPath> {
         if let Some(vpath) = Self::resolve_include(parent_url, rel) {
-            if let Some(id) = self.load_from_disk(&vpath) {
-                return Some(id);
+            if vpath.as_path().is_file() {
+                return Some(vpath);
             }
         }
         let parent_vpath = Self::url_to_vpath(parent_url)?;
         let winner = self.vfs.find_include(&parent_vpath, rel)?;
-        let winner_path = self.vfs.path(winner)?.clone();
-        self.load_from_disk(&winner_path)
+        let winner_path = self.vfs.path(winner)?;
+        winner_path.as_path().is_file().then(|| winner_path.clone())
+    }
+
+    /// Load a single include (no transitive closure) via [`Self::resolve_include_vpath`].
+    fn load_one_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
+        let vpath = self.resolve_include_vpath(parent_url, rel)?;
+        self.load_from_disk(&vpath)
     }
 
     /// Recursively load `id`'s own includes (its include-closure) so resolution works from within

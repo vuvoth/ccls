@@ -83,7 +83,8 @@ fn main_loop(
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     let params: InitializeParams = serde_json::from_value(params)?;
 
-    // Roots confine include resolution (path-traversal defense); empty roots ⇒ no include loads.
+    // Roots scope the project `.circom` walk (the basename-index source). Includes resolve
+    // circom-style relative to each source file, so navigation works even with wrong/empty roots.
     let roots = workspace_roots(&params);
     let mut state = GlobalState::new(roots.clone());
 

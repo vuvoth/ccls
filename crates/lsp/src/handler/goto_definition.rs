@@ -3,11 +3,11 @@ use rowan::ast::AstNode;
 
 use syntax::abstract_syntax_tree::AstInclude;
 use syntax::node::SyntaxToken;
-use vfs::Vfs;
 
 use crate::file_db::FileDB;
 use crate::global_state::GlobalState;
 use crate::resolver::{token_ancestors, token_at_offset};
+use crate::source_db::ContentCacheDb;
 
 use anyhow::Result;
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse};
@@ -36,58 +36,28 @@ pub fn handle(
 }
 
 // If `token` is an include path (`include "lib.circom";`), jump to that file's URL. Routed here
-// (not the resolver) because a `CircomString` carries a path, not a symbol name. Same resolution
-// order as `load_include` so the jump target and the load always agree. A relative include jumps
-// to its file (resolved like circom, relative to the source — independent of the workspace root);
-// the basename fallback jumps to a workspace-indexed file.
-pub fn include_target_location(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
+// (not the resolver) because a `CircomString` carries a path, not a symbol name. Delegates to the
+// same resolver `load_include` uses (`resolve_include_vpath`), so the jump target and the loaded
+// file always agree — one resolution order (relative same-dir then workspace basename fallback),
+// no drift. Refuses absolute include paths.
+pub fn include_target_location(
+    file_db: &FileDB,
+    token: &SyntaxToken,
+    db: &ContentCacheDb,
+) -> Vec<Location> {
     let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
     };
     let Some(include_path) = include_stmt.lib() else {
         return Vec::new();
     };
-    let rel = include_path.value();
-    let path = file_db.get_path();
-    let Some(parent_dir) = path.parent() else {
+    let Some(vpath) = db.resolve_include_vpath(&file_db.file_path, &include_path.value()) else {
         return Vec::new();
     };
-    let lib_path = parent_dir.join(&rel);
-
-    // Relative include: jump to it iff it's a real file on disk (circom resolves includes relative
-    // to the source file, regardless of the editor's workspace root). Refuse absolute `rel`
-    // (`PathBuf::join` would replace the base → arbitrary path) and non-files, matching what
-    // `load_include` would actually load; on a miss we fall through to the workspace-indexed
-    // basename fallback below.
-    let rel_is_absolute = std::path::Path::new(&rel).is_absolute();
-    if !rel_is_absolute && lib_path.is_file() {
-        if let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) {
-            if let Ok(lib_url) = Url::from_file_path(vpath.as_path()) {
-                return vec![Location::new(lib_url, Range::default())];
-            }
-        }
+    match Url::from_file_path(vpath.as_path()) {
+        Ok(lib_url) => vec![Location::new(lib_url, Range::default())],
+        Err(_) => Vec::new(),
     }
-
-    // Same-dir miss → basename fallback over the workspace index. `parent` is the includer file
-    // (matching `load_include`) so `find_include` ranks identically. Re-check the winner exists on
-    // disk so the jump never targets a file the walk indexed but that has since been deleted (and
-    // that `load_include` would therefore refuse to load).
-    let Some(parent_vpath) = vfs::VfsPath::from_abs_path(&path) else {
-        return Vec::new();
-    };
-    let Some(winner) = vfs.find_include(&parent_vpath, &rel) else {
-        return Vec::new();
-    };
-    let Some(winner_path) = vfs.path(winner) else {
-        return Vec::new();
-    };
-    if !winner_path.as_path().is_file() {
-        return Vec::new();
-    }
-    let Ok(lib_url) = Url::from_file_path(winner_path.as_path()) else {
-        return Vec::new();
-    };
-    vec![Location::new(lib_url, Range::default())]
 }
 
 #[cfg(test)]
@@ -454,7 +424,7 @@ mod tests {
             .find(|t| t.kind() == TokenKind::CircomString)
             .expect("include path string present");
 
-        let locs = super::include_target_location(&file_db, &token, state.source_db.vfs());
+        let locs = super::include_target_location(&file_db, &token, &state.source_db);
         assert_eq!(
             locs.len(),
             1,

@@ -95,8 +95,10 @@ impl Default for GlobalState {
 }
 
 impl GlobalState {
-    /// Construct with workspace `roots` confining `include` resolution. Empty roots ⇒ no include
-    /// ever loads (fail-closed against path traversal).
+    /// Construct with workspace `roots`. Roots scope the project `.circom` walk that feeds the
+    /// basename index; `include` resolution itself is circom-style (relative to the source file),
+    /// not confined to the roots. Absolute include paths are rejected; relative/`..` includes
+    /// resolve (and may reach files outside the roots, matching the circom compiler).
     pub fn new(roots: Vec<PathBuf>) -> Self {
         let mut source_db = ContentCacheDb::new();
         source_db.set_workspace_roots(roots);
@@ -213,6 +215,11 @@ impl GlobalState {
         }
         match change.typ {
             FileChangeType::CREATED => {
+                // Skip open docs: a build tool deleting+recreating a file must not clobber an open
+                // doc's dirty buffer (`didChange` is authoritative for it) — mirrors DELETED/CHANGED.
+                if self.open_documents.contains(&change.uri) {
+                    return;
+                }
                 if let Ok(canon) = path.canonicalize() {
                     if let Some(vpath) = vfs::VfsPath::from_abs_path(&canon) {
                         let id = self.source_db.vfs_mut().register_path(vpath.clone());
@@ -290,15 +297,34 @@ impl GlobalState {
                 removed_canon.push(canon);
             }
         }
-        self.source_db.set_workspace_roots(roots);
+        self.source_db.set_workspace_roots(roots.clone());
         if !removed_canon.is_empty() {
+            // Drop only files no longer under ANY remaining root — a removed folder may be nested
+            // inside one, in which case its files must stay resolvable. `unregister_under` is too
+            // blunt (it would null their text), so unregister the uncovered paths individually.
+            let still_under = |id: FileId| -> bool {
+                self.source_db
+                    .vfs()
+                    .path(id)
+                    .is_some_and(|p| roots.iter().any(|r| p.as_path().starts_with(r)))
+            };
+            let mut to_drop: Vec<FileId> = Vec::new();
             for canon in &removed_canon {
                 for id in self.source_db.vfs().ids_under(canon) {
-                    self.workspace_files.remove(&id);
+                    if !still_under(id) {
+                        to_drop.push(id);
+                    }
                 }
-                self.source_db.vfs_mut().unregister_under(canon);
             }
-            self.after_vfs_mutation();
+            for id in &to_drop {
+                self.workspace_files.remove(id);
+                if let Some(p) = self.source_db.vfs().path(*id).cloned() {
+                    self.source_db.vfs_mut().unregister_path(&p);
+                }
+            }
+            if !to_drop.is_empty() {
+                self.after_vfs_mutation();
+            }
         }
         if !added_canon.is_empty() {
             self.register_indexed_paths(crate::project_index::collect_circom_files_with_content(
@@ -311,7 +337,7 @@ impl GlobalState {
     /// resolves via [`Self::resolve_token`], file-tagged.
     pub fn lookup_definition(&self, file_db: &FileDB, token: &SyntaxToken) -> Vec<Location> {
         if token.kind() == TokenKind::CircomString {
-            return include_target_location(file_db, token, self.source_db.vfs());
+            return include_target_location(file_db, token, &self.source_db);
         }
         self.to_locations(self.resolve_token(file_db, token))
     }
@@ -368,62 +394,26 @@ impl GlobalState {
             .collect()
     }
 
-    /// Resolve `token` to its file-tagged declaration(s): in-file first; then, for a component
-    /// decl/call — or the top-level `component main = X()` instantiation — each loaded include's
-    /// top-level by name. Cross-file is file-scope only (template/function names) — the shared
-    /// core for goto-def, rename, references.
-    pub(crate) fn resolve_use(
+    /// In-file resolution of `token` against `origin`'s own `SymbolTable` (file-tagged).
+    fn resolve_in_file(
         &self,
         origin: &FileDB,
         token: &SyntaxToken,
     ) -> Vec<(FileId, ResolvedSymbol)> {
         let table = self.source_db.symbol_table(origin.file_id);
-        let mut out: Vec<(FileId, ResolvedSymbol)> = resolver::resolve(&table, token)
+        resolver::resolve(&table, token)
             .into_iter()
             .map(|s| (origin.file_id, s))
-            .collect();
-
-        // A component declaration/call — or the top-level `component main = X()` instantiation —
-        // also resolves to template/function defs in loaded includes. `MainComponent` is a distinct
-        // node kind from `ComponentDecl`/`ComponentCall`, so it is listed explicitly (without it,
-        // `component main = Lib()` where `Lib` is in an include would never resolve).
-        let is_component_use = token_ancestors(token).any(|n| {
-            AstComponentDecl::can_cast(n.kind())
-                || AstComponentCall::can_cast(n.kind())
-                || AstMainComponent::can_cast(n.kind())
-        });
-        if is_component_use {
-            let name = token.text();
-            for lib_id in self.loaded_includes(origin) {
-                let lib_table = self.source_db.symbol_table(lib_id);
-                for sym in lib_table.lookup_top_level(name) {
-                    out.push((lib_id, sym.into()));
-                }
-            }
-        }
-        out
+            .collect()
     }
 
-    /// Resolve `token` with workspace visibility — [`Self::resolve_use`] **without** the
-    /// component-use gate. In-file `resolve` first (precedence/shadowing): when non-empty it wins
-    /// outright, so an in-file def shadows an include's same-named def. Only when in-file
-    /// resolution is empty does it search each **direct** include's top-level by name (circom's
-    /// non-transitive include visibility). References/rename need this ungated path to find usages
-    /// of *any* included top-level symbol (a template/function referenced by name inside a body),
-    /// not just component instantiations.
-    pub(crate) fn resolve_visible(
+    /// Each **direct** include's top-level declarations named like `token` (circom's non-transitive
+    /// include visibility), file-tagged with the include's `FileId`.
+    fn resolve_in_includes(
         &self,
         origin: &FileDB,
         token: &SyntaxToken,
     ) -> Vec<(FileId, ResolvedSymbol)> {
-        let table = self.source_db.symbol_table(origin.file_id);
-        let in_file: Vec<(FileId, ResolvedSymbol)> = resolver::resolve(&table, token)
-            .into_iter()
-            .map(|s| (origin.file_id, s))
-            .collect();
-        if !in_file.is_empty() {
-            return in_file;
-        }
         let name = token.text();
         let mut out = Vec::new();
         for lib_id in self.loaded_includes(origin) {
@@ -433,6 +423,50 @@ impl GlobalState {
             }
         }
         out
+    }
+
+    /// Resolve `token` to its file-tagged declaration(s) for goto-def/hover: in-file first
+    /// (shadowing); if empty, for a component decl/call — or the top-level `component main = X()`
+    /// instantiation — each loaded include's top-level by name. `MainComponent` is a distinct node
+    /// kind from `ComponentDecl`/`ComponentCall`, so it is listed explicitly (without it,
+    /// `component main = Lib()` where `Lib` is in an include would never resolve).
+    pub(crate) fn resolve_use(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let in_file = self.resolve_in_file(origin, token);
+        if !in_file.is_empty() {
+            return in_file;
+        }
+        let is_component_use = token_ancestors(token).any(|n| {
+            AstComponentDecl::can_cast(n.kind())
+                || AstComponentCall::can_cast(n.kind())
+                || AstMainComponent::can_cast(n.kind())
+        });
+        if is_component_use {
+            self.resolve_in_includes(origin, token)
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Resolve `token` with workspace visibility — [`Self::resolve_use`] **without** the
+    /// component-use gate: in-file first (precedence/shadowing); when non-empty it wins outright, so
+    /// an in-file def shadows an include's same-named def; otherwise every direct include's
+    /// top-level by name. References/rename need this ungated path to find usages of *any* included
+    /// top-level symbol (a template/function referenced by name inside a body), not just component
+    /// instantiations.
+    pub(crate) fn resolve_visible(
+        &self,
+        origin: &FileDB,
+        token: &SyntaxToken,
+    ) -> Vec<(FileId, ResolvedSymbol)> {
+        let in_file = self.resolve_in_file(origin, token);
+        if !in_file.is_empty() {
+            return in_file;
+        }
+        self.resolve_in_includes(origin, token)
     }
 
     /// Resolve a component member-access **field** token (`c.x` / `T()(...).x`) to its signal
@@ -527,10 +561,19 @@ impl GlobalState {
             if self.source_db.vfs().file_text(f).is_none() {
                 continue;
             }
+            let file_db = self.source_db.file_db(f);
+            // A token in `f` can only resolve to `target` if `f` IS the defining file, is the
+            // cursor's file, or directly includes the defining file (circom's non-transitive
+            // visibility). Skip the rest — they can't reference `target`, so walking their tokens
+            // (an O(file_text) walk each) is wasted work on large workspaces.
+            let visible =
+                f == *def_file || f == origin || self.loaded_includes(&file_db).contains(def_file);
+            if !visible {
+                continue;
+            }
             let Some(ast) = self.source_db.ast(f) else {
                 continue;
             };
-            let file_db = self.source_db.file_db(f);
             for tok in resolver::identifiers_named(ast.syntax(), name) {
                 let matched = self
                     .resolve_visible(&file_db, &tok)
@@ -550,7 +593,7 @@ impl GlobalState {
     /// query ⇒ all), as owned `(FileId, Symbol)` (each file's `SymbolTable` is cached behind a
     /// short-lived borrow). Powers `workspace/symbol`.
     pub(crate) fn workspace_symbols(&self, query: &str) -> Vec<(FileId, Symbol)> {
-        let q = query.trim();
+        let q = query.trim().to_lowercase();
         let mut out = Vec::new();
         for f in &self.workspace_files {
             if self.source_db.vfs().file_text(*f).is_none() {
@@ -561,7 +604,7 @@ impl GlobalState {
             }
             let table = self.source_db.symbol_table(*f);
             for sym in table.top_level_symbols() {
-                if is_workspace_symbol_kind(sym.kind) && matches_query(q, &sym.name) {
+                if is_workspace_symbol_kind(sym.kind) && matches_query(&q, &sym.name) {
                     out.push((*f, sym.clone()));
                 }
             }
@@ -620,10 +663,10 @@ fn is_workspace_symbol_kind(kind: SymbolKind) -> bool {
     )
 }
 
-/// Case-insensitive substring match; an empty query matches everything (`workspace/symbol` lists
-/// all symbols when the query is blank).
-fn matches_query(query: &str, name: &str) -> bool {
-    query.is_empty() || name.to_lowercase().contains(&query.to_lowercase())
+/// Case-insensitive substring match against an already-lowercased `query` (callers hoist the
+/// `to_lowercase` once per request); an empty query matches everything.
+fn matches_query(query_lower: &str, name: &str) -> bool {
+    query_lower.is_empty() || name.to_lowercase().contains(query_lower)
 }
 
 /// Deserialize params, run the handler, wrap the result in a success `Response`. Generic so
@@ -901,6 +944,44 @@ mod tests {
         let _ = fs::remove_dir_all(&base);
     }
 
+    /// Regression (CREATED fix): a `workspace/didChangeWatchedFiles` CREATED event for a file the
+    /// client has open must NOT overwrite its dirty buffer. A build tool that deletes+recreates a
+    /// file while it's open fires CREATED; the open doc's unsaved edits must survive (mirrors the
+    /// CHANGED/DELETED open-doc guards).
+    #[test]
+    fn watched_created_skips_open_document_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_created_{}", std::process::id()));
+        let ws = base.join("ws");
+        fs::create_dir_all(&ws).unwrap();
+        let lib_path = ws.join("lib.circom");
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        // Open with dirty text; the file does not yet exist on disk.
+        state
+            .handle_update(doc(
+                &lib_url,
+                "pragma circom 2.0.0;\ntemplate Dirty() {}\n".to_string(),
+            ))
+            .unwrap();
+
+        // The file is (re)created on disk underneath; watcher fires CREATED.
+        fs::write(&lib_path, "pragma circom 2.0.0;\n").unwrap();
+        state.handle_watched_file_change(lsp_types::FileEvent {
+            uri: lib_url.clone(),
+            typ: lsp_types::FileChangeType::CREATED,
+        });
+
+        let id = state.source_db.id_for_url(&lib_url).unwrap();
+        let text = state.source_db.file_text(id);
+        assert!(
+            text.contains("Dirty"),
+            "open-doc buffer must be preserved across a watcher CREATED: {text}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
     /// Regression (DELETED fix): a `workspace/didChangeWatchedFiles` DELETED event for a file the
     /// client has open must NOT null its in-memory text (a build tool deleting+recreating the file
     /// must not make the open doc unresolvable). Mirrors the CHANGED open-doc guard.
@@ -992,6 +1073,59 @@ mod tests {
                 .id_for_include(&main_url, "lib.circom")
                 .is_none(),
             "removed-folder include must stop resolving"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// Regression (nested-folder fix): removing a folder nested inside a *remaining* root must NOT
+    /// drop files that are still covered by the outer root. Previously `unregister_under` nulled
+    /// their text, silently breaking resolution.
+    #[test]
+    fn removed_nested_folder_keeps_covered_files_test() {
+        use std::fs;
+        let base = std::env::temp_dir().join(format!("ccls_nested_{}", std::process::id()));
+        let outer = base.join("proj");
+        let inner = outer.join("sub");
+        fs::create_dir_all(&inner).unwrap();
+        fs::write(
+            inner.join("lib.circom"),
+            "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
+        )
+        .unwrap();
+        let lib_url = Url::from_file_path(inner.join("lib.circom")).unwrap();
+
+        // Both the outer project and its nested sub-folder are roots.
+        let mut state = GlobalState::new(vec![
+            outer.canonicalize().unwrap(),
+            inner.canonicalize().unwrap(),
+        ]);
+        state.index_workspace();
+        let id = state.source_db.id_for_url(&lib_url).expect("lib indexed");
+        assert!(
+            state.source_db.vfs().file_text(id).is_some(),
+            "lib has loaded text"
+        );
+
+        // Remove only the nested folder — `outer` still covers `lib.circom`.
+        state.handle_workspace_folders_change(lsp_types::DidChangeWorkspaceFoldersParams {
+            event: lsp_types::WorkspaceFoldersChangeEvent {
+                added: Vec::new(),
+                removed: vec![lsp_types::WorkspaceFolder {
+                    uri: Url::from_file_path(&inner).unwrap(),
+                    name: "sub".to_string(),
+                }],
+            },
+        });
+
+        // The file is still under the outer root → it must keep its text + stay in the workspace.
+        assert!(
+            state.source_db.vfs().file_text(id).is_some(),
+            "a file still under a remaining root must keep its text"
+        );
+        assert!(
+            state.workspace_files.contains(&id),
+            "a file still under a remaining root stays in workspace_files"
         );
 
         let _ = fs::remove_dir_all(&base);
