@@ -37,7 +37,9 @@ pub fn handle(
 
 // If `token` is an include path (`include "lib.circom";`), jump to that library file's URL.
 // Routed here (never the resolver) because the resolver only handles `Identifier` tokens — a
-// `CircomString` carries a path, not a symbol name.
+// `CircomString` carries a path, not a symbol name. Resolution order matches `load_include` so the
+// jump target and the actual load always agree: same-dir path first, then a project-wide basename
+// fallback (`vfs.find_include`) for a non-sibling include.
 pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Location> {
     let Some(include_stmt) = token_ancestors(token).find_map(AstInclude::cast) else {
         return Vec::new();
@@ -45,28 +47,46 @@ pub fn jump_to_lib(file_db: &FileDB, token: &SyntaxToken, vfs: &Vfs) -> Vec<Loca
     let Some(include_path) = include_stmt.lib() else {
         return Vec::new();
     };
+    let rel = include_path.value();
     let path = file_db.get_path();
     let Some(parent_dir) = path.parent() else {
         return Vec::new();
     };
-    let lib_path = parent_dir.join(include_path.value());
+    let lib_path = parent_dir.join(&rel);
 
     // Defense-in-depth: don't offer a jump target for an include that escapes the workspace.
     // `load_include` (the actual read boundary) already refuses these; mirror it so goto-def never
     // surfaces an unreachable/escaped path. `canonicalize` resolves `..`/symlinks (the one disk
     // stat, kept out of the I/O-free Vfs); `vfs.is_confined` is the pure prefix check.
-    match lib_path.canonicalize() {
-        Ok(canon) if vfs.is_confined(&canon) => {}
-        _ => return Vec::new(),
+    if let Ok(canon) = lib_path.canonicalize() {
+        if vfs.is_confined(&canon) {
+            if let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) {
+                if let Ok(lib_url) = Url::from_file_path(vpath.as_path()) {
+                    return vec![Location::new(lib_url, Range::default())];
+                }
+            }
+        }
     }
 
-    // Absolutize so the returned location URL is canonical and matches the FileId the source db
-    // interns for the same include (otherwise a `"../lib.circom"` include resolves to a
-    // non-canonical URL like `/a/b/../lib.circom` that won't match the interned `/a/lib.circom`).
-    let Some(vpath) = vfs::VfsPath::from_abs_path(&lib_path) else {
+    // Same-dir miss → project-wide basename fallback. The winner was interned (path-only is fine —
+    // a jump only needs the URL, not the text) with an already-canonical path collected from a
+    // workspace root, so it's confined by construction; the explicit `is_confined` check is kept as
+    // defense-in-depth. `parent` is the includer **file** (matching `load_include`/`id_for_include`)
+    // so `find_include`'s nearest tiebreak ranks identically and the jump target always equals the
+    // loaded target.
+    let Some(parent_vpath) = vfs::VfsPath::from_abs_path(&path) else {
         return Vec::new();
     };
-    let Ok(lib_url) = Url::from_file_path(vpath.as_path()) else {
+    let Some(winner) = vfs.find_include(&parent_vpath, &rel) else {
+        return Vec::new();
+    };
+    let Some(winner_path) = vfs.path(winner) else {
+        return Vec::new();
+    };
+    if !vfs.is_confined(winner_path.as_path()) {
+        return Vec::new();
+    }
+    let Ok(lib_url) = Url::from_file_path(winner_path.as_path()) else {
         return Vec::new();
     };
     vec![Location::new(lib_url, Range::default())]
@@ -364,6 +384,55 @@ mod tests {
         assert_eq!(
             locs[0].range.start.line, 2,
             "lands on the lib signal: {locs:?}"
+        );
+
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    /// `jump_to_lib` on a **non-sibling** include (`include "lib.circom"` where lib lives under
+    /// `circuits/`) resolves to the indexed lib's URL via the basename fallback after
+    /// `index_workspace`. The same-dir lookup misses (no sibling), so the project index must drive
+    /// the jump — and the jump target must agree with `load_include`'s resolution.
+    #[test]
+    fn jump_to_lib_nonsibling_via_index_test() {
+        use std::fs;
+
+        let base = std::env::temp_dir().join(format!("ccls_jump_ns_{}", std::process::id()));
+        let ws = base.join("ws");
+        let circuits = ws.join("circuits");
+        fs::create_dir_all(&circuits).unwrap();
+        fs::write(circuits.join("lib.circom"), "pragma circom 2.0.0;\n").unwrap();
+        let main_src = "pragma circom 2.0.0;\ninclude \"lib.circom\";\n";
+        let main_path = ws.join("main.circom");
+        fs::write(&main_path, main_src).unwrap();
+
+        let main_url = Url::from_file_path(&main_path).unwrap();
+        let mut state = GlobalState::new(vec![ws.canonicalize().unwrap()]);
+        state.index_workspace();
+        state
+            .source_db
+            .set_document(&main_url, main_src.to_string());
+
+        let id = state.source_db.id_for_url(&main_url).unwrap();
+        let file_db = state.source_db.file_db(id);
+        let ast = AstCircomProgram::cast(syntax_tree(main_src)).expect("parses to a program");
+        let token = ast
+            .syntax()
+            .descendants_with_tokens()
+            .filter_map(|e| e.into_token())
+            .find(|t| t.kind() == TokenKind::CircomString)
+            .expect("include path string present");
+
+        let locs = super::jump_to_lib(&file_db, &token, state.source_db.vfs());
+        assert_eq!(
+            locs.len(),
+            1,
+            "non-sibling include jumps to exactly one target"
+        );
+        let resolved = locs[0].uri.to_file_path().unwrap();
+        assert!(
+            resolved.ends_with("circuits/lib.circom"),
+            "jumps to the indexed non-sibling lib: {resolved:?}"
         );
 
         let _ = fs::remove_dir_all(&base);

@@ -12,6 +12,7 @@
 //! feeds text in via [`Vfs::set_file_contents`]. Keeping vfs I/O-free makes it unit-testable
 //! without touching the filesystem.
 
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -78,6 +79,12 @@ pub struct Vfs {
     /// [`Vfs::is_confined`] stays pure (no disk I/O) — the `canonicalize` stat is the LSP layer's
     /// job, keeping this crate I/O-free and unit-testable.
     workspace_roots: Vec<PathBuf>,
+    /// Project-wide basename index: `file_name` (e.g. `lib.circom`) → every interned [`FileId`]
+    /// with that basename. The search surface for include resolution when the same-dir lookup
+    /// misses (an include whose target lives elsewhere in the project). Built by the LSP layer's
+    /// workspace walk via [`Vfs::register_path`]; kept I/O-free here — only path identity, never a
+    /// disk read. Ranking in [`Vfs::find_include`] is deterministic and pure.
+    index: HashMap<String, Vec<FileId>>,
 }
 
 impl Default for Vfs {
@@ -93,6 +100,7 @@ impl Vfs {
             files: Vec::new(),
             changes: Vec::new(),
             workspace_roots: Vec::new(),
+            index: HashMap::new(),
         }
     }
 
@@ -100,6 +108,12 @@ impl Vfs {
     /// handshake) pass already-canonicalized absolute paths; no disk I/O happens here.
     pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
         self.workspace_roots = roots;
+    }
+
+    /// The workspace roots confining [`Self::is_confined`] (already canonicalized by the caller).
+    /// Read accessor so the LSP layer's workspace walker can re-walk the same roots it set.
+    pub fn workspace_roots(&self) -> &[PathBuf] {
+        &self.workspace_roots
     }
 
     /// Pure containment check: is `canonical` (an already-canonicalized absolute path) inside one of
@@ -115,6 +129,7 @@ impl Vfs {
     }
 
     /// The id for `path` if it has been interned, else `None`.
+    #[inline]
     pub fn file_id(&self, path: &VfsPath) -> Option<FileId> {
         self.path_to_id.get(path).copied()
     }
@@ -125,6 +140,7 @@ impl Vfs {
     }
 
     /// The current text of `id`, or `None` if the file is deleted/absent/unknown.
+    #[inline]
     pub fn file_text(&self, id: FileId) -> Option<Arc<str>> {
         self.files.get(id.0 as usize).and_then(|s| s.text.clone())
     }
@@ -197,6 +213,114 @@ impl Vfs {
     pub fn has_changes(&self) -> bool {
         !self.changes.is_empty()
     }
+
+    // --- project-wide basename index (pure, no I/O) ---------------------------
+
+    /// Intern `path` with **no text** and add it to the basename index, so a later
+    /// [`Self::find_include`] can locate it. Idempotent: a path already interned (whether by an
+    /// earlier `register_path` or by a text-bearing `set_file_contents`) keeps its existing
+    /// [`FileId`] and is added to the index at most once. **Does not clobber loaded text** — if the
+    /// path was loaded (e.g. by `load_include`), its text is preserved; only an unknown path is
+    /// interned, and interning with `None` records no change-log entry (so no spurious cache drop).
+    /// The caller canonicalizes the path *before* calling; this method stays pure.
+    #[inline]
+    pub fn register_path(&mut self, path: VfsPath) -> FileId {
+        let id = if let Some(&id) = self.path_to_id.get(&path) {
+            id
+        } else {
+            // Unknown path: intern with no text. This is the no-change-log branch of
+            // `set_file_contents` (Create-with-None records nothing), so the path becomes known
+            // without a disk read or a cache invalidation.
+            self.set_file_contents(path.clone(), None)
+        };
+        if let Some(key) = file_name_of(path.as_path()) {
+            push_dedup(self.index.entry(key).or_default(), id);
+        }
+        id
+    }
+
+    /// Remove `path`'s [`FileId`] from the basename index and drop any loaded text. Records a
+    /// [`ChangeKind::Delete`] change **iff** the file had text, so the source db drops its
+    /// parse/symbol-table caches — a delete must not leave stale caches behind. No-op (and no
+    /// change recorded) if `path` was never interned, or was interned with no text.
+    pub fn unregister_path(&mut self, path: &VfsPath) {
+        let Some(&id) = self.path_to_id.get(path) else {
+            return;
+        };
+        if let Some(key) = file_name_of(path.as_path()) {
+            if let Some(vec) = self.index.get_mut(&key) {
+                vec.retain(|f| *f != id);
+                if vec.is_empty() {
+                    self.index.remove(&key);
+                }
+            }
+        }
+        // Drop any loaded text. None→None is a no-op (no change); Some→None records a Delete.
+        self.set_file_contents(path.clone(), None);
+    }
+
+    /// Pure ranked search for the best [`FileId`] matching include `rel` (e.g. `lib.circom` or
+    /// `circuits/x.circom`) from the includer `parent` (any interned path, typically the includer
+    /// file's own [`VfsPath`]). Candidates are every indexed file sharing `rel`'s basename. Ranking
+    /// is deterministic:
+    /// 1. **Suffix match** (desc): a candidate whose path *ends with* the full `rel` (so
+    ///    `include "circuits/x.circom"` prefers `…/circuits/x.circom` over a bare `…/x.circom`).
+    /// 2. **Nearest** (desc): longest shared path-component prefix with `parent`.
+    /// 3. **Shortest path** (asc).
+    /// 4. **Alphabetical** (asc) — the final tiebreak for full determinism.
+    ///
+    /// Returns `None` if the basename isn't indexed.
+    #[inline]
+    pub fn find_include(&self, parent: &VfsPath, rel: &str) -> Option<FileId> {
+        let rel_path = Path::new(rel);
+        let key = file_name_of(rel_path)?;
+        let candidates = self.index.get(&key)?;
+        if candidates.is_empty() {
+            return None;
+        }
+        let parent_path = parent.as_path();
+        candidates.iter().copied().min_by_key(|&id| {
+            let cpath = self
+                .path(id)
+                .map(|p| p.as_path())
+                .unwrap_or_else(|| Path::new(""));
+            // min_by_key picks the smallest key, so the "want-highest" fields are inverted. The
+            // final tiebreak compares the path's `OsStr` directly (`OsStr: Ord`, allocation-free,
+            // and MSRV-safe — unlike `as_encoded_bytes` which needs Rust 1.74).
+            let osname = cpath.as_os_str();
+            (
+                !cpath.ends_with(rel_path),
+                Reverse(shared_component_prefix(parent_path, cpath)),
+                osname.len(),
+                osname,
+            )
+        })
+    }
+}
+
+/// The `file_name` of `path` as a UTF-8 `String` (the index key), or `None` if it has none or is
+/// non-UTF-8. Both registration and lookup derive the key the same way, so a `&str` include and an
+/// interned path agree on their basename bucket.
+fn file_name_of(path: &Path) -> Option<String> {
+    path.file_name()?.to_str().map(|s| s.to_string())
+}
+
+/// Push `id` into `vec` only if absent (keeps the index dedup'd under repeated registration).
+fn push_dedup(vec: &mut Vec<FileId>, id: FileId) {
+    if !vec.contains(&id) {
+        vec.push(id);
+    }
+}
+
+/// Count of leading path components `candidate` shares with `parent` (component-wise, not
+/// byte-wise). Used by [`Vfs::find_include`] to prefer the include target nearest the includer.
+/// Zips the two paths' component iterators directly — no intermediate `Vec` allocation.
+fn shared_component_prefix(parent: &Path, candidate: &Path) -> usize {
+    parent
+        .components()
+        .zip(candidate.components())
+        .take_while(|(a, b)| a == b)
+        .count()
 }
 
 #[cfg(test)]
@@ -277,5 +401,107 @@ mod tests {
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].change_kind, ChangeKind::Delete);
         assert_eq!(vfs.file_text(id), None, "deleted file has no text");
+    }
+
+    // --- basename index tests (pure, no disk) ---------------------------------
+
+    #[test]
+    fn register_then_find_include_test() {
+        let mut vfs = Vfs::new();
+        let a = vfs.register_path(vp("/proj/a/lib.circom"));
+        let b = vfs.register_path(vp("/proj/b/lib.circom"));
+        let parent = vp("/proj/main.circom");
+        // Same suffix (no), equal shared prefix (/proj), equal length → alphabetical: a < b.
+        assert_eq!(vfs.find_include(&parent, "lib.circom"), Some(a));
+        let _ = b;
+    }
+
+    #[test]
+    fn find_include_suffix_match_preferred_test() {
+        let mut vfs = Vfs::new();
+        let bare = vfs.register_path(vp("/proj/x.circom"));
+        let nested = vfs.register_path(vp("/proj/circuits/x.circom"));
+        let parent = vp("/proj/main.circom");
+        // `circuits/x.circom` matches the nested candidate's suffix; bare does not.
+        assert_eq!(vfs.find_include(&parent, "circuits/x.circom"), Some(nested));
+        // `x.circom` suffix-matches both; tie on shared prefix; shortest path wins → bare.
+        assert_eq!(vfs.find_include(&parent, "x.circom"), Some(bare));
+    }
+
+    #[test]
+    fn find_include_nearest_wins_test() {
+        let mut vfs = Vfs::new();
+        let near = vfs.register_path(vp("/proj/sub/lib.circom"));
+        let _far = vfs.register_path(vp("/other/lib.circom"));
+        let parent = vp("/proj/sub/main.circom");
+        // `near` shares `/proj/sub` with the includer; `far` shares only `/`.
+        assert_eq!(vfs.find_include(&parent, "lib.circom"), Some(near));
+    }
+
+    #[test]
+    fn register_path_idempotent_test() {
+        let mut vfs = Vfs::new();
+        let p = vp("/proj/lib.circom");
+        let id1 = vfs.register_path(p.clone());
+        let id2 = vfs.register_path(p.clone());
+        assert_eq!(id1, id2, "re-registering the same path returns one id");
+        assert_eq!(
+            vfs.find_include(&vp("/proj/m.circom"), "lib.circom"),
+            Some(id1)
+        );
+    }
+
+    #[test]
+    fn register_path_preserves_loaded_text_test() {
+        let mut vfs = Vfs::new();
+        let p = vp("/proj/lib.circom");
+        let id = vfs.set_file_contents(p.clone(), Some(Arc::from("loaded")));
+        let _ = vfs.take_changes();
+        // Registering an already-loaded path must NOT delete its text or record a change.
+        let id2 = vfs.register_path(p.clone());
+        assert_eq!(id, id2);
+        assert_eq!(vfs.file_text(id).as_deref(), Some("loaded"));
+        assert!(
+            !vfs.has_changes(),
+            "registering a loaded path records no change"
+        );
+    }
+
+    #[test]
+    fn unregister_drops_candidate_test() {
+        let mut vfs = Vfs::new();
+        let p = vp("/proj/lib.circom");
+        let id = vfs.register_path(p.clone());
+        assert!(vfs
+            .find_include(&vp("/proj/m.circom"), "lib.circom")
+            .is_some());
+        // A path-only file (never loaded) has no text to delete → no change recorded.
+        vfs.unregister_path(&p);
+        assert!(
+            !vfs.has_changes(),
+            "deleting a never-loaded path records no change"
+        );
+        assert!(vfs
+            .find_include(&vp("/proj/m.circom"), "lib.circom")
+            .is_none());
+        // Idempotent: unregistering again is a no-op.
+        vfs.unregister_path(&p);
+        let _ = id;
+    }
+
+    #[test]
+    fn unregister_loaded_records_delete_test() {
+        let mut vfs = Vfs::new();
+        let p = vp("/proj/lib.circom");
+        let id = vfs.set_file_contents(p.clone(), Some(Arc::from("loaded")));
+        vfs.register_path(p.clone());
+        let _ = vfs.take_changes();
+        // Deleting a loaded file must record a Delete so caches drop.
+        vfs.unregister_path(&p);
+        let changes = vfs.take_changes();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].change_kind, ChangeKind::Delete);
+        assert_eq!(changes[0].file_id, id);
+        assert!(vfs.file_text(id).is_none());
     }
 }

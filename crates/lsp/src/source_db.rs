@@ -89,6 +89,12 @@ impl ContentCacheDb {
         &self.vfs
     }
 
+    /// Mutable [`Vfs`] handle for the workspace walker (registers/unregisters project paths in the
+    /// basename index) and the file-watcher refresh.
+    pub(crate) fn vfs_mut(&mut self) -> &mut Vfs {
+        &mut self.vfs
+    }
+
     /// Convert a `file:` URL to its absolutized [`VfsPath`], or `None` for non-`file:` schemes or
     /// non-absolutizable paths. Single source for the URI→path step so interning and lookup can't
     /// disagree (a split would intern under one key and look up another, silently breaking
@@ -115,10 +121,18 @@ impl ContentCacheDb {
     }
 
     /// The already-interned `FileId` for an include, without reading disk. `None` if unresolvable
-    /// or not yet loaded. Used by cross-file goto-def (the include loads once in `handle_update`).
+    /// or not yet loaded. Resolution order: the **same-dir** [`VfsPath`] lookup first (unchanged — a
+    /// sibling include resolves without the index), then the **project-wide basename fallback**
+    /// ([`Vfs::find_include`]) so a non-sibling `include "X.circom"` still resolves when the eager
+    /// walk indexed `X.circom` elsewhere in the project. Pure — no disk I/O.
     pub fn id_for_include(&self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        let vpath = Self::resolve_include(parent_url, rel)?;
-        self.vfs.file_id(&vpath)
+        if let Some(vpath) = Self::resolve_include(parent_url, rel) {
+            if let Some(id) = self.vfs.file_id(&vpath) {
+                return Some(id);
+            }
+        }
+        let parent_vpath = Self::url_to_vpath(parent_url)?;
+        self.vfs.find_include(&parent_vpath, rel)
     }
 
     /// Register/update a document's text. Returns `(FileId, changed)`; `changed` is `false` when
@@ -132,36 +146,60 @@ impl ContentCacheDb {
     }
 
     /// Load a relative include from disk **once**, then serve the interned `FileId` from cache — a
-    /// keystroke in the main file never re-reads its includes. `None` (skipped) for non-`file:`
-    /// schemes, missing parent dir, unreadable file, or non-absolutizable path.
+    /// keystroke in the main file never re-reads its includes. Resolution order (so a non-sibling
+    /// include resolves without regressing the sibling case):
+    /// 1. **Same-dir disk path** (unchanged): join `rel` onto the includer's dir, then
+    ///    canonicalize + confine + read.
+    /// 2. On a miss, **project-wide basename fallback**: rank indexed files via
+    ///    [`Vfs::find_include`], take the winner, canonicalize + confine + read it.
+    ///
+    /// `None` (skipped) for non-`file:` schemes, a missing/unreadable file, a non-absolutizable
+    /// path, or an include that escapes the workspace roots.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
-        let vpath = Self::resolve_include(parent_url, rel)?;
+        // 1. Same-dir path first.
+        if let Some(vpath) = Self::resolve_include(parent_url, rel) {
+            if let Some(id) = self.load_from_disk(&vpath) {
+                return Some(id);
+            }
+        }
+        // 2. Basename fallback against the project index.
+        let parent_vpath = Self::url_to_vpath(parent_url)?;
+        let winner = self.vfs.find_include(&parent_vpath, rel)?;
+        let winner_path = self.vfs.path(winner)?.clone();
+        self.load_from_disk(&winner_path)
+    }
 
-        // Security: confine the resolved include to a workspace root. `canonicalize` (the one disk
-        // stat — kept in this LSP layer so Vfs stays I/O-free) resolves `..`/`.`/symlinks to a real
-        // absolute path; `is_confined` then checks it's inside a root. Escapes (`include
-        // "/etc/passwd"`, `../../.ssh/id_rsa`, or a root symlink pointing out) are refused. This is
-        // the single read boundary; lookup/jump paths only surface includes loaded (and thus
-        // confined) here.
+    /// Canonicalize + confine + (read-if-needed) for one resolved include path — the single disk
+    /// boundary shared by the same-dir path and the basename-fallback winner. Returns the loaded
+    /// `FileId` (cached if already text-bearing), or `None` if the path can't be canonicalized,
+    /// escapes the workspace, or is unreadable. Security: `canonicalize` resolves `..`/`.`/symlinks;
+    /// `is_confined` is the pure prefix check. Escapes (`/etc/passwd`, `../../.ssh/id_rsa`, a root
+    /// symlink pointing out) are refused here so lookup/jump paths only ever surface confined files.
+    fn load_from_disk(&mut self, vpath: &VfsPath) -> Option<FileId> {
         let canonical = vpath.as_path().canonicalize().ok()?;
         if !self.vfs.is_confined(&canonical) {
             return None;
         }
-
-        // Already loaded — serve the cached id (never re-read).
-        if let Some(id) = self.vfs.file_id(&vpath) {
-            return Some(id);
+        // Already interned with text → serve the cached id (never re-read). A path interned with no
+        // text (by the workspace walk's `register_path`) falls through to the read.
+        if let Some(id) = self.vfs.file_id(vpath) {
+            if self.vfs.file_text(id).is_some() {
+                return Some(id);
+            }
         }
-
         let src = std::fs::read_to_string(vpath.as_path()).ok()?;
-        let id = self.vfs.set_file_contents(vpath, Some(Arc::from(src)));
+        let id = self
+            .vfs
+            .set_file_contents(vpath.clone(), Some(Arc::from(src)));
         self.invalidate_changed();
         Some(id)
     }
 
     /// Drain the VFS change log and drop every changed id's derived caches (others untouched).
-    /// `parse_count` is intentionally preserved — it tracks total parses, not cache state.
-    fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
+    /// `pub(crate)` so the workspace walker / file-watcher refresh can flush a `Delete` (from
+    /// `unregister_path`) after mutating the index. `parse_count` is intentionally preserved — it
+    /// tracks total parses, not cache state.
+    pub(crate) fn invalidate_changed(&mut self) -> Vec<ChangedFile> {
         let changes = self.vfs.take_changes();
         if !changes.is_empty() {
             let mut caches = self.caches.borrow_mut();

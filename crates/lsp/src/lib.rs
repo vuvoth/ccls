@@ -3,6 +3,7 @@
 pub mod file_db;
 pub mod global_state;
 pub mod handler;
+pub mod project_index;
 pub mod resolver;
 pub mod source_db;
 pub mod symbol_table;
@@ -13,7 +14,7 @@ mod test_util;
 use std::error::Error;
 use std::path::PathBuf;
 
-use lsp_server::{Connection, Message};
+use lsp_server::{Connection, Message, Request, RequestId};
 use lsp_types::{
     CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
     TextDocumentSyncCapability, TextDocumentSyncKind,
@@ -82,9 +83,36 @@ fn main_loop(
 
     // Capture workspace roots so `include` resolution can be confined to them (path-traversal
     // defense). Without roots the server refuses to load any include rather than read arbitrarily.
-    let mut state = GlobalState::new(workspace_roots(&params));
+    let roots = workspace_roots(&params);
+    let mut state = GlobalState::new(roots.clone());
+
+    // Background the workspace walk so `initialize` never blocks on I/O (a large `node_modules` can
+    // take seconds). The thread only does the I/O-heavy `collect_circom_files`; it hands the
+    // canonical paths back on a side channel, and the main loop registers them between messages.
+    // The server is responsive immediately; non-sibling includes resolve once the index lands, and
+    // same-dir includes work from the start (never gated on the index).
+    let (index_tx, index_rx) = std::sync::mpsc::channel::<Vec<std::path::PathBuf>>();
+    if !roots.is_empty() {
+        let walk_roots = roots.clone();
+        std::thread::spawn(move || {
+            let paths = crate::project_index::collect_circom_files(&walk_roots);
+            // The only error is the receiver being gone (server shutting down); nothing to do then.
+            let _ = index_tx.send(paths);
+        });
+    }
+
+    // If the client supports it, register a `**/*.circom` watcher per root so created/deleted
+    // files keep the index fresh without a full re-walk. Best-effort: a missing reply or
+    // unsupported client just leaves the index stale at the file level (refreshed on workspace
+    // folder changes); the `Message::Response(_)` no-op arm below absorbs the registration reply.
+    register_watched_files_capability(&connection, &params, &roots)?;
 
     for msg in &connection.receiver {
+        // Apply any completed background-walk results without blocking, before handling this
+        // message. `try_recv` returns immediately when nothing is ready yet.
+        while let Ok(paths) = index_rx.try_recv() {
+            state.register_indexed_paths(paths);
+        }
         match msg {
             Message::Request(req) => {
                 // The `shutdown` request is handled by the transport itself.
@@ -135,4 +163,44 @@ fn workspace_roots(params: &InitializeParams) -> Vec<PathBuf> {
     raw.into_iter()
         .filter_map(|r| r.canonicalize().ok())
         .collect()
+}
+
+/// If the client advertised `workspace.didChangeWatchedFiles` dynamic-registration support,
+/// register one `**/*.circom` file watcher per workspace root via a `client/registerCapability`
+/// request. Best-effort: no-op if unsupported or if there are no roots. The request is sent on the
+/// `connection.sender`; its (empty) reply hits the `Message::Response(_)` no-op arm in
+/// [`main_loop`]. We build the params as JSON to stay independent of the proposed
+/// `GlobPattern`/`RelativePattern` shape across `lsp_types` versions — the wire format is stable.
+fn register_watched_files_capability(
+    connection: &Connection,
+    params: &InitializeParams,
+    roots: &[PathBuf],
+) -> Result<(), Box<dyn Error + Sync + Send>> {
+    let supported = params
+        .capabilities
+        .workspace
+        .as_ref()
+        .and_then(|w| w.did_change_watched_files.as_ref())
+        .and_then(|d| d.dynamic_registration)
+        .unwrap_or(false);
+    if !supported || roots.is_empty() {
+        return Ok(());
+    }
+
+    let watchers: Vec<serde_json::Value> = roots
+        .iter()
+        .map(|root| serde_json::json!({ "globPattern": format!("{}/**/*.circom", root.display()) }))
+        .collect();
+    let registrations = vec![serde_json::json!({
+        "id": "ccls-watched-files",
+        "method": "workspace/didChangeWatchedFiles",
+        "registerOptions": { "watchers": watchers }
+    })];
+    let req = Request {
+        id: RequestId::from(String::from("ccls-register-watched-files")),
+        method: String::from("client/registerCapability"),
+        params: serde_json::json!({ "registrations": registrations }),
+    };
+    connection.sender.send(Message::Request(req))?;
+    Ok(())
 }
