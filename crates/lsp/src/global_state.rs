@@ -5,8 +5,8 @@ use lsp_types::notification::{
     DidOpenTextDocument, Notification as _,
 };
 use lsp_types::request::{
-    Completion, DocumentSymbolRequest, Formatting, GotoDefinition, HoverRequest,
-    PrepareRenameRequest, References, Rename, Request as _,
+    Completion, DocumentSymbolRequest, Formatting, GotoDefinition, GotoImplementation,
+    HoverRequest, PrepareRenameRequest, References, Rename, Request as _,
 };
 use lsp_types::{
     DidChangeTextDocumentParams, DidOpenTextDocumentParams, FileChangeType, Location, Range, Url,
@@ -151,6 +151,9 @@ impl GlobalState {
         let id = req.id.clone();
         match req.method.as_str() {
             GotoDefinition::METHOD => dispatch(self, id, req, handler::goto_definition::handle),
+            GotoImplementation::METHOD => {
+                dispatch(self, id, req, handler::goto_implementation::handle)
+            }
             HoverRequest::METHOD => dispatch(self, id, req, handler::hover::handle),
             Completion::METHOD => dispatch(self, id, req, handler::completion::handle),
             References::METHOD => dispatch(self, id, req, handler::references::handle),

@@ -9,6 +9,7 @@ pub mod completion;
 pub mod document_symbol;
 pub mod formatting;
 pub mod goto_definition;
+pub mod goto_implementation;
 pub mod hover;
 pub mod references;
 pub mod rename;

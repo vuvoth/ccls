@@ -17,8 +17,8 @@ use std::path::PathBuf;
 use lsp_server::{Connection, Message, Request, RequestId};
 use lsp_types::notification::Notification;
 use lsp_types::{
-    CompletionOptions, HoverProviderCapability, InitializeParams, OneOf, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind,
+    CompletionOptions, HoverProviderCapability, ImplementationProviderCapability, InitializeParams,
+    OneOf, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 
 use crate::global_state::GlobalState;
@@ -49,15 +49,18 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
 
 /// Advertise the LSP features this server handles.
 ///
-/// `definition` is fully implemented; `hover`/`completion`/`references`/`documentSymbol`/
-/// `formatting` are registered as placeholders — the client routes them to the server, which
-/// currently returns an empty result until each is implemented in `handler::*`. `rename` is fully
-/// implemented and advertises `prepareSupport` so the client consults the server (not its own
-/// textual word check) before opening the rename box — keywords/strings never become renamable.
+/// `definition` and `implementation` are fully implemented; `implementation` behaves identically
+/// to `definition` (Circom has no separate implementation targets). `hover`/`completion`/
+/// `references`/`documentSymbol`/`formatting` are registered as placeholders — the client routes
+/// them to the server, which currently returns an empty result until each is implemented in
+/// `handler::*`. `rename` is fully implemented and advertises `prepareSupport` so the client
+/// consults the server (not its own textual word check) before opening the rename box —
+/// keywords/strings never become renamable.
 fn server_capabilities() -> ServerCapabilities {
     ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         definition_provider: Some(OneOf::Left(true)),
+        implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         completion_provider: Some(CompletionOptions {
             trigger_characters: Some(vec![".".to_string()]),
