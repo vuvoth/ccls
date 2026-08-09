@@ -125,9 +125,9 @@ impl FileDB {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use lsp_types::Position;
 
-    use lsp_types::{Position, Url};
+    use crate::test_util::file_url;
 
     use super::{FileDB, FileId};
 
@@ -136,11 +136,7 @@ mod tests {
         // Source begins with a '\n', so line 0 is empty and line 1 is "one".
         let source = "\none\ntwo\nthree\n";
 
-        let file_db = FileDB::new(
-            FileId(1),
-            source,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
+        let file_db = FileDB::new(FileId(1), source, file_url("tmp.txt"));
 
         // Line 1 ("one") starts at byte 1; character 1 -> byte 2 ('n').
         assert_eq!(file_db.offset(Position::new(1, 1)), 2.into());
@@ -158,11 +154,7 @@ mod tests {
                "#;
 
         // newline byte offsets: 0, 12, 24 (the leading `\n` then the indented lines)
-        let file_db = FileDB::new(
-            FileId(1),
-            source,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
+        let file_db = FileDB::new(FileId(1), source, file_url("tmp.txt"));
         assert_eq!(Position::new(1, 1), file_db.position(2.into()));
         assert_eq!(Position::new(0, 0), file_db.position(0.into()));
     }
@@ -173,11 +165,7 @@ mod tests {
     fn utf16_offset_round_trip_test() {
         // "é" is 2 bytes in UTF-8 / 1 UTF-16 unit; "😀" is 4 bytes / 2 UTF-16 units (surrogate pair).
         let source = "é😀x";
-        let file_db = FileDB::new(
-            FileId(1),
-            source,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
+        let file_db = FileDB::new(FileId(1), source, file_url("tmp.txt"));
 
         // byte offsets: é=0, 😀=2, x=6. UTF-16 units: é=0, 😀=1, x=3.
         assert_eq!(
@@ -208,11 +196,7 @@ mod tests {
     fn multibyte_before_newline_no_panic_test() {
         // Line 0 ends with `─` (U+2500, 3 bytes); line 1 is `ab`. Bytes: ─=0..3, \n=3, a=4, b=5.
         let source = "─\nab";
-        let file_db = FileDB::new(
-            FileId(1),
-            source,
-            Url::from_file_path(Path::new("/tmp.txt")).unwrap(),
-        );
+        let file_db = FileDB::new(FileId(1), source, file_url("tmp.txt"));
         // The newline is at byte 3, not char index 1.
         assert_eq!(file_db.newline_offsets, vec![3]);
 

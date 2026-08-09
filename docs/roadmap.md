@@ -16,8 +16,6 @@ These handlers exist but currently return `None`:
 
 ## Not yet implemented
 
-- [ ] **Diagnostics** — syntax/semantic error reporting (`textDocument/publishDiagnostics`).
-      The parser already produces errors via `error_report()`; surface them to the client.
 - [ ] **Semantic Highlighting** — `textDocument/semanticTokens`.
 - [ ] **Signature Help** — `textDocument/signatureHelp`.
 - [ ] **Code Actions / Quick Fixes** — `textDocument/codeAction`.
@@ -25,13 +23,12 @@ These handlers exist but currently return `None`:
 - [ ] **Document Highlight** — `textDocument/documentHighlight`.
 - [ ] **Selection Range** — `textDocument/selectionRange`.
 - [ ] **Inlay Hints** — `textDocument/inlayHint`.
+- [ ] **Member-field references/rename** — `c.out` resolves for goto-def/hover, but Find
+      References and Rename of a component signal field are a no-op (they ride the flat
+      resolver). Needs per-template occurrence search.
 
 ## Existing features — follow-ups
 
-- [ ] **Cross-file Rename & References** — both are currently in-file only. A workspace-wide
-      symbol graph is needed instead of name/`def_range` matching across files (which both
-      misses real cross-file usages and can collide when two files define a same-named symbol
-      at the same line:column).
 - [ ] **Doc-comment parsing** — richer hover derived from circom comments.
 - [ ] **Incremental sync** — document sync is currently `Full`; switch to incremental
       `didChange` ranges.

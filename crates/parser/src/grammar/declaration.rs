@@ -273,24 +273,22 @@ pub(super) fn component_declaration(p: &mut Parser) {
     let m = p.open();
     p.expect(ComponentKw);
 
-    // component identifier
-    // eg: comp[N - 1][10]
+    // `component c[N]` — the `[` follows the name. Detect before parsing so we can flag an
+    // initializer on an array component, which circom forbids.
+    let is_array_component = p.nth(1) == LBracket;
+
     complex_identifier(p);
 
-    // do not assign for array components
-    // but we will not catch this error
     if p.at(Assign) {
+        if is_array_component {
+            p.error_report("array components cannot be initialized".to_string());
+        }
         p.expect(Assign);
 
-        // TODO: support `parallel` tag
-        // eg: component comp = parallel NameTemplate(...){...}
-
-        // template name
         let m_c = p.open();
         p.expect(Identifier);
         p.close(m_c, TemplateName);
 
-        // template params
         let parameter_marker = p.open();
         paren_list(p);
         p.close(parameter_marker, Call);

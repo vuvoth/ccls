@@ -1,6 +1,6 @@
 use parser::event::Event;
 use parser::grammar::entry::Scope;
-use parser::lexer::{tokenize, Token};
+use parser::lexer::{tokenize, tokenize_with_errors, Token};
 use parser::parser::Parser;
 use parser::token_kind::TokenKind;
 use rowan::{GreenNodeBuilder, NodeCache};
@@ -12,98 +12,187 @@ pub use rowan::{
 
 use crate::node::SyntaxNode;
 
-/// Parse `source` as a whole circom program and build its syntax tree.
-pub fn syntax_tree(source: &str) -> SyntaxNode {
-    let tokens = tokenize(source);
+/// A syntax error: a source range plus a message. Collected during the build from the parser's
+/// `ErrorReport` events (and the lexer's errors) and surfaced as LSP diagnostics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyntaxError {
+    pub range: rowan::TextRange,
+    pub msg: String,
+}
+
+/// The product of a parse: the lossless syntax tree plus the errors found in it.
+#[derive(Debug, Clone)]
+pub struct Parse {
+    pub tree: SyntaxNode,
+    pub errors: Vec<SyntaxError>,
+}
+
+/// Parse `source` as a whole circom program, returning the tree and any errors.
+pub fn parse(source: &str) -> Parse {
+    let (tokens, lex_errors) = tokenize_with_errors(source);
     let events = Parser::parse(&tokens);
-    build_syntax_node(&tokens, events)
+    let (tree, parse_errors) = build_syntax_node(&tokens, events);
+
+    // Byte ranges the lexer already reported (stray `*/`, unrecognized bytes, unterminated
+    // comment). The offending span is also pushed into the token stream as a `TokenKind::Error`,
+    // so the parser re-flags it as an "unexpected token" — keep the specific lexer message and
+    // drop the redundant parser-side diagnostic at the identical span.
+    let lex_ranges: Vec<rowan::TextRange> =
+        lex_errors.iter().map(|le| text_range(&le.range)).collect();
+
+    let mut errors: Vec<SyntaxError> = lex_errors
+        .into_iter()
+        .map(|le| SyntaxError {
+            range: text_range(&le.range),
+            msg: le.msg,
+        })
+        .collect();
+    errors.extend(
+        parse_errors
+            .into_iter()
+            .filter(|pe| !lex_ranges.contains(&pe.range)),
+    );
+    Parse { tree, errors }
+}
+
+/// Parse `source` as a whole circom program and build its syntax tree (errors discarded).
+pub fn syntax_tree(source: &str) -> SyntaxNode {
+    parse(source).tree
 }
 
 /// Parse `source` starting from a specific entry `scope` and build its syntax tree.
 pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     let tokens = tokenize(source);
     let events = Parser::parse_with_scope(&tokens, scope);
-    build_syntax_node(&tokens, events)
+    build_syntax_node(&tokens, events).0
 }
 
-fn build_syntax_node(tokens: &[Token], events: Vec<Event>) -> SyntaxNode {
-    // A fresh `NodeCache` per parse: identical tokens/subtrees are still deduplicated *within* a
-    // single parse, but nothing accumulates across parses. A process-global cache would leak
-    // every distinct identifier/literal ever parsed for the whole server lifetime (unbounded in a
-    // long LSP session); a per-parse cache bounds memory to one parse's working set.
+/// Convert a lexer byte range into a `rowan::TextRange`.
+fn text_range(r: &std::ops::Range<usize>) -> rowan::TextRange {
+    rowan::TextRange::new(
+        rowan::TextSize::from(r.start as u32),
+        rowan::TextSize::from(r.end as u32),
+    )
+}
+
+fn build_syntax_node(tokens: &[Token], events: Vec<Event>) -> (SyntaxNode, Vec<SyntaxError>) {
     let mut cache = NodeCache::default();
     let mut builder = GreenNodeBuilder::with_cache(&mut cache);
-    build_green(tokens, events, &mut builder);
+    let errors = build_green(tokens, events, &mut builder);
     let green = builder.finish();
-    SyntaxNode::new_root(green)
+    (SyntaxNode::new_root(green), errors)
 }
 
-/// Drive a `GreenNodeBuilder` straight from the parser's event stream, producing a tree
-/// byte-identical to the previous `Output` → `build_rec` path.
+/// Per-open-node state tracked during the build. `Err` frames record the first token they wrap
+/// (if any) and any `ErrorReport` message, so on close they can be turned into a [`SyntaxError`].
+enum Frame {
+    Normal,
+    Err {
+        token: Option<rowan::TextRange>,
+        msg: Option<String>,
+    },
+}
+
+/// Drive a `GreenNodeBuilder` from the parser's event stream, returning the syntax errors.
 ///
-/// Robust against malformed streams (a stray `Close`, an unclosed `Open`, or a stream with no root
-/// `Open`) so that `GreenNodeBuilder::finish` — which asserts exactly one top-level node — never
-/// panics, even on a grammar bug. Real parser output is always single-rooted and balanced, so these
-/// guards are defense-in-depth only.
-fn build_green(tokens: &[Token], events: Vec<Event>, builder: &mut GreenNodeBuilder) {
-    // The first event must open the root node. An empty stream, or one whose first event is not an
-    // `Open` (neither can come from the real grammar), yields an empty `ParserError` root —
-    // mirroring `Output::from`'s empty-tree fallback and keeping `finish()` single-rooted.
+/// Robust against malformed streams so `GreenNodeBuilder::finish` (which asserts exactly one
+/// top-level node) never panics.
+fn build_green(
+    tokens: &[Token],
+    events: Vec<Event>,
+    builder: &mut GreenNodeBuilder,
+) -> Vec<SyntaxError> {
+    let mut errors: Vec<SyntaxError> = Vec::new();
+    let mut next_idx: usize = 0;
+    let mut stack: Vec<Frame> = Vec::new();
+
     let mut iter = events.into_iter();
     let root_kind = match iter.next() {
         Some(Event::Open { kind }) => kind,
         _ => {
             builder.start_node(TokenKind::ParserError.into());
             builder.finish_node();
-            return;
+            return errors;
         }
     };
 
-    // The root is held open (`open >= 1`) for the whole stream and closed by the tail loop, so a
-    // stray trailing `Close` can never pop below the root.
     builder.start_node(root_kind.into());
-    let mut open: u32 = 1;
+    stack.push(Frame::Normal);
+
+    let close_frame = |frame: Frame, errors: &mut Vec<SyntaxError>, next_idx: usize| {
+        if let Frame::Err { token, msg } = frame {
+            let range = match (token, msg.is_some()) {
+                (Some(r), _) => r,
+                (None, true) => match tokens.get(next_idx) {
+                    Some(t) => text_range(&t.range),
+                    None => {
+                        let end = tokens.last().map(|t| t.range.end).unwrap_or(0);
+                        TextRange::new(TextSize::from(end as u32), TextSize::from(end as u32))
+                    }
+                },
+                (None, false) => return,
+            };
+            let message = msg.unwrap_or_else(|| "unexpected token".to_string());
+            errors.push(SyntaxError {
+                range,
+                msg: message,
+            });
+        }
+    };
+
     for event in iter {
         match event {
             Event::Open { kind } => {
                 builder.start_node(kind.into());
-                open += 1;
+                stack.push(if kind == TokenKind::Error {
+                    Frame::Err {
+                        token: None,
+                        msg: None,
+                    }
+                } else {
+                    Frame::Normal
+                });
             }
             Event::Close => {
-                // Close an inner node; a stray `Close` at the root level (`open == 1`) is dropped
-                // rather than popping the root.
-                if open > 1 {
+                if stack.len() > 1 {
+                    let frame = stack.pop().unwrap();
                     builder.finish_node();
-                    open -= 1;
+                    close_frame(frame, &mut errors, next_idx);
                 }
             }
             Event::Token(i) => {
-                // The parser emits a token index only for a token it consumed, so `i` is always in
-                // range; an out-of-range index (impossible for well-formed output) is dropped
-                // rather than panicking. Each token is wrapped in a single-child node of the same
-                // kind — this wrapping is load-bearing for `AstNode::cast`.
                 if let Some(t) = tokens.get(i) {
                     builder.start_node(t.kind.into());
                     builder.token(t.kind.into(), t.text);
                     builder.finish_node();
+                    if let Some(Frame::Err { token, .. }) = stack.last_mut() {
+                        if token.is_none() {
+                            *token = Some(text_range(&t.range));
+                        }
+                    }
+                    if i + 1 > next_idx {
+                        next_idx = i + 1;
+                    }
                 }
             }
-            Event::ErrorReport(_) => {
-                // A zero-width `Error` node marks the error position. The message is diagnostic
-                // metadata, NOT source text: emitting it as a token (`builder.token(Error, &msg)`)
-                // would make rowan size the node by the message length, inflating its byte range
-                // past EOF on terminal errors (e.g. `c.` at end of input) and breaking
-                // offset/range math. `has_error`/`parses_clean` key off the node kind, not text.
+            Event::ErrorReport(msg) => {
                 builder.start_node(TokenKind::Error.into());
                 builder.finish_node();
+                if let Some(Frame::Err { msg: slot, .. }) = stack.last_mut() {
+                    *slot = Some(msg);
+                }
             }
         }
     }
 
-    // Close every node still open, the root last, so `finish()` always observes exactly one root.
-    for _ in 0..open {
+    while stack.len() > 1 {
+        let frame = stack.pop().unwrap();
         builder.finish_node();
+        close_frame(frame, &mut errors, next_idx);
     }
+    builder.finish_node();
+
+    errors
 }
 
 #[cfg(test)]
@@ -348,6 +437,98 @@ mod build_green_tests {
         match &inner[0] {
             NodeOrToken::Node(n) => assert_eq!(n.kind(), TokenKind::Error),
             other => panic!("expected inner Error node, got {other:?}"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod parse_error_tests {
+    use super::parse;
+
+    #[test]
+    fn clean_program_has_no_errors() {
+        let src = "pragma circom 2.0.0;\ntemplate T() { signal output o; o <== 0; }\n";
+        let parsed = parse(src);
+        assert!(
+            parsed.errors.is_empty(),
+            "unexpected errors: {:?}",
+            parsed.errors
+        );
+    }
+
+    #[test]
+    fn missing_semicolon_yields_error() {
+        // `expect(Semicolon)` fails at EOF → one ErrorReport with a range at end of input.
+        let parsed = parse("pragma circom 2.0.0");
+        assert_eq!(parsed.errors.len(), 1, "{:?}", parsed.errors);
+        assert!(
+            parsed.errors[0].msg.contains("Semicolon"),
+            "{:?}",
+            parsed.errors[0]
+        );
+    }
+
+    #[test]
+    fn unclosed_template_yields_error() {
+        let parsed = parse("template T() { signal output o; o <== 0;");
+        assert!(
+            !parsed.errors.is_empty(),
+            "unclosed block should report an error"
+        );
+    }
+
+    #[test]
+    fn unterminated_block_comment_is_a_lexer_error() {
+        let parsed = parse("/* never closed");
+        assert!(
+            parsed
+                .errors
+                .iter()
+                .any(|e| e.msg.contains("block comment")),
+            "{:?}",
+            parsed.errors
+        );
+    }
+
+    #[test]
+    fn stray_close_comment_is_a_lexer_error() {
+        let parsed = parse("a */ b");
+        assert!(
+            parsed.errors.iter().any(|e| e.msg.contains("*/")),
+            "{:?}",
+            parsed.errors
+        );
+    }
+
+    #[test]
+    fn lexer_error_token_is_not_double_reported() {
+        // The stray `*/` is recorded as a `LexError` and also pushed as a `TokenKind::Error`, so
+        // without dedup the parser would add a second "unexpected token" at the same span. The
+        // specific lexer message must be the only diagnostic at that range.
+        let parsed = parse("a */ b");
+        let star_slash_count = parsed
+            .errors
+            .iter()
+            .filter(|e| e.msg.contains("*/"))
+            .count();
+        assert_eq!(
+            star_slash_count, 1,
+            "expected one lexer diagnostic for `*/`, got {star_slash_count}: {:?}",
+            parsed.errors
+        );
+    }
+
+    #[test]
+    fn error_ranges_are_within_source() {
+        let src = "pragma circom 2.0.0";
+        let parsed = parse(src);
+        let end = rowan::TextSize::from(src.len() as u32);
+        for e in &parsed.errors {
+            assert!(
+                e.range.start() <= end && e.range.end() <= end,
+                "range out of bounds: {:?}",
+                e
+            );
         }
     }
 }

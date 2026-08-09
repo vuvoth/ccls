@@ -52,7 +52,6 @@ pub fn handle(state: &GlobalState, params: ReferenceParams) -> Result<Option<Vec
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use std::time::Instant;
 
     use lsp_types::Url;
@@ -87,7 +86,7 @@ mod tests {
         }
         src.push_str("}\n");
 
-        let url = Url::from_file_path(Path::new("/tmp/big.circom")).unwrap();
+        let url = file_url("big.circom");
 
         let t_parse = Instant::now();
         let file_db = FileDB::new(FileId(0), &src, url);
@@ -127,7 +126,7 @@ mod tests {
     };
 
     use crate::global_state::GlobalState;
-    use crate::test_util::position_of;
+    use crate::test_util::{file_url, position_of};
 
     /// Drive the real `textDocument/references` handler (cursor → resolve → workspace scan).
     fn refs(

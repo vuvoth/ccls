@@ -173,17 +173,20 @@ fn return_statement(p: &mut Parser) {
 fn assignment_statement(p: &mut Parser) {
     let open_marker = p.open();
 
-    // left-hand expression / variable
     expression(p);
 
-    if p.at_assign_token() {
-        // <left> <assign-op> <right>
+    // Only label as an assignment when an assignment/inc-dec operator was actually consumed;
+    // otherwise this is a bare expression statement.
+    let close_kind = if p.at_assign_token() {
         p.advance();
         expression(p);
+        AssignStatement
     } else if p.at(UnitInc) || p.at(UnitDec) {
-        // <var> ++ / <var> --  (postfix; prefix ++/-- is illegal in circom and errors elsewhere)
         p.advance();
-    }
+        AssignStatement
+    } else {
+        ExpressionStatement
+    };
 
-    p.close(open_marker, AssignStatement);
+    p.close(open_marker, close_kind);
 }

@@ -9,37 +9,12 @@ use anyhow::Result;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, CompletionParams, CompletionResponse,
 };
+use parser::token_kind::KEYWORDS;
 use rowan::TextSize;
 
 use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::SymbolKind;
 use crate::source_db::SourceDatabase;
-
-/// Reserved circom keywords (mirror the lexer keywords in `token_kind.rs`). A constant list keeps
-/// completion allocation-free; drift is low (keywords change rarely).
-const KEYWORDS: &[&str] = &[
-    "pragma",
-    "include",
-    "template",
-    "function",
-    "bus",
-    "signal",
-    "input",
-    "output",
-    "component",
-    "var",
-    "parallel",
-    "custom",
-    "extern_c",
-    "custom_templates",
-    "return",
-    "for",
-    "while",
-    "if",
-    "else",
-    "log",
-    "assert",
-];
 
 /// Entry point for `textDocument/completion`. Suggests in-scope body symbols + file top-level
 /// names + keywords, deduped by name. `None` for an unknown file.
@@ -182,7 +157,7 @@ mod tests {
 
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
-    use crate::test_util::state_with;
+    use crate::test_util::{file_url, state_with};
 
     use super::handle;
     use lsp_types::{
@@ -191,7 +166,7 @@ mod tests {
 
     /// Position at the byte offset just past the last occurrence of `needle`.
     fn position_after_last(source: &str, needle: &str) -> Position {
-        let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
+        let file = FileDB::new(FileId(0), source, file_url("x"));
         let idx = source.rfind(needle).unwrap_or(0) + needle.len();
         file.position(TextSize::from(idx as u32))
     }
@@ -228,7 +203,7 @@ mod tests {
     fn completion_in_scope_includes_body_symbols_test() {
         let source =
             "pragma circom 2.0.0;\ntemplate T(a) {\n    signal input b;\n    signal output c;\n}\n";
-        let url = Url::from_file_path("/tmp/c.circom").unwrap();
+        let url = file_url("c.circom");
         let state = state_with(&url, source);
 
         // Position inside the body (line 2, col 4 — past `{`).
@@ -243,7 +218,7 @@ mod tests {
     #[test]
     fn completion_at_top_level_excludes_body_symbols_test() {
         let source = "pragma circom 2.0.0;\ntemplate T(a) {\n    signal input b;\n}\n";
-        let url = Url::from_file_path("/tmp/t.circom").unwrap();
+        let url = file_url("t.circom");
         let state = state_with(&url, source);
 
         // Position on the pragma line (before any template — top-level scope).
@@ -261,7 +236,7 @@ mod tests {
     #[test]
     fn completion_offers_keywords_test() {
         let source = "pragma circom 2.0.0;\n";
-        let url = Url::from_file_path("/tmp/k.circom").unwrap();
+        let url = file_url("k.circom");
         let state = state_with(&url, source);
 
         let got = labels(&state, &url, Position::new(0, 0));
@@ -274,7 +249,7 @@ mod tests {
     #[test]
     fn completion_dedups_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n}\n";
-        let url = Url::from_file_path("/tmp/d.circom").unwrap();
+        let url = file_url("d.circom");
         let state = state_with(&url, source);
 
         let items = match handle(
@@ -306,7 +281,7 @@ mod tests {
     #[test]
     fn member_completion_offers_template_signals_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal input b;\n    signal output c;\n}\ntemplate Main() {\n    component m = T();\n    m.\n}\n";
-        let url = Url::from_file_path("/tmp/m.circom").unwrap();
+        let url = file_url("m.circom");
         let state = state_with(&url, source);
 
         // Cursor right after the `m.` member-access dot.
@@ -329,7 +304,7 @@ mod tests {
     #[test]
     fn member_completion_non_component_falls_through_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input a; }\ntemplate Main() {\n    var v = 0;\n    v.\n}\n";
-        let url = Url::from_file_path("/tmp/n.circom").unwrap();
+        let url = file_url("n.circom");
         let state = state_with(&url, source);
 
         let got = labels(&state, &url, position_after_last(source, "v."));
@@ -348,7 +323,7 @@ mod tests {
     #[test]
     fn completion_scope_is_per_template_test() {
         let source = "pragma circom 2.0.0;\ntemplate A() {\n    signal input aa;\n}\ntemplate B() {\n    signal input bb;\n}\n";
-        let url = Url::from_file_path("/tmp/s.circom").unwrap();
+        let url = file_url("s.circom");
         let state = state_with(&url, source);
 
         let in_a = labels(&state, &url, Position::new(2, 4)); // inside A's body

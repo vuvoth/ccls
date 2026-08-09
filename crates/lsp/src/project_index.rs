@@ -50,6 +50,16 @@ pub(crate) fn collect_circom_files(roots: &[PathBuf]) -> Vec<PathBuf> {
 pub(crate) fn collect_circom_files_with_content(roots: &[PathBuf]) -> Vec<(PathBuf, String)> {
     let mut out = Vec::new();
     for canon in collect_circom_files(roots) {
+        if let Ok(meta) = std::fs::metadata(&canon) {
+            if meta.len() > crate::source_db::MAX_FILE_BYTES {
+                eprintln!(
+                    "ccls: skipping {} ({} bytes > limit)",
+                    canon.display(),
+                    meta.len()
+                );
+                continue;
+            }
+        }
         if let Ok(content) = std::fs::read_to_string(&canon) {
             out.push((canon, content));
         }
@@ -92,12 +102,7 @@ impl GlobalState {
             let libs: Vec<String> = self
                 .source_db
                 .ast(id)
-                .map(|a| {
-                    a.libs()
-                        .into_iter()
-                        .filter_map(|i| i.lib().map(|l| l.value()))
-                        .collect()
-                })
+                .map(|a| a.include_paths())
                 .unwrap_or_default();
             for rel in libs {
                 let _ = self.source_db.load_include(&uri, &rel);

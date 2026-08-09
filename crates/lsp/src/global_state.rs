@@ -9,7 +9,8 @@ use lsp_types::request::{
     HoverRequest, PrepareRenameRequest, References, Rename, Request as _,
 };
 use lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, FileChangeType, Location, Range, Url,
+    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
+    FileChangeType, Location, Range, Url,
 };
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
@@ -145,6 +146,32 @@ impl GlobalState {
         })
     }
 
+    /// LSP diagnostics for `uri` from its cached parse/lexer errors. Empty for unknown or
+    /// textless files (never panics — mirrors the `cursor_context` None-text guard).
+    pub fn diagnostics_for_uri(&self, uri: &Url) -> Vec<Diagnostic> {
+        let Some(id) = self.source_db.id_for_url(uri) else {
+            return Vec::new();
+        };
+        if self.source_db.vfs().file_text(id).is_none() {
+            return Vec::new();
+        }
+        let file_db = self.source_db.file_db(id);
+        let errors = self.source_db.errors(id);
+        errors
+            .iter()
+            .map(|e| Diagnostic {
+                range: Range {
+                    start: file_db.position(e.range.start()),
+                    end: file_db.position(e.range.end()),
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                source: Some("circom".to_string()),
+                message: e.msg.clone(),
+                ..Default::default()
+            })
+            .collect()
+    }
+
     /// Dispatch an LSP request to its handler by method name; `Ok(None)` for unhandled methods.
     /// Add a request = one arm here + a handler module + a capability entry.
     pub fn handle_request(&self, req: Request) -> Result<Option<Response>> {
@@ -168,24 +195,35 @@ impl GlobalState {
         }
     }
 
-    /// Dispatch an LSP notification. Document open/change load includes; didClose drops open-doc
-    /// tracking; watched-file changes keep the project basename index fresh (created/deleted
-    /// `.circom` files); workspace-folder changes walk the newly-added roots.
-    pub fn handle_notification(&mut self, not: Notification) -> Result<()> {
+    /// Dispatch an LSP notification. Document open/change load includes and publish diagnostics;
+    /// didClose drops open-doc tracking and clears diagnostics; watched-file changes keep the
+    /// project basename index fresh (created/deleted `.circom` files); workspace-folder changes
+    /// walk the newly-added roots. Returns `(uri, diagnostics)` pairs for the main loop to publish.
+    pub fn handle_notification(
+        &mut self,
+        not: Notification,
+    ) -> Result<Vec<(Url, Vec<Diagnostic>)>> {
+        let mut to_publish = Vec::new();
         match not.method.as_str() {
             DidOpenTextDocument::METHOD => {
                 let params: DidOpenTextDocumentParams = serde_json::from_value(not.params)?;
+                let uri = params.text_document.uri.clone();
                 self.handle_update(TextDocument::from(params))?;
+                to_publish.push((uri.clone(), self.diagnostics_for_uri(&uri)));
             }
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = serde_json::from_value(not.params)?;
+                let uri = params.text_document.uri.clone();
                 self.handle_update(TextDocument::from(params))?;
+                to_publish.push((uri.clone(), self.diagnostics_for_uri(&uri)));
             }
             DidCloseTextDocument::METHOD => {
                 if let Ok(params) =
                     serde_json::from_value::<lsp_types::DidCloseTextDocumentParams>(not.params)
                 {
-                    self.open_documents.remove(&params.text_document.uri);
+                    let uri = params.text_document.uri.clone();
+                    self.open_documents.remove(&uri);
+                    to_publish.push((uri, Vec::new()));
                 }
             }
             DidChangeWatchedFiles::METHOD => {
@@ -202,7 +240,7 @@ impl GlobalState {
             }
             _ => {}
         }
-        Ok(())
+        Ok(to_publish)
     }
 
     /// Apply one watched-file change to the index. `*.circom` only. Created → intern; Deleted →
@@ -384,13 +422,10 @@ impl GlobalState {
         let Some(ast) = self.source_db.ast(origin.file_id) else {
             return Vec::new();
         };
-        ast.libs()
+        ast.include_paths()
             .into_iter()
-            .filter_map(|inc| inc.lib())
             .filter_map(|path| {
-                let id = self
-                    .source_db
-                    .id_for_include(&origin.file_path, &path.value())?;
+                let id = self.source_db.id_for_include(&origin.file_path, &path)?;
                 let has_text = self.source_db.vfs().file_text(id).is_some();
                 has_text.then_some(id)
             })
@@ -639,13 +674,8 @@ impl GlobalState {
 
         // Includes load from disk once then cache; symbol tables build lazily on first query.
         if let Some(ast) = self.source_db.ast(id) {
-            for include in ast.libs() {
-                let Some(include_path) = include.lib() else {
-                    continue;
-                };
-                let _ = self
-                    .source_db
-                    .load_include(&text_document.uri, &include_path.value());
+            for path in ast.include_paths() {
+                let _ = self.source_db.load_include(&text_document.uri, &path);
             }
         }
 
@@ -699,6 +729,8 @@ mod tests {
 
     use lsp_types::Url;
 
+    use crate::test_util::file_url;
+
     use crate::source_db::SourceDatabase;
 
     use super::{GlobalState, TextDocument};
@@ -717,6 +749,47 @@ mod tests {
         let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let path = Path::new(&crate_path).join(format!("src/test_files/handler/{rel}"));
         Url::from_file_path(&path).unwrap()
+    }
+
+    /// A clean program yields no diagnostics; a missing `;` yields an ERROR diagnostic whose
+    /// message references the expected token.
+    #[test]
+    fn diagnostics_for_clean_and_broken_docs_test() {
+        let mut state = GlobalState::new(Vec::new());
+
+        let clean = file_url("diag_clean.circom");
+        state
+            .source_db
+            .set_document(&clean, "pragma circom 2.0.0;\n".to_string());
+        assert!(
+            state.diagnostics_for_uri(&clean).is_empty(),
+            "clean file should have no diagnostics"
+        );
+
+        let broken = file_url("diag_broken.circom");
+        state
+            .source_db
+            .set_document(&broken, "pragma circom 2.0.0".to_string());
+        let diags = state.diagnostics_for_uri(&broken);
+        assert_eq!(diags.len(), 1, "missing semicolon: {diags:?}");
+        assert_eq!(
+            diags[0].severity,
+            Some(lsp_types::DiagnosticSeverity::ERROR)
+        );
+        assert_eq!(diags[0].source.as_deref(), Some("circom"));
+        assert!(
+            diags[0].message.contains("Semicolon"),
+            "{}",
+            diags[0].message
+        );
+    }
+
+    /// A textless/unknown file yields no diagnostics and never panics.
+    #[test]
+    fn diagnostics_for_unknown_uri_is_empty_test() {
+        let state = GlobalState::new(Vec::new());
+        let unknown = file_url("nope.circom");
+        assert!(state.diagnostics_for_uri(&unknown).is_empty());
     }
 
     /// Editing the main file must never re-read or re-parse an unchanged `include`:
@@ -1096,7 +1169,10 @@ mod tests {
             "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
         )
         .unwrap();
-        let lib_url = Url::from_file_path(inner.join("lib.circom")).unwrap();
+        // Canonicalize so the URL matches the canonicalized path the workspace walk interns the
+        // file under (on macOS `temp_dir()` lives under a symlinked `/private/var`).
+        let lib_path = inner.join("lib.circom").canonicalize().unwrap();
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
 
         // Both the outer project and its nested sub-folder are roots.
         let mut state = GlobalState::new(vec![

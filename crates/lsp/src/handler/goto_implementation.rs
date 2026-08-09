@@ -29,7 +29,7 @@ mod tests {
     use syntax::tree::syntax_tree;
 
     use crate::source_db::SourceDatabase;
-    use crate::test_util::state_with;
+    use crate::test_util::{file_url, state_with};
 
     /// Drive the real `textDocument/implementation` handler at the `occurrence`-th token whose
     /// kind+text match, returning the resolved `Location`s.
@@ -77,7 +77,7 @@ mod tests {
     fn implementation_matches_definition_same_file_test() {
         let source =
             "pragma circom 2.0.0;\ntemplate X() { signal output o; o <== 0; }\ncomponent main = X();\n";
-        let url = Url::from_file_path("/tmp/impl_same.circom").unwrap();
+        let url = file_url("impl_same.circom");
         let state = state_with(&url, source);
 
         // The `X` usage in `component main = X()` is the 2nd `X` token (0th = the definition).
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn implementation_on_include_string_test() {
         let source = "pragma circom 2.0.0;\ninclude \"lib.circom\";\ncomponent main = X();\n";
-        let url = Url::from_file_path("/tmp/impl_inc.circom").unwrap();
+        let url = file_url("impl_inc.circom");
         // `state_with` is single-file; the include won't resolve to a real lib, but the handler
         // must still run without panicking and return an array (here empty, as the lib is absent).
         let state = state_with(&url, source);

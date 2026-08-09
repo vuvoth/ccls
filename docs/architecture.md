@@ -91,17 +91,21 @@ Responsibilities:
 
 See [crates/vfs.md](./crates/vfs.md) for the full API.
 
-## Sandboxed includes
+## Include resolution
 
-`include "…"` resolution is confined to workspace roots as a path-traversal defense:
+`include "…"` resolution follows circom semantics: the path is resolved **relative to the
+including source file**, the way the circom compiler resolves it. It is **not** confined to the
+workspace roots.
 
-- `Vfs::set_workspace_roots` stores already-canonicalized root paths during the `initialize`
-  handshake.
-- `Vfs::is_confined(canonical)` is a **pure** containment check — `canonical.starts_with(root)`
-  against the roots — with **no disk I/O**. The LSP layer canonicalizes the candidate
-  (resolving `..` and symlinks) before calling, which keeps the VFS I/O-free.
-- The check is **fail-closed**: with no roots configured, nothing is confined, so the server
-  refuses to load any include rather than risk an arbitrary read.
+- `Vfs::set_workspace_roots` stores canonicalized root paths from the `initialize` handshake.
+  They scope the project `.circom` walk that feeds the basename index — an *indexing* scope, not
+  a confinement gate.
+- An **absolute** include path is refused (`source_db::resolve_include`): `PathBuf::join` would
+  otherwise replace the base (`include "/etc/passwd"`), enabling an arbitrary local-file read.
+- Relative and `..` includes resolve normally and **may read files outside the workspace roots**,
+  matching circom — so navigation works even when the editor points at the wrong/incomplete folder.
+- The basename fallback (`Vfs::find_include`) only returns files the workspace walk already
+  indexed, so that path cannot escape the indexed set.
 
 ## Extension
 
