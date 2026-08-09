@@ -32,14 +32,37 @@ pub struct VfsPath(PathBuf);
 impl VfsPath {
     /// Absolutize `path` into a [`VfsPath`]. Returns `None` if absolutization fails (e.g. a
     /// non-existent root on platforms that canonicalize). The caller (LSP layer) has already
-    /// validated the path comes from a `file:` URL.
+    /// validated the path comes from a `file:` URL. Strips a Windows verbatim `\\?\` prefix first
+    /// (see [`trim_verbatim`]) so a `std::fs::canonicalize`d path and the same path round-tripped
+    /// through a `file:` URL intern to one key.
     pub fn from_abs_path(path: &Path) -> Option<Self> {
-        let abs = path.absolutize().ok()?.to_path_buf();
+        let abs = trim_verbatim(path).absolutize().ok()?.to_path_buf();
         Some(VfsPath(abs))
     }
 
     pub fn as_path(&self) -> &Path {
         &self.0
+    }
+}
+
+/// Strip a Windows verbatim/extended-length prefix so two representations of the same file collapse
+/// to one [`VfsPath`] (and thus one [`FileId`]). `std::fs::canonicalize` yields `\\?\C:\...`
+/// (`\\?\UNC\host\share\...` for UNC); a `file:` URL round-trip (`Url::from_file_path` →
+/// `to_file_path`) drops it. Without normalization the workspace walk (canonicalized) and URL
+/// lookups (`set_document`/`id_for_url`) would intern the same file twice on Windows — producing
+/// duplicate workspace occurrences. A no-op when the prefix is absent (i.e. always on non-Windows).
+fn trim_verbatim(path: &Path) -> PathBuf {
+    let Some(s) = path.as_os_str().to_str() else {
+        return path.to_path_buf();
+    };
+    let Some(rest) = s.strip_prefix(r"\\?\") else {
+        return path.to_path_buf();
+    };
+    // `\\?\UNC\host\share\...` -> `\\host\share\...`; otherwise just drop the `\\?\`.
+    if let Some(unc) = rest.strip_prefix(r"UNC\") {
+        PathBuf::from(format!(r"\\{unc}"))
+    } else {
+        PathBuf::from(rest)
     }
 }
 
@@ -330,6 +353,36 @@ mod tests {
         let id1 = vfs.set_file_contents(vp("/a/../a/c"), Some(Arc::from("x")));
         let id2 = vfs.file_id(&vp("/a/c"));
         assert_eq!(Some(id1), id2, "aliased paths must share one FileId");
+    }
+
+    #[test]
+    fn verbatim_prefix_collapses_to_one_id_test() {
+        // On Windows, `std::fs::canonicalize` yields `\\?\C:\...` while a `file:` URL round-trip
+        // drops the prefix. Both forms must intern to the same FileId — otherwise the workspace
+        // walk and open-doc lookups register one file twice, doubling its references/rename hits.
+        let mut vfs = Vfs::new();
+        let id1 = vfs.set_file_contents(
+            VfsPath::from_abs_path(Path::new(r"\\?\C:\proj\main.circom")).unwrap(),
+            Some(Arc::from("x")),
+        );
+        let id2 = vfs.file_id(&VfsPath::from_abs_path(Path::new(r"C:\proj\main.circom")).unwrap());
+        assert_eq!(
+            Some(id1),
+            id2,
+            "verbatim and stripped forms must share one FileId"
+        );
+        // UNC verbatim form: `\\?\UNC\host\share\m.circom` -> `\\host\share\m.circom`.
+        let id3 = vfs.set_file_contents(
+            VfsPath::from_abs_path(Path::new(r"\\?\UNC\host\share\lib.circom")).unwrap(),
+            Some(Arc::from("y")),
+        );
+        let id4 =
+            vfs.file_id(&VfsPath::from_abs_path(Path::new(r"\\host\share\lib.circom")).unwrap());
+        assert_eq!(
+            Some(id3),
+            id4,
+            "verbatim UNC and stripped UNC must share one FileId"
+        );
     }
 
     #[test]
