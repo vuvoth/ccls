@@ -23,16 +23,16 @@ jobs:
       - run: cargo fmt -- --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
 
-  # The extension ships linux + mac binaries (see client.ts bundledBinaryPath); Windows support
-  # requires the user to build/place the `ccls` binary on PATH, but the server itself is
-  # cross-platform, so the full test matrix runs on all three OSes.
+  # The extension ships linux + mac binaries (see client.ts bundledBinaryPath). Windows is not a
+  # supported target — Windows users run the server under WSL — so the test matrix covers linux +
+  # mac only.
   test:
     name: Test (stable) / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
