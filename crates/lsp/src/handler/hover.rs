@@ -79,7 +79,7 @@ mod tests {
     use lsp_types::{Position, Url};
 
     use crate::global_state::GlobalState;
-    use crate::test_util::{position_of, state_with};
+    use crate::test_util::{file_url, position_of, state_with};
 
     use super::handle;
     use lsp_types::{
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn hover_signal_usage_shows_decl_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal output c;\n    c <== a;\n}\n";
-        let url = Url::from_file_path("/tmp/h.circom").unwrap();
+        let url = file_url("h.circom");
         let state = state_with(&url, source);
 
         // Cursor on the `a` usage in `c <== a` (line 4, col ~10).
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn hover_template_name_shows_header_test() {
         let source = "pragma circom 2.0.0;\ntemplate Multiplier2(a, b) {\n    signal input a;\n    signal output c;\n}\n";
-        let url = Url::from_file_path("/tmp/h2.circom").unwrap();
+        let url = file_url("h2.circom");
         let state = state_with(&url, source);
 
         let v = hover_value(&state, &url, Position::new(1, 12)).expect("hover present");
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn hover_unresolved_is_none_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input a; }\n";
-        let url = Url::from_file_path("/tmp/h3.circom").unwrap();
+        let url = file_url("h3.circom");
         let state = state_with(&url, source);
 
         // Cursor on `template` (a keyword — identifier_at returns None).
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn hover_member_field_anonymous_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal output out;\n    out <== 0;\n}\ntemplate Main() {\n    signal output c;\n    c <== T()().out;\n}\n";
-        let url = Url::from_file_path("/tmp/hmem.circom").unwrap();
+        let url = file_url("hmem.circom");
         let state = state_with(&url, source);
 
         // `out` occurrences: [0]=decl, [1]=usage in T, [2]=the `.out` field.

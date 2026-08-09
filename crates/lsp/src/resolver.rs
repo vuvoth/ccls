@@ -176,11 +176,10 @@ pub fn occurrences_in(
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use lsp_types::Url;
     use parser::token_kind::TokenKind;
     use rowan::ast::AstNode;
+
+    use crate::test_util::file_url;
     use syntax::abstract_syntax_tree::{
         AstCircomProgram, AstComponentCall, AstComponentDecl, AstInputSignalDecl, AstSignalDecl,
         AstVarDecl,
@@ -195,11 +194,7 @@ mod tests {
 
     /// Build the (file_db, ast, symbol_table) triple from inline source.
     fn index(source: &str) -> (FileDB, AstCircomProgram, SymbolTable) {
-        let file = FileDB::new(
-            FileId(0),
-            source,
-            Url::from_file_path(Path::new("/tmp/test.circom")).unwrap(),
-        );
+        let file = FileDB::new(FileId(0), source, file_url("test.circom"));
         let node = syntax_tree(source);
         let ast = AstCircomProgram::cast(node).expect("source should parse to a program");
         let table = SymbolTable::build(&file, &ast);

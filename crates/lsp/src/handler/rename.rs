@@ -112,7 +112,7 @@ mod tests {
 
     use crate::file_db::{FileDB, FileId};
     use crate::global_state::GlobalState;
-    use crate::test_util::{position_of, position_of_token, state_with};
+    use crate::test_util::{file_url, position_of, position_of_token, state_with};
 
     use super::handle;
 
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn rename_signal_edits_decl_and_usage_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal output c;\n    c <== a + 0;\n}\n";
-        let url = Url::from_file_path("/tmp/rename.circom").unwrap();
+        let url = file_url("rename.circom");
         let state = state_with(&url, source);
 
         // Cursor on the *usage* `a` in `c <== a + 0` (the 2nd `a` token).
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn rename_respects_scope_shadowing_test() {
         let source = "pragma circom 2.0.0;\ntemplate A() {\n    signal input a;\n    signal output o;\n    o <== a;\n}\ntemplate B() {\n    signal input a;\n    signal output o;\n    o <== a;\n}\n";
-        let url = Url::from_file_path("/tmp/shadow.circom").unwrap();
+        let url = file_url("shadow.circom");
         let state = state_with(&url, source);
 
         // Cursor on template A's declared `a` (the 0th `a` token).
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn rename_template_name_and_instantiation_test() {
         let source = "pragma circom 2.0.0;\ntemplate Foo() { signal output o; o <== 0; }\ntemplate Main() { component f = Foo(); }\n";
-        let url = Url::from_file_path("/tmp/tmpl.circom").unwrap();
+        let url = file_url("tmpl.circom");
         let state = state_with(&url, source);
 
         let pos = position_of(source, "Foo", 0); // the definition name
@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn invalid_new_name_yields_no_edits_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input a; }\n";
-        let url = Url::from_file_path("/tmp/bad.circom").unwrap();
+        let url = file_url("bad.circom");
         let state = state_with(&url, source);
         let pos = position_of(source, "a", 0);
 
@@ -237,7 +237,7 @@ mod tests {
     fn rename_refuses_non_identifier_cursor_test() {
         let source =
             "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate T() { signal input a; }\n";
-        let url = Url::from_file_path("/tmp/guard.circom").unwrap();
+        let url = file_url("guard.circom");
         let state = state_with(&url, source);
 
         // `signal` is a keyword (no token resolves); `"lib.circom"` is a CircomString (include path).
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn rename_member_access_field_is_noop_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input x; signal output o; }\ntemplate Main() { component c = T(); c.x <== 0; }\n";
-        let url = Url::from_file_path("/tmp/member.circom").unwrap();
+        let url = file_url("member.circom");
         let state = state_with(&url, source);
 
         // The `x` in `c.x` is the 2nd `x` token (1st is T's `signal input x`); it doesn't resolve.
@@ -279,8 +279,8 @@ mod tests {
     #[test]
     fn rename_does_not_touch_other_files_test() {
         let src = "pragma circom 2.0.0;\ntemplate T() { signal output o; o <== 0; }\n";
-        let url_a = Url::from_file_path("/tmp/a.circom").unwrap();
-        let url_b = Url::from_file_path("/tmp/b.circom").unwrap();
+        let url_a = file_url("a.circom");
+        let url_b = file_url("b.circom");
         let mut state = GlobalState::new(Vec::new());
         state.source_db.set_document(&url_a, src.to_string());
         state.source_db.set_document(&url_b, src.to_string());
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn rename_loop_variable_test() {
         let source = "pragma circom 2.0.0;\ntemplate Loop() {\n    signal input in[4];\n    signal output out;\n    var acc = 0;\n    for (var i = 0; i < 4; i++) {\n        acc += in[i];\n    }\n    out <== acc;\n}\n";
-        let url = Url::from_file_path("/tmp/loop.circom").unwrap();
+        let url = file_url("loop.circom");
         let state = state_with(&url, source);
 
         // Cursor on `i` in `i < 4` (the condition — the 2nd `i` occurrence).
@@ -373,7 +373,7 @@ mod tests {
     fn prepare_rejects_keyword_cursor_test() {
         let source =
             "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate T() { signal input a; }\n";
-        let url = Url::from_file_path("/tmp/prepare_kw.circom").unwrap();
+        let url = file_url("prepare_kw.circom");
         let state = state_with(&url, source);
 
         assert!(
@@ -387,7 +387,7 @@ mod tests {
     fn prepare_rejects_include_string_cursor_test() {
         let source =
             "pragma circom 2.0.0;\ninclude \"lib.circom\";\ntemplate T() { signal input a; }\n";
-        let url = Url::from_file_path("/tmp/prepare_inc.circom").unwrap();
+        let url = file_url("prepare_inc.circom");
         let state = state_with(&url, source);
 
         assert!(
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn prepare_identifier_returns_range_and_placeholder_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() {\n    signal input a;\n    signal output c;\n    c <== a + 0;\n}\n";
-        let url = Url::from_file_path("/tmp/prepare_id.circom").unwrap();
+        let url = file_url("prepare_id.circom");
         let state = state_with(&url, source);
 
         let pos = position_of(source, "a", 0);
@@ -416,7 +416,7 @@ mod tests {
 
         // The returned range must exactly cover the `a` declaration token.
         let expected = {
-            let file = FileDB::new(FileId(0), source, Url::from_file_path("/tmp/x").unwrap());
+            let file = FileDB::new(FileId(0), source, file_url("x"));
             let node = syntax_tree(source);
             let token = node
                 .descendants_with_tokens()
@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn prepare_rejects_member_access_field_test() {
         let source = "pragma circom 2.0.0;\ntemplate T() { signal input x; signal output o; }\ntemplate Main() { component c = T(); c.x <== 0; }\n";
-        let url = Url::from_file_path("/tmp/prepare_member.circom").unwrap();
+        let url = file_url("prepare_member.circom");
         let state = state_with(&url, source);
 
         let pos = position_of(source, "x", 1);

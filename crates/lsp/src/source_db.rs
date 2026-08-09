@@ -371,7 +371,7 @@ mod tests {
     use super::*;
 
     fn url_for(name: &str) -> Url {
-        Url::from_file_path(format!("/tmp/ccls_test/{name}.circom")).unwrap()
+        Url::from_file_path(std::env::temp_dir().join(format!("{name}.circom"))).unwrap()
     }
 
     #[test]

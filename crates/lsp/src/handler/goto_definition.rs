@@ -74,7 +74,7 @@ mod tests {
     use crate::file_db::FileDB;
     use crate::global_state::GlobalState;
     use crate::source_db::SourceDatabase;
-    use crate::test_util::state_with;
+    use crate::test_util::{file_url, state_with};
     use parser::token_kind::TokenKind;
 
     use super::token_at_offset;
@@ -92,11 +92,7 @@ mod tests {
     fn goto_decl_test() {
         let file_path = "/src/test_files/handler/templates.circom";
         let source = get_source_from_path(file_path);
-        let file_db = FileDB::new(
-            vfs::FileId(0),
-            &source,
-            Url::from_file_path(Path::new("/tmp")).unwrap(),
-        );
+        let file_db = FileDB::new(vfs::FileId(0), &source, file_url("tmp"));
 
         let syntax_node = syntax_tree(&source);
 
@@ -129,12 +125,11 @@ mod tests {
 
     #[test]
     fn url_test() {
-        let url = Url::from_file_path(Path::new("/hello/abc.tx"));
-        let binding = url.unwrap();
-        let path = binding.path();
-        let parent = Path::new(path).parent().unwrap().to_str().unwrap();
-
-        assert_eq!("/hello", parent);
+        // A file URL round-trips to a parent path on every platform (Windows path strings differ
+        // from Unix, so assert derivability rather than a hardcoded `/hello`).
+        let file = std::env::temp_dir().join("abc.tx");
+        let url = Url::from_file_path(&file).unwrap();
+        assert!(Path::new(url.path()).parent().is_some());
     }
 
     /// `lookup_definition` for the `occurrence`-th `Identifier` token named `name`, using the db's
@@ -200,7 +195,7 @@ mod tests {
     #[test]
     fn main_component_same_file_jump_test() {
         let source = "pragma circom 2.0.0;\ntemplate X() { signal output o; o <== 0; }\ncomponent main = X();\n";
-        let url = Url::from_file_path("/tmp/mc_same.circom").unwrap();
+        let url = file_url("mc_same.circom");
         let state = state_with(&url, source);
 
         // The `X` usage in `component main = X()` is the 2nd `X` token (0th = the definition).
@@ -265,7 +260,7 @@ mod tests {
     #[test]
     fn member_field_named_jump_test() {
         let source = "pragma circom 2.0.0;\ntemplate Multiplier2() {\n    signal input in[2];\n    signal output out;\n    out <== in[0] * in[1];\n}\ntemplate Main() {\n    component c = Multiplier2();\n    signal output res;\n    res <== c.out;\n}\n";
-        let url = Url::from_file_path("/tmp/mf_named.circom").unwrap();
+        let url = file_url("mf_named.circom");
         let state = state_with(&url, source);
 
         // `out` occurrences: [0]=decl, [1]=usage in Multiplier2, [2]=the `c.out` field.
@@ -286,7 +281,7 @@ mod tests {
     #[test]
     fn member_field_anonymous_jump_test() {
         let source = "pragma circom 2.0.0;\ntemplate Multiplier2() {\n    signal input in[2];\n    signal output out;\n    out <== in[0] * in[1];\n}\ntemplate Main() {\n    signal input a;\n    signal input b;\n    signal output c;\n    c <== Multiplier2()([a, b]).out;\n}\n";
-        let url = Url::from_file_path("/tmp/mf_anon.circom").unwrap();
+        let url = file_url("mf_anon.circom");
         let state = state_with(&url, source);
 
         // `out` occurrences: [0]=decl, [1]=usage in Multiplier2, [2]=the anonymous `.out` field.

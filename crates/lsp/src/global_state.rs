@@ -729,6 +729,8 @@ mod tests {
 
     use lsp_types::Url;
 
+    use crate::test_util::file_url;
+
     use crate::source_db::SourceDatabase;
 
     use super::{GlobalState, TextDocument};
@@ -755,7 +757,7 @@ mod tests {
     fn diagnostics_for_clean_and_broken_docs_test() {
         let mut state = GlobalState::new(Vec::new());
 
-        let clean = Url::from_file_path("/tmp/diag_clean.circom").unwrap();
+        let clean = file_url("diag_clean.circom");
         state
             .source_db
             .set_document(&clean, "pragma circom 2.0.0;\n".to_string());
@@ -764,7 +766,7 @@ mod tests {
             "clean file should have no diagnostics"
         );
 
-        let broken = Url::from_file_path("/tmp/diag_broken.circom").unwrap();
+        let broken = file_url("diag_broken.circom");
         state
             .source_db
             .set_document(&broken, "pragma circom 2.0.0".to_string());
@@ -786,7 +788,7 @@ mod tests {
     #[test]
     fn diagnostics_for_unknown_uri_is_empty_test() {
         let state = GlobalState::new(Vec::new());
-        let unknown = Url::from_file_path("/tmp/nope.circom").unwrap();
+        let unknown = file_url("nope.circom");
         assert!(state.diagnostics_for_uri(&unknown).is_empty());
     }
 
