@@ -32,6 +32,14 @@ pub fn parse(source: &str) -> Parse {
     let (tokens, lex_errors) = tokenize_with_errors(source);
     let events = Parser::parse(&tokens);
     let (tree, parse_errors) = build_syntax_node(&tokens, events);
+
+    // Byte ranges the lexer already reported (stray `*/`, unrecognized bytes, unterminated
+    // comment). The offending span is also pushed into the token stream as a `TokenKind::Error`,
+    // so the parser re-flags it as an "unexpected token" — keep the specific lexer message and
+    // drop the redundant parser-side diagnostic at the identical span.
+    let lex_ranges: Vec<rowan::TextRange> =
+        lex_errors.iter().map(|le| text_range(&le.range)).collect();
+
     let mut errors: Vec<SyntaxError> = lex_errors
         .into_iter()
         .map(|le| SyntaxError {
@@ -39,7 +47,11 @@ pub fn parse(source: &str) -> Parse {
             msg: le.msg,
         })
         .collect();
-    errors.extend(parse_errors);
+    errors.extend(
+        parse_errors
+            .into_iter()
+            .filter(|pe| !lex_ranges.contains(&pe.range)),
+    );
     Parse { tree, errors }
 }
 
@@ -484,6 +496,24 @@ mod parse_error_tests {
         assert!(
             parsed.errors.iter().any(|e| e.msg.contains("*/")),
             "{:?}",
+            parsed.errors
+        );
+    }
+
+    #[test]
+    fn lexer_error_token_is_not_double_reported() {
+        // The stray `*/` is recorded as a `LexError` and also pushed as a `TokenKind::Error`, so
+        // without dedup the parser would add a second "unexpected token" at the same span. The
+        // specific lexer message must be the only diagnostic at that range.
+        let parsed = parse("a */ b");
+        let star_slash_count = parsed
+            .errors
+            .iter()
+            .filter(|e| e.msg.contains("*/"))
+            .count();
+        assert_eq!(
+            star_slash_count, 1,
+            "expected one lexer diagnostic for `*/`, got {star_slash_count}: {:?}",
             parsed.errors
         );
     }

@@ -299,34 +299,59 @@ pub const BP_CMP: u16 = 111;
 pub const BP_BOOL_AND: u16 = 101;
 pub const BP_BOOL_OR: u16 = 91;
 
-/// Every circom keyword, in source order. The single source of truth for keyword text shared by
-/// the lexer (`*Kw` variants) and completion. Add a new keyword here and as a `*Kw` variant.
-pub const KEYWORDS: &[&str] = &[
-    "pragma",
-    "circom",
-    "include",
-    "template",
-    "function",
-    "component",
-    "main",
-    "public",
-    "signal",
-    "var",
-    "log",
-    "custom",
-    "custom_templates",
-    "extern_c",
-    "parallel",
-    "bus",
-    "input",
-    "output",
-    "if",
-    "else",
-    "for",
-    "while",
-    "return",
-    "assert",
-];
+/// Single source of truth for circom keywords: each `*Kw` variant paired with its source text.
+/// Generates [`TokenKind::keyword_text`], [`KEYWORDS`], and [`KEYWORD_VARIANTS`] from one
+/// declaration. Adding a keyword means adding a `*Kw` variant (with its `#[token]`) AND an entry
+/// here; `keyword_text` then returns its text and the lexer cross-check test enforces the match.
+macro_rules! define_keywords {
+    ($($variant:ident => $text:expr),+ $(,)?) => {
+        impl TokenKind {
+            /// `Some(text)` if `self` is a circom keyword token, else `None`. The keyword text is
+            /// the same one completion offers ([`KEYWORDS`]).
+            #[must_use]
+            pub const fn keyword_text(self) -> Option<&'static str> {
+                match self {
+                    $(TokenKind::$variant => Some($text),)+
+                    _ => None,
+                }
+            }
+        }
+
+        /// Every circom keyword text, for autocompletion. Generated from the same list as
+        /// [`TokenKind::keyword_text`], so completion and keyword detection share one definition.
+        pub const KEYWORDS: &[&str] = &[$($text),+];
+
+        /// Every `(keyword token, source text)` pair, in declaration order.
+        pub const KEYWORD_VARIANTS: &[(TokenKind, &str)] = &[$((TokenKind::$variant, $text)),+];
+    };
+}
+
+define_keywords! {
+    PragmaKw => "pragma",
+    Circom => "circom",
+    IncludeKw => "include",
+    TemplateKw => "template",
+    FunctionKw => "function",
+    ComponentKw => "component",
+    MainKw => "main",
+    PublicKw => "public",
+    SignalKw => "signal",
+    VarKw => "var",
+    LogKw => "log",
+    CustomKw => "custom",
+    CustomTemplatesKw => "custom_templates",
+    ExternCKw => "extern_c",
+    ParallelKw => "parallel",
+    BusKw => "bus",
+    InputKw => "input",
+    OutputKw => "output",
+    IfKw => "if",
+    ElseKw => "else",
+    ForKw => "for",
+    WhileKw => "while",
+    ReturnKw => "return",
+    AssertKw => "assert",
+}
 
 impl From<u16> for TokenKind {
     #[inline]
@@ -466,5 +491,37 @@ impl TokenKind {
             self,
             Self::WhiteSpace | Self::EndLine | Self::CommentLine | Self::BlockComment | Self::Error
         )
+    }
+}
+
+#[cfg(test)]
+mod keyword_tests {
+    use super::{TokenKind, KEYWORD_VARIANTS};
+    use logos::Lexer;
+
+    /// Guard against drift between the `define_keywords!` list and the lexer's `#[token]` attrs:
+    /// each keyword text must lex as exactly its declared `*Kw` variant (a single token), and each
+    /// declared variant's `keyword_text` must round-trip to that text.
+    #[test]
+    fn keyword_list_matches_lexer() {
+        for &(variant, text) in KEYWORD_VARIANTS {
+            let mut lex = Lexer::<TokenKind>::new(text);
+            let kind = lex.next();
+            assert_eq!(
+                kind,
+                Some(variant),
+                "lexer does not recognize keyword text {text:?} as {variant:?}"
+            );
+            assert_eq!(
+                lex.next(),
+                None,
+                "keyword text {text:?} must lex as a single token"
+            );
+            assert_eq!(
+                variant.keyword_text(),
+                Some(text),
+                "keyword_text mismatch for {variant:?}"
+            );
+        }
     }
 }
