@@ -12,22 +12,42 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  rust:
-    name: Rust ${{ matrix.toolchain }} / ${{ matrix.os }}
+  # Formatting + clippy run once on stable; rustfmt/clippy output is toolchain-specific, so it is
+  # not gated on the MSRV toolchain.
+  lint:
+    name: Lint (fmt + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo fmt -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # The extension ships linux + mac binaries (see client.ts bundledBinaryPath); Windows is not a
+  # supported target, so the test matrix covers the platforms we distribute.
+  test:
+    name: Test (stable) / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        toolchain: [stable]
-        include:
-          - os: ubuntu-latest
-            toolchain: "1.71.0" # MSRV (workspace rust-version)
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo fmt -- --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: rustup update stable && rustup default stable
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+
+  # MSRV check: build + test only (no fmt/clippy — those are toolchain-specific). Advisory because
+  # Cargo.lock is not committed, so dependency resolution can drift above the declared MSRV; it
+  # surfaces regressions without blocking on upstream churn.
+  msrv:
+    name: MSRV (1.71)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update 1.71.0 && rustup default 1.71.0
       - run: cargo build --verbose
       - run: cargo test --verbose
 

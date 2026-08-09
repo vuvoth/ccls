@@ -1167,7 +1167,10 @@ mod tests {
             "pragma circom 2.0.0;\ntemplate Lib() { signal output o; o <== 0; }\n",
         )
         .unwrap();
-        let lib_url = Url::from_file_path(inner.join("lib.circom")).unwrap();
+        // Canonicalize so the URL matches the canonicalized path the workspace walk interns the
+        // file under (on macOS `temp_dir()` lives under a symlinked `/private/var`).
+        let lib_path = inner.join("lib.circom").canonicalize().unwrap();
+        let lib_url = Url::from_file_path(&lib_path).unwrap();
 
         // Both the outer project and its nested sub-folder are roots.
         let mut state = GlobalState::new(vec![
