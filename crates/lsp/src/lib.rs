@@ -49,13 +49,11 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
 
 /// Advertise the LSP features this server handles.
 ///
-/// `definition` and `implementation` are fully implemented; `implementation` behaves identically
-/// to `definition` (Circom has no separate implementation targets). `hover`/`completion`/
-/// `references`/`documentSymbol`/`formatting` are registered as placeholders — the client routes
-/// them to the server, which currently returns an empty result until each is implemented in
-/// `handler::*`. `rename` is fully implemented and advertises `prepareSupport` so the client
-/// consults the server (not its own textual word check) before opening the rename box —
-/// keywords/strings never become renamable.
+/// All advertised providers are implemented: `definition`, `implementation` (identical to
+/// definition — circom has no separate implementation targets), `hover`, `completion`,
+/// `references`, `rename` (with `prepareSupport`), `workspace_symbol`. `documentSymbol` and
+/// `formatting` are registered but currently return empty results. Diagnostics are sent via
+/// `publishDiagnostics` (no capability needed).
 fn server_capabilities() -> ServerCapabilities {
     ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
@@ -130,7 +128,19 @@ fn main_loop(
                     watcher_registered = true;
                     register_watched_files_capability(&connection, &params, &roots)?;
                 }
-                state.handle_notification(not)?;
+                let to_publish = state.handle_notification(not)?;
+                for (uri, diagnostics) in to_publish {
+                    let params = lsp_types::PublishDiagnosticsParams {
+                        uri,
+                        diagnostics,
+                        version: None,
+                    };
+                    let not = lsp_server::Notification::new(
+                        lsp_types::notification::PublishDiagnostics::METHOD.to_string(),
+                        serde_json::to_value(&params)?,
+                    );
+                    connection.sender.send(Message::Notification(not))?;
+                }
             }
         }
     }

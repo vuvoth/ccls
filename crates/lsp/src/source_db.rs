@@ -15,11 +15,15 @@ use lsp_types::Url;
 use rowan::ast::AstNode;
 use syntax::abstract_syntax_tree::AstCircomProgram;
 use syntax::node::SyntaxNode;
-use syntax::tree::syntax_tree;
+use syntax::tree::{parse as parse_tree, SyntaxError};
 use vfs::{ChangedFile, Vfs, VfsPath};
 
 use crate::file_db::{FileDB, FileId};
 use crate::symbol_table::SymbolTable;
+
+/// Skip `.circom` files larger than this. Circom codegen can emit multi-MB files that would stall
+/// the single-threaded server to parse/index.
+pub(crate) const MAX_FILE_BYTES: u64 = 1 << 20; // 1 MiB
 
 /// Source-level queries over open files, keyed by [`FileId`] — inputs (`file_text`) or
 /// content-derived values (`parse`/`ast`/`file_db`/`symbol_table`). All `&self` with memoization
@@ -36,6 +40,8 @@ pub trait SourceDatabase {
     /// The lexical symbol table for `id` (memoized); built lazily on first query, dropped by the
     /// change-log invalidation on any edit.
     fn symbol_table(&self, id: FileId) -> Arc<SymbolTable>;
+    /// The syntax errors for `id` (memoized); lexer + parser errors aggregated at parse time.
+    fn errors(&self, id: FileId) -> Arc<Vec<SyntaxError>>;
 }
 
 /// Lazily-computed caches behind one `RefCell` so a query takes only one short-lived borrow (read
@@ -46,6 +52,7 @@ struct Caches {
     parse: HashMap<FileId, SyntaxNode>,
     file_db: HashMap<FileId, FileDB>,
     symbol_table: HashMap<FileId, Arc<SymbolTable>>,
+    errors: HashMap<FileId, Arc<Vec<SyntaxError>>>,
     /// Cache-miss parses per file (test-only memoization proof). Not touched by invalidation — it
     /// counts total parses, not cache state.
     parse_count: HashMap<FileId, usize>,
@@ -72,19 +79,19 @@ impl ContentCacheDb {
                 parse: HashMap::new(),
                 file_db: HashMap::new(),
                 symbol_table: HashMap::new(),
+                errors: HashMap::new(),
                 parse_count: HashMap::new(),
             }),
         }
     }
 
-    /// Set the workspace roots confining `include` resolution (delegated to the [`Vfs`], which owns
-    /// them + the pure containment check).
+    /// Set the workspace roots scoping the project `.circom` walk (the basename-index source).
+    /// `include` resolution itself is circom-style (relative to the source file), not confined.
     pub fn set_workspace_roots(&mut self, roots: Vec<PathBuf>) {
         self.vfs.set_workspace_roots(roots);
     }
 
-    /// Read-only [`Vfs`] handle (e.g. so `include_target_location` applies the same containment check as
-    /// `load_include`).
+    /// Read-only [`Vfs`] handle.
     pub(crate) fn vfs(&self) -> &Vfs {
         &self.vfs
     }
@@ -150,7 +157,7 @@ impl ContentCacheDb {
     /// transitively — so goto-def/hover *inside* an include (e.g. one opened via peek/jump without a
     /// full didOpen) can still resolve across that include's own includes. Same-dir path first, then
     /// the project-wide basename fallback. `None` for non-`file:` URIs, missing/unreadable files, or
-    /// includes escaping the workspace roots.
+    /// absolute include paths.
     pub fn load_include(&mut self, parent_url: &Url, rel: &str) -> Option<FileId> {
         let id = self.load_one_include(parent_url, rel)?;
         let mut visited = HashSet::new();
@@ -191,15 +198,7 @@ impl ContentCacheDb {
         let Ok(parent_url) = Url::from_file_path(path.as_path()) else {
             return;
         };
-        let includes: Vec<String> = self
-            .ast(id)
-            .map(|a| {
-                a.libs()
-                    .into_iter()
-                    .filter_map(|i| i.lib().map(|l| l.value()))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let includes: Vec<String> = self.ast(id).map(|a| a.include_paths()).unwrap_or_default();
         for rel in includes {
             if let Some(child) = self.load_one_include(&parent_url, &rel) {
                 if visited.insert(child) {
@@ -216,10 +215,19 @@ impl ContentCacheDb {
     /// ([`Vfs::find_include`]) only returns files the workspace walk already indexed. Serves a
     /// cached id when the text is already loaded.
     fn load_from_disk(&mut self, vpath: &VfsPath) -> Option<FileId> {
-        // Serve the cached id if text is already loaded; a path-only id (from the walk) reads below.
         if let Some(id) = self.vfs.file_id(vpath) {
             if self.vfs.file_text(id).is_some() {
                 return Some(id);
+            }
+        }
+        if let Ok(meta) = std::fs::metadata(vpath.as_path()) {
+            if meta.len() > MAX_FILE_BYTES {
+                eprintln!(
+                    "ccls: skipping {} ({} bytes > {MAX_FILE_BYTES} limit)",
+                    vpath.as_path().display(),
+                    meta.len()
+                );
+                return None;
             }
         }
         let src = std::fs::read_to_string(vpath.as_path()).ok()?;
@@ -240,6 +248,7 @@ impl ContentCacheDb {
                 caches.parse.remove(file_id);
                 caches.file_db.remove(file_id);
                 caches.symbol_table.remove(file_id);
+                caches.errors.remove(file_id);
             }
         }
         changes
@@ -254,6 +263,20 @@ impl ContentCacheDb {
             .expect("url_for: unknown FileId (document not registered)");
         Url::from_file_path(vpath.as_path())
             .expect("VfsPath was validated as file: scheme at registration time")
+    }
+
+    /// Lazily parse `id` once and cache both the tree and its errors. Shared by the `parse` and
+    /// `errors` queries so a single miss fills both caches.
+    fn ensure_parsed(&self, id: FileId) {
+        if self.caches.borrow().parse.contains_key(&id) {
+            return;
+        }
+        let text = self.file_text(id);
+        let parsed = parse_tree(&text);
+        let mut caches = self.caches.borrow_mut();
+        caches.parse.insert(id, parsed.tree);
+        caches.errors.insert(id, Arc::new(parsed.errors));
+        *caches.parse_count.entry(id).or_insert(0) += 1;
     }
 
     /// Test-only: how many cache-miss parses have run for `id` (0 = never parsed).
@@ -276,20 +299,13 @@ impl SourceDatabase for ContentCacheDb {
     }
 
     fn parse(&self, id: FileId) -> SyntaxNode {
-        // Hit check under a short-lived shared borrow (dropped at block end).
-        {
-            let caches = self.caches.borrow();
-            if let Some(cached) = caches.parse.get(&id) {
-                return cached.clone();
-            }
-        }
-
-        let text = self.file_text(id);
-        let tree = syntax_tree(&text);
-        let mut caches = self.caches.borrow_mut();
-        caches.parse.insert(id, tree.clone());
-        *caches.parse_count.entry(id).or_insert(0) += 1;
-        tree
+        self.ensure_parsed(id);
+        self.caches
+            .borrow()
+            .parse
+            .get(&id)
+            .cloned()
+            .expect("ensure_parsed caches the tree")
     }
 
     fn ast(&self, id: FileId) -> Option<AstCircomProgram> {
@@ -335,6 +351,16 @@ impl SourceDatabase for ContentCacheDb {
             .symbol_table
             .insert(id, table.clone());
         table
+    }
+
+    fn errors(&self, id: FileId) -> Arc<Vec<SyntaxError>> {
+        self.ensure_parsed(id);
+        self.caches
+            .borrow()
+            .errors
+            .get(&id)
+            .cloned()
+            .expect("ensure_parsed caches errors")
     }
 }
 

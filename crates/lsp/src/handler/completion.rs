@@ -9,37 +9,12 @@ use anyhow::Result;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionList, CompletionParams, CompletionResponse,
 };
+use parser::token_kind::KEYWORDS;
 use rowan::TextSize;
 
 use crate::global_state::{CursorContext, GlobalState};
 use crate::resolver::SymbolKind;
 use crate::source_db::SourceDatabase;
-
-/// Reserved circom keywords (mirror the lexer keywords in `token_kind.rs`). A constant list keeps
-/// completion allocation-free; drift is low (keywords change rarely).
-const KEYWORDS: &[&str] = &[
-    "pragma",
-    "include",
-    "template",
-    "function",
-    "bus",
-    "signal",
-    "input",
-    "output",
-    "component",
-    "var",
-    "parallel",
-    "custom",
-    "extern_c",
-    "custom_templates",
-    "return",
-    "for",
-    "while",
-    "if",
-    "else",
-    "log",
-    "assert",
-];
 
 /// Entry point for `textDocument/completion`. Suggests in-scope body symbols + file top-level
 /// names + keywords, deduped by name. `None` for an unknown file.

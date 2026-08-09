@@ -71,6 +71,13 @@ impl AstCircomProgram {
     pub fn libs(&self) -> Vec<AstInclude> {
         support::children(self.syntax()).collect()
     }
+    /// The include path strings (`"…"` stripped) declared in this program.
+    pub fn include_paths(&self) -> Vec<String> {
+        self.libs()
+            .into_iter()
+            .filter_map(|inc| inc.lib().map(|l| l.value()))
+            .collect()
+    }
     pub fn template_list(&self) -> Vec<AstTemplateDef> {
         support::children(self.syntax()).collect()
     }

@@ -2,8 +2,10 @@
 //! the signature `fn handle(state: &GlobalState, params: P) -> Result<Option<R>>`. Dispatch lives in
 //! [`crate::global_state::GlobalState::handle_request`].
 //!
-//! `goto_definition` is fully implemented; the rest are placeholders that return `None`/empty until
-//! their logic is filled in.
+//! Implemented: `goto_definition`, `goto_implementation` (delegates to definition), `hover`,
+//! `completion`, `references`, `rename` (+ `prepareRename`), `workspace_symbol`. Placeholders
+//! returning `None`: `document_symbol`, `formatting`. Diagnostics are pushed via
+//! `textDocument/publishDiagnostics` from the notification path (no request handler).
 
 pub mod completion;
 pub mod document_symbol;

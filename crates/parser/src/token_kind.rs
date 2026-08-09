@@ -221,6 +221,7 @@ pub enum TokenKind {
     LogStatement,
     ReturnStatement,
     AssignStatement,
+    ExpressionStatement,
     ForLoop,
     WhileLoop,
     // Program
@@ -297,6 +298,35 @@ pub const BP_BIT_OR: u16 = 121;
 pub const BP_CMP: u16 = 111;
 pub const BP_BOOL_AND: u16 = 101;
 pub const BP_BOOL_OR: u16 = 91;
+
+/// Every circom keyword, in source order. The single source of truth for keyword text shared by
+/// the lexer (`*Kw` variants) and completion. Add a new keyword here and as a `*Kw` variant.
+pub const KEYWORDS: &[&str] = &[
+    "pragma",
+    "circom",
+    "include",
+    "template",
+    "function",
+    "component",
+    "main",
+    "public",
+    "signal",
+    "var",
+    "log",
+    "custom",
+    "custom_templates",
+    "extern_c",
+    "parallel",
+    "bus",
+    "input",
+    "output",
+    "if",
+    "else",
+    "for",
+    "while",
+    "return",
+    "assert",
+];
 
 impl From<u16> for TokenKind {
     #[inline]

@@ -20,6 +20,21 @@ library file from its `"path.circom"` string.
 - It uses `token_at_offset` (not `identifier_at`) because an include-path `CircomString` is
   also a valid jump target.
 
+### Go to Implementation
+
+Behaves identically to Go to Definition — circom has no separate implementation concept (no
+interfaces/traits distinct from a definition). Delegates to the definition handler so the two
+cannot drift.
+
+- Handler: `crates/lsp/src/handler/goto_implementation.rs`
+
+### Workspace Symbol
+
+`workspace/symbol` lists every top-level template/function/bus across the workspace matching the
+query (empty query ⇒ all), powered by the cached per-file symbol tables.
+
+- Handler: `crates/lsp/src/handler/workspace_symbol.rs`
+
 ### Hover
 
 Shows the symbol kind and its declaration signature (header only for block-bodied definitions
@@ -42,12 +57,12 @@ In-scope body symbols, file top-level names, reserved keywords, and **member com
 
 ### Find References
 
-Every occurrence of a symbol, resolved *semantically* (not text-matched), so shadowing is
-respected.
+Every occurrence of a symbol across the workspace, resolved *semantically* (not text-matched), so
+shadowing and same-name collisions across files are respected.
 
 - Handler: `crates/lsp/src/handler/references.rs`
-- Returns the declaration plus every in-scope use as `Location`s. **In-file by design** —
-  cross-file references are a follow-up (see roadmap).
+- Returns the declaration plus every reference as `Location`s. Workspace-wide: scans only files
+  that could reference the target (via the cached identifier index + include visibility).
 
 ### Rename
 
@@ -56,7 +71,8 @@ illegal names, and unresolved member-access fields.
 
 - Handler: `crates/lsp/src/handler/rename.rs`
 - Occurrences are found by *resolving* each candidate (not text-matching), so shadowing is
-  correct. In-file (the symbol's defining file); cross-file rename is a follow-up.
+  correct. Workspace-wide: edits span every file referencing the symbol, grouped by URI into a
+  single `WorkspaceEdit`.
 - `prepareSupport` is advertised so the client consults the server (not its own textual word
   check) before opening the rename box.
 
@@ -72,11 +88,19 @@ from disk once. A client resending identical text records no change and triggers
 See [architecture.md](./architecture.md#source-database) for the change-log-driven
 invalidation.
 
-### Sandboxed includes
+### Circom-style include resolution
 
-`include` resolution is confined to workspace roots — path-traversal and symlink-safe. With no
-roots configured the server refuses to load any include rather than risk an arbitrary file
-read (fail-closed). See [architecture.md](./architecture.md#sandboxed-includes).
+`include` paths resolve **relative to the including source file**, the way the circom compiler
+resolves them — not confined to the workspace roots. Absolute include paths are refused (they
+would enable an arbitrary local-file read); relative and `..` includes resolve normally and may
+read files outside the workspace roots. The basename fallback is scoped to workspace-indexed
+files. See [architecture.md](./architecture.md#include-resolution).
+
+### Diagnostics
+
+Syntax and lexer errors are reported via `textDocument/publishDiagnostics` as you type. The
+error-recovering parser produces precise ranges and messages (e.g. `expect Semicolon but got
+TemplateKw`); unterminated block comments and stray `*/` are surfaced as lexer errors.
 
 ## Registered but not yet implemented
 

@@ -28,22 +28,24 @@ pub struct Token<'a> {
     pub range: Range<usize>,
 }
 
-/// Tokenize `source` into a flat token sequence including trivia.
-///
-/// The token stream is byte-identical to the legacy `Input::new` output: the same logos rules
-/// produce the same kinds in the same order, block comments are coalesced with identical span
-/// joining, and a stray `*/` (with no matching `/*`) becomes an `Error`.
-pub fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
+/// A lexing error: byte range in `source` that matched no token rule, plus a message.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LexError {
+    pub range: Range<usize>,
+    pub msg: String,
+}
+
+/// Like [`tokenize`], but also returns lexer errors for surfacing as diagnostics.
+pub fn tokenize_with_errors<'a>(source: &'a str) -> (Vec<Token<'a>>, Vec<LexError>) {
     let mut tokens: Vec<Token<'a>> = Vec::new();
+    let mut errors: Vec<LexError> = Vec::new();
     let mut lex = Lexer::<TokenKind>::new(source);
 
     while let Some(kind) = lex.next() {
         let span = lex.span();
         match kind {
             TokenKind::CommentBlockOpen => {
-                // Coalesce a block comment into one `BlockComment` token. circom comments do NOT
-                // nest, so consume up to (and including) the first `CommentBlockClose`; the joined
-                // span runs from the `/*` start to the `*/` end.
+                // Coalesce up to the first `*/`; circom comments do not nest.
                 let mut closed = false;
                 let mut join_span = span;
                 while let Some(t) = lex.next() {
@@ -54,6 +56,12 @@ pub fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
                     }
                 }
 
+                if !closed {
+                    errors.push(LexError {
+                        range: join_span.clone(),
+                        msg: "unterminated block comment".to_string(),
+                    });
+                }
                 let coalesced = if closed {
                     TokenKind::BlockComment
                 } else {
@@ -61,13 +69,19 @@ pub fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
                 };
                 tokens.push(token(source, coalesced, join_span));
             }
-            // A stray `*/` with no matching `/*` — e.g. from nested comment markers
-            // (`/* a /* b */ c */`), since circom comments do NOT nest. The coalescing above
-            // consumes only up to the first `*/`, so a trailing `*/` would otherwise leak into the
-            // token stream as a `CommentBlockClose` the parser cannot consume. Treat it as a
-            // lexing error instead.
             TokenKind::CommentBlockClose => {
+                errors.push(LexError {
+                    range: span.clone(),
+                    msg: "unexpected `*/`".to_string(),
+                });
                 tokens.push(token(source, TokenKind::Error, span));
+            }
+            TokenKind::Error => {
+                errors.push(LexError {
+                    range: span.clone(),
+                    msg: format!("invalid token {:?}", &source[span.clone()]),
+                });
+                tokens.push(token(source, kind, span));
             }
             _ => {
                 tokens.push(token(source, kind, span));
@@ -75,7 +89,12 @@ pub fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
         }
     }
 
-    tokens
+    (tokens, errors)
+}
+
+/// Tokenize `source` into a flat token sequence including trivia.
+pub fn tokenize<'a>(source: &'a str) -> Vec<Token<'a>> {
+    tokenize_with_errors(source).0
 }
 
 /// Build a `Token` from a logos-derived span.

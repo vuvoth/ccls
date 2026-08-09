@@ -9,7 +9,8 @@ use lsp_types::request::{
     HoverRequest, PrepareRenameRequest, References, Rename, Request as _,
 };
 use lsp_types::{
-    DidChangeTextDocumentParams, DidOpenTextDocumentParams, FileChangeType, Location, Range, Url,
+    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
+    FileChangeType, Location, Range, Url,
 };
 use parser::token_kind::TokenKind;
 use rowan::ast::AstNode;
@@ -75,6 +76,10 @@ pub struct GlobalState {
     /// Memoized [`Self::loaded_includes`] per origin; interior-mutable for the `&self` read path.
     /// Cleared by [`Self::drop_include_cache`] on any text/index mutation.
     loaded_includes_cache: RefCell<HashMap<FileId, Vec<FileId>>>,
+    /// Cached `identifier text -> files containing it` index over `workspace_files`, used to prune
+    /// workspace references/rename scans to files that actually mention the name. `None` = stale;
+    /// rebuilt lazily, dropped on any mutation via [`Self::drop_include_cache`].
+    identifier_index: RefCell<Option<HashMap<String, HashSet<FileId>>>>,
     /// Eagerly loaded workspace `.circom` files — the scan set for workspace occurrences/symbol.
     pub(crate) workspace_files: HashSet<FileId>,
 }
@@ -106,14 +111,16 @@ impl GlobalState {
             source_db,
             open_documents: HashSet::new(),
             loaded_includes_cache: RefCell::new(HashMap::new()),
+            identifier_index: RefCell::new(None),
             workspace_files: HashSet::new(),
         }
     }
 
-    /// Drop the memoized [`Self::loaded_includes`] — call after any text/index mutation so a stale
-    /// include-id list can't be served.
+    /// Drop the memoized [`Self::loaded_includes`] and the identifier index — call after any
+    /// text/index mutation so stale data can't be served.
     pub(crate) fn drop_include_cache(&mut self) {
         self.loaded_includes_cache.borrow_mut().clear();
+        *self.identifier_index.borrow_mut() = None;
     }
 
     /// Flush derived caches after a VFS mutation that may record a change-log entry (text
@@ -145,6 +152,32 @@ impl GlobalState {
         })
     }
 
+    /// LSP diagnostics for `uri` from its cached parse/lexer errors. Empty for unknown or
+    /// textless files (never panics — mirrors the `cursor_context` None-text guard).
+    pub fn diagnostics_for_uri(&self, uri: &Url) -> Vec<Diagnostic> {
+        let Some(id) = self.source_db.id_for_url(uri) else {
+            return Vec::new();
+        };
+        if self.source_db.vfs().file_text(id).is_none() {
+            return Vec::new();
+        }
+        let file_db = self.source_db.file_db(id);
+        let errors = self.source_db.errors(id);
+        errors
+            .iter()
+            .map(|e| Diagnostic {
+                range: Range {
+                    start: file_db.position(e.range.start()),
+                    end: file_db.position(e.range.end()),
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                source: Some("circom".to_string()),
+                message: e.msg.clone(),
+                ..Default::default()
+            })
+            .collect()
+    }
+
     /// Dispatch an LSP request to its handler by method name; `Ok(None)` for unhandled methods.
     /// Add a request = one arm here + a handler module + a capability entry.
     pub fn handle_request(&self, req: Request) -> Result<Option<Response>> {
@@ -168,24 +201,35 @@ impl GlobalState {
         }
     }
 
-    /// Dispatch an LSP notification. Document open/change load includes; didClose drops open-doc
-    /// tracking; watched-file changes keep the project basename index fresh (created/deleted
-    /// `.circom` files); workspace-folder changes walk the newly-added roots.
-    pub fn handle_notification(&mut self, not: Notification) -> Result<()> {
+    /// Dispatch an LSP notification. Document open/change load includes and publish diagnostics;
+    /// didClose drops open-doc tracking and clears diagnostics; watched-file changes keep the
+    /// project basename index fresh (created/deleted `.circom` files); workspace-folder changes
+    /// walk the newly-added roots. Returns `(uri, diagnostics)` pairs for the main loop to publish.
+    pub fn handle_notification(
+        &mut self,
+        not: Notification,
+    ) -> Result<Vec<(Url, Vec<Diagnostic>)>> {
+        let mut to_publish = Vec::new();
         match not.method.as_str() {
             DidOpenTextDocument::METHOD => {
                 let params: DidOpenTextDocumentParams = serde_json::from_value(not.params)?;
+                let uri = params.text_document.uri.clone();
                 self.handle_update(TextDocument::from(params))?;
+                to_publish.push((uri.clone(), self.diagnostics_for_uri(&uri)));
             }
             DidChangeTextDocument::METHOD => {
                 let params: DidChangeTextDocumentParams = serde_json::from_value(not.params)?;
+                let uri = params.text_document.uri.clone();
                 self.handle_update(TextDocument::from(params))?;
+                to_publish.push((uri.clone(), self.diagnostics_for_uri(&uri)));
             }
             DidCloseTextDocument::METHOD => {
                 if let Ok(params) =
                     serde_json::from_value::<lsp_types::DidCloseTextDocumentParams>(not.params)
                 {
-                    self.open_documents.remove(&params.text_document.uri);
+                    let uri = params.text_document.uri.clone();
+                    self.open_documents.remove(&uri);
+                    to_publish.push((uri, Vec::new()));
                 }
             }
             DidChangeWatchedFiles::METHOD => {
@@ -202,7 +246,7 @@ impl GlobalState {
             }
             _ => {}
         }
-        Ok(())
+        Ok(to_publish)
     }
 
     /// Apply one watched-file change to the index. `*.circom` only. Created → intern; Deleted →
@@ -384,13 +428,10 @@ impl GlobalState {
         let Some(ast) = self.source_db.ast(origin.file_id) else {
             return Vec::new();
         };
-        ast.libs()
+        ast.include_paths()
             .into_iter()
-            .filter_map(|inc| inc.lib())
             .filter_map(|path| {
-                let id = self
-                    .source_db
-                    .id_for_include(&origin.file_path, &path.value())?;
+                let id = self.source_db.id_for_include(&origin.file_path, &path)?;
                 let has_text = self.source_db.vfs().file_text(id).is_some();
                 has_text.then_some(id)
             })
@@ -555,7 +596,9 @@ impl GlobalState {
         let (def_file, sym) = target;
         let name = sym.name.as_str();
 
-        let mut scan = self.workspace_files.clone();
+        // Prune to files that actually contain an identifier with this text (plus the cursor's
+        // file and the target's defining file), instead of scanning every workspace file.
+        let mut scan = self.files_containing_name(name);
         scan.insert(origin);
         scan.insert(*def_file);
 
@@ -590,6 +633,44 @@ impl GlobalState {
             }
         }
         out
+    }
+
+    /// The set of workspace files containing at least one `Identifier` token with text `name`.
+    /// Backed by the cached identifier index (rebuilt lazily, dropped on any mutation).
+    fn files_containing_name(&self, name: &str) -> HashSet<FileId> {
+        self.ensure_identifier_index();
+        self.identifier_index
+            .borrow()
+            .as_ref()
+            .and_then(|idx| idx.get(name))
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Build the identifier index once and cache it; no-op if already built.
+    fn ensure_identifier_index(&self) {
+        if self.identifier_index.borrow().is_some() {
+            return;
+        }
+        let mut index: HashMap<String, HashSet<FileId>> = HashMap::new();
+        for f in &self.workspace_files {
+            if self.source_db.vfs().file_text(*f).is_none() {
+                continue;
+            }
+            let Some(ast) = self.source_db.ast(*f) else {
+                continue;
+            };
+            for tok in ast
+                .syntax()
+                .descendants_with_tokens()
+                .filter_map(|e| e.into_token())
+            {
+                if tok.kind() == TokenKind::Identifier {
+                    index.entry(tok.text().to_string()).or_default().insert(*f);
+                }
+            }
+        }
+        *self.identifier_index.borrow_mut() = Some(index);
     }
 
     /// Every top-level template/function/bus in the workspace whose name matches `query` (empty
@@ -639,13 +720,8 @@ impl GlobalState {
 
         // Includes load from disk once then cache; symbol tables build lazily on first query.
         if let Some(ast) = self.source_db.ast(id) {
-            for include in ast.libs() {
-                let Some(include_path) = include.lib() else {
-                    continue;
-                };
-                let _ = self
-                    .source_db
-                    .load_include(&text_document.uri, &include_path.value());
+            for path in ast.include_paths() {
+                let _ = self.source_db.load_include(&text_document.uri, &path);
             }
         }
 
@@ -717,6 +793,47 @@ mod tests {
         let crate_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let path = Path::new(&crate_path).join(format!("src/test_files/handler/{rel}"));
         Url::from_file_path(&path).unwrap()
+    }
+
+    /// A clean program yields no diagnostics; a missing `;` yields an ERROR diagnostic whose
+    /// message references the expected token.
+    #[test]
+    fn diagnostics_for_clean_and_broken_docs_test() {
+        let mut state = GlobalState::new(Vec::new());
+
+        let clean = Url::from_file_path("/tmp/diag_clean.circom").unwrap();
+        state
+            .source_db
+            .set_document(&clean, "pragma circom 2.0.0;\n".to_string());
+        assert!(
+            state.diagnostics_for_uri(&clean).is_empty(),
+            "clean file should have no diagnostics"
+        );
+
+        let broken = Url::from_file_path("/tmp/diag_broken.circom").unwrap();
+        state
+            .source_db
+            .set_document(&broken, "pragma circom 2.0.0".to_string());
+        let diags = state.diagnostics_for_uri(&broken);
+        assert_eq!(diags.len(), 1, "missing semicolon: {diags:?}");
+        assert_eq!(
+            diags[0].severity,
+            Some(lsp_types::DiagnosticSeverity::ERROR)
+        );
+        assert_eq!(diags[0].source.as_deref(), Some("circom"));
+        assert!(
+            diags[0].message.contains("Semicolon"),
+            "{}",
+            diags[0].message
+        );
+    }
+
+    /// A textless/unknown file yields no diagnostics and never panics.
+    #[test]
+    fn diagnostics_for_unknown_uri_is_empty_test() {
+        let state = GlobalState::new(Vec::new());
+        let unknown = Url::from_file_path("/tmp/nope.circom").unwrap();
+        assert!(state.diagnostics_for_uri(&unknown).is_empty());
     }
 
     /// Editing the main file must never re-read or re-parse an unchanged `include`:
