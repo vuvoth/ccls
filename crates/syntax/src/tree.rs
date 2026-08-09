@@ -90,8 +90,6 @@ fn build_green(
     events: Vec<Event>,
     builder: &mut GreenNodeBuilder,
 ) -> Vec<SyntaxError> {
-    use rowan::{TextRange, TextSize};
-
     let mut errors: Vec<SyntaxError> = Vec::new();
     let mut next_idx: usize = 0;
     let mut stack: Vec<Frame> = Vec::new();

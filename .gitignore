@@ -2,7 +2,6 @@ out
 node_modules
 .vscode-test
 /target
-Cargo.lock
 assets
 *.new
 *.pending-snap
