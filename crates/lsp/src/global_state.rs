@@ -76,10 +76,6 @@ pub struct GlobalState {
     /// Memoized [`Self::loaded_includes`] per origin; interior-mutable for the `&self` read path.
     /// Cleared by [`Self::drop_include_cache`] on any text/index mutation.
     loaded_includes_cache: RefCell<HashMap<FileId, Vec<FileId>>>,
-    /// Cached `identifier text -> files containing it` index over `workspace_files`, used to prune
-    /// workspace references/rename scans to files that actually mention the name. `None` = stale;
-    /// rebuilt lazily, dropped on any mutation via [`Self::drop_include_cache`].
-    identifier_index: RefCell<Option<HashMap<String, HashSet<FileId>>>>,
     /// Eagerly loaded workspace `.circom` files — the scan set for workspace occurrences/symbol.
     pub(crate) workspace_files: HashSet<FileId>,
 }
@@ -111,16 +107,14 @@ impl GlobalState {
             source_db,
             open_documents: HashSet::new(),
             loaded_includes_cache: RefCell::new(HashMap::new()),
-            identifier_index: RefCell::new(None),
             workspace_files: HashSet::new(),
         }
     }
 
-    /// Drop the memoized [`Self::loaded_includes`] and the identifier index — call after any
-    /// text/index mutation so stale data can't be served.
+    /// Drop the memoized [`Self::loaded_includes`] — call after any text/index mutation so a stale
+    /// include-id list can't be served.
     pub(crate) fn drop_include_cache(&mut self) {
         self.loaded_includes_cache.borrow_mut().clear();
-        *self.identifier_index.borrow_mut() = None;
     }
 
     /// Flush derived caches after a VFS mutation that may record a change-log entry (text
@@ -596,9 +590,7 @@ impl GlobalState {
         let (def_file, sym) = target;
         let name = sym.name.as_str();
 
-        // Prune to files that actually contain an identifier with this text (plus the cursor's
-        // file and the target's defining file), instead of scanning every workspace file.
-        let mut scan = self.files_containing_name(name);
+        let mut scan = self.workspace_files.clone();
         scan.insert(origin);
         scan.insert(*def_file);
 
@@ -633,44 +625,6 @@ impl GlobalState {
             }
         }
         out
-    }
-
-    /// The set of workspace files containing at least one `Identifier` token with text `name`.
-    /// Backed by the cached identifier index (rebuilt lazily, dropped on any mutation).
-    fn files_containing_name(&self, name: &str) -> HashSet<FileId> {
-        self.ensure_identifier_index();
-        self.identifier_index
-            .borrow()
-            .as_ref()
-            .and_then(|idx| idx.get(name))
-            .cloned()
-            .unwrap_or_default()
-    }
-
-    /// Build the identifier index once and cache it; no-op if already built.
-    fn ensure_identifier_index(&self) {
-        if self.identifier_index.borrow().is_some() {
-            return;
-        }
-        let mut index: HashMap<String, HashSet<FileId>> = HashMap::new();
-        for f in &self.workspace_files {
-            if self.source_db.vfs().file_text(*f).is_none() {
-                continue;
-            }
-            let Some(ast) = self.source_db.ast(*f) else {
-                continue;
-            };
-            for tok in ast
-                .syntax()
-                .descendants_with_tokens()
-                .filter_map(|e| e.into_token())
-            {
-                if tok.kind() == TokenKind::Identifier {
-                    index.entry(tok.text().to_string()).or_default().insert(*f);
-                }
-            }
-        }
-        *self.identifier_index.borrow_mut() = Some(index);
     }
 
     /// Every top-level template/function/bus in the workspace whose name matches `query` (empty

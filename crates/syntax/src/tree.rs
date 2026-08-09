@@ -27,15 +27,6 @@ pub struct Parse {
     pub errors: Vec<SyntaxError>,
 }
 
-impl Parse {
-    pub fn tree(&self) -> &SyntaxNode {
-        &self.tree
-    }
-    pub fn errors(&self) -> &[SyntaxError] {
-        &self.errors
-    }
-}
-
 /// Parse `source` as a whole circom program, returning the tree and any errors.
 pub fn parse(source: &str) -> Parse {
     let (tokens, lex_errors) = tokenize_with_errors(source);
@@ -44,10 +35,7 @@ pub fn parse(source: &str) -> Parse {
     let mut errors: Vec<SyntaxError> = lex_errors
         .into_iter()
         .map(|le| SyntaxError {
-            range: rowan::TextRange::new(
-                rowan::TextSize::from(le.range.start as u32),
-                rowan::TextSize::from(le.range.end as u32),
-            ),
+            range: text_range(&le.range),
             msg: le.msg,
         })
         .collect();
@@ -65,6 +53,14 @@ pub fn syntax_node_from_source(source: &str, scope: Scope) -> SyntaxNode {
     let tokens = tokenize(source);
     let events = Parser::parse_with_scope(&tokens, scope);
     build_syntax_node(&tokens, events).0
+}
+
+/// Convert a lexer byte range into a `rowan::TextRange`.
+fn text_range(r: &std::ops::Range<usize>) -> rowan::TextRange {
+    rowan::TextRange::new(
+        rowan::TextSize::from(r.start as u32),
+        rowan::TextSize::from(r.end as u32),
+    )
 }
 
 fn build_syntax_node(tokens: &[Token], events: Vec<Event>) -> (SyntaxNode, Vec<SyntaxError>) {
@@ -118,10 +114,7 @@ fn build_green(
             let range = match (token, msg.is_some()) {
                 (Some(r), _) => r,
                 (None, true) => match tokens.get(next_idx) {
-                    Some(t) => TextRange::new(
-                        TextSize::from(t.range.start as u32),
-                        TextSize::from(t.range.end as u32),
-                    ),
+                    Some(t) => text_range(&t.range),
                     None => {
                         let end = tokens.last().map(|t| t.range.end).unwrap_or(0);
                         TextRange::new(TextSize::from(end as u32), TextSize::from(end as u32))
@@ -164,10 +157,7 @@ fn build_green(
                     builder.finish_node();
                     if let Some(Frame::Err { token, .. }) = stack.last_mut() {
                         if token.is_none() {
-                            *token = Some(TextRange::new(
-                                TextSize::from(t.range.start as u32),
-                                TextSize::from(t.range.end as u32),
-                            ));
+                            *token = Some(text_range(&t.range));
                         }
                     }
                     if i + 1 > next_idx {
